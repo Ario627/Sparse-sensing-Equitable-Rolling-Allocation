@@ -1,0 +1,525 @@
+generator client {
+    provider = "prisma-client"
+    output = "../src/generated/prisma"
+    moduleFormat = "esm"
+    importFileExtension = "ts"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  OPERATOR
+  RESEARCHER
+  VIEWER
+}
+
+enum Topology {
+  CHAIN
+  BRANCHED
+  MIXED
+}
+
+enum NodeType {
+  SOURCE
+  JUNCTION
+  GATE
+  BLOCK_TERMINAL
+}
+
+enum LossZone {
+  HEAD
+  MIDDLE
+  TAIL
+}
+
+enum SensorType {
+  WATER_LEVEL
+  FLOW
+  PRESSURE
+  SOIL_MOISTURE
+  GATE_POSITION
+}
+
+enum ReadingQuality {
+  GOOD
+  SUSPECT
+  BAD
+  STALE
+}
+
+enum CropStage {
+  LAND_PREPARATION
+  VEGETATIVE
+  TILLERING
+  PANICLE_INITIATION
+  FLOWERING
+  GRAIN_FILLING
+  RIPENING
+}
+
+enum PlanStatus {
+  PROPOSED
+  APPROVED
+  EXECUTED
+  SUPERSEDED
+  FALLBACK
+}
+
+enum PolicyProfile {
+  EQUITY_FIRST
+  SHORTAGE_FIRST
+  BALANCED
+}
+
+enum ApprovalAction {
+  APPROVE
+  REJECT
+  REQUEST_CHANGES
+}
+
+enum ExperimentStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         UserRole @default(OPERATOR)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships Membership[]
+  approvals   Approval[]
+  overrides   Override[]
+  auditLogs   AuditLog[]
+}
+
+model P3A {
+  id        String   @id @default(uuid())
+  name      String
+  region    String?
+  createdAt DateTime @default(now())
+
+  memberships Membership[]
+  networks    IrrigationNetwork[]
+}
+
+model Membership {
+  id     String @id @default(uuid())
+  userId String
+  p3aId  String
+  role   String @default("member")
+
+  user User @relation(fields: [userId], references: [id])
+  p3a  P3A  @relation(fields: [p3aId], references: [id])
+
+  @@unique([userId, p3aId])
+}
+
+model IrrigationNetwork {
+  id          String   @id @default(uuid())
+  p3aId       String?
+  name        String
+  description String?
+  topology    Topology @default(MIXED)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  p3a         P3A?                @relation(fields: [p3aId], references: [id])
+  nodes       Node[]
+  edges       Edge[]
+  blocks      Block[]
+  sensors     Sensor[]
+  plans       Plan[]
+  forecasts   WeatherForecast[]
+  ledger      ServiceLedger[]
+  estimates   StateEstimate[]
+  lossParams  LossParameter[]
+  experiments Experiment[]
+}
+
+model Node {
+  id        String   @id @default(uuid())
+  networkId String
+  type      NodeType
+  name      String
+  orderIdx  Int?
+  metadata  Json?
+
+  network  IrrigationNetwork @relation(fields: [networkId], references: [id])
+  sensors  Sensor[]
+  outgoing Edge[]            @relation("edge_from")
+  incoming Edge[]            @relation("edge_to")
+  block    Block?
+}
+
+model Edge {
+  id          String   @id @default(uuid())
+  networkId   String
+  fromNodeId  String
+  toNodeId    String
+  lengthM     Float?
+  capacityLps Float
+  zone        LossZone @default(MIDDLE)
+
+  network  IrrigationNetwork @relation(fields: [networkId], references: [id])
+  fromNode Node              @relation("edge_from", fields: [fromNodeId], references: [id])
+  toNode   Node              @relation("edge_to", fields: [toNodeId], references: [id])
+}
+
+model Block {
+  id                  String  @id @default(uuid())
+  networkId           String
+  nodeId              String  @unique
+  name                String
+  areaM2              Float
+  cropType            String  @default("paddy")
+  nominalFlowLps      Float
+  distanceFromSourceM Float?
+  soilType            String?
+  metadata            Json?
+
+  network    IrrigationNetwork @relation(fields: [networkId], references: [id])
+  node       Node              @relation(fields: [nodeId], references: [id])
+  cropStates CropState[]
+  ledgerRows ServiceLedger[]
+  planItems  PlanItem[]
+  readings   SensorReading[]
+}
+
+model Sensor {
+  id          String    @id @default(uuid())
+  networkId   String
+  nodeId      String?
+  deviceId    String    @unique
+  type        SensorType
+  unit        String
+  installedAt DateTime?
+  calibration Json?
+  isActive    Boolean   @default(true)
+
+  network  IrrigationNetwork @relation(fields: [networkId], references: [id])
+  node     Node?             @relation(fields: [nodeId], references: [id])
+  readings SensorReading[]
+  commands GateCommand[]
+  feedback GateFeedback[]
+}
+
+model SensorReading {
+  id         BigInt         @id @default(autoincrement())
+  sensorId   String
+  blockId    String?
+  ts         DateTime
+  value      Float
+  quality    ReadingQuality @default(GOOD)
+  seq        Int?
+  receivedAt DateTime       @default(now())
+
+  sensor Sensor @relation(fields: [sensorId], references: [id])
+  block  Block? @relation(fields: [blockId], references: [id])
+
+  @@unique([sensorId, ts, seq])
+  @@index([sensorId, ts])
+  @@index([ts])
+}
+
+model CropState {
+  id           String    @id @default(uuid())
+  blockId      String
+  ts           DateTime
+  stage        CropStage
+  kc           Float
+  etcMmPerDay  Float
+  percMmPerDay Float?
+  wlrMm        Float?
+  storageMm    Float?
+  source       String    @default("kp01")
+
+  block Block @relation(fields: [blockId], references: [id])
+
+  @@index([blockId, ts])
+}
+
+model StateEstimate {
+  id          String   @id @default(uuid())
+  networkId   String
+  blockId     String?
+  ts          DateTime
+  stateVector Json
+  covariance  Json
+  confidence  Float?
+  method      String   @default("mvp-kalman")
+  createdAt   DateTime @default(now())
+
+  network IrrigationNetwork @relation(fields: [networkId], references: [id])
+
+  @@index([networkId, ts])
+}
+
+model LossParameter {
+  id                  String   @id @default(uuid())
+  networkId           String
+  zone                LossZone
+  etaMean             Float
+  etaLower            Float
+  etaUpper            Float
+  identified          Boolean  @default(false)
+  identifiabilityJson Json?
+  validFrom           DateTime
+  validTo             DateTime?
+  createdAt           DateTime @default(now())
+
+  network IrrigationNetwork @relation(fields: [networkId], references: [id])
+
+  @@index([networkId, zone, validFrom])
+}
+
+model WeatherForecast {
+  id         String   @id @default(uuid())
+  networkId  String
+  issuedAt   DateTime
+  validFrom  DateTime
+  validTo    DateTime
+  source     String
+  rainfallMm Float?
+  et0Mm      Float?
+  tempC      Float?
+  payload    Json?
+
+  network IrrigationNetwork @relation(fields: [networkId], references: [id])
+
+  @@index([networkId, validFrom])
+}
+
+model ServiceLedger {
+  id           String   @id @default(uuid())
+  networkId    String
+  blockId      String
+  periodStart  DateTime
+  periodEnd    DateTime
+  targetFairM3 Float
+  targetReqM3  Float
+  deliveredM3  Float
+  serviceRatio Float
+  debtM3       Float
+  debtCapped   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  network IrrigationNetwork @relation(fields: [networkId], references: [id])
+  block   Block             @relation(fields: [blockId], references: [id])
+
+  @@index([networkId, blockId, periodStart])
+}
+
+model Plan {
+  id             String        @id @default(uuid())
+  networkId      String
+  status         PlanStatus    @default(PROPOSED)
+  profile        PolicyProfile @default(BALANCED)
+  horizonFrom    DateTime
+  horizonTo      DateTime
+  solverName     String?
+  solverTimeMs   Int?
+  mipGap         Float?
+  objectiveJson  Json?
+  bindingFactors Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  network   IrrigationNetwork @relation(fields: [networkId], references: [id])
+  items     PlanItem[]
+  scenarios PlanScenario[]
+  approvals Approval[]
+  overrides Override[]
+  events    Event[]
+
+  @@index([networkId, status])
+}
+
+model PlanItem {
+  id             String   @id @default(uuid())
+  planId         String
+  blockId        String
+  slotStart      DateTime
+  slotEnd        DateTime
+  gateOpen       Boolean
+  volumeDelM3    Float?
+  volumeGrossM3  Float?
+  serviceRatioEst Float?
+  reasonJson     Json?
+
+  plan  Plan  @relation(fields: [planId], references: [id])
+  block Block @relation(fields: [blockId], references: [id])
+
+  @@index([planId, slotStart])
+}
+
+model PlanScenario {
+  id          String  @id @default(uuid())
+  planId      String
+  scenarioId  String
+  probability Float
+  payload     Json
+
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@unique([planId, scenarioId])
+}
+
+model Approval {
+  id        String         @id @default(uuid())
+  planId    String
+  userId    String
+  action    ApprovalAction
+  reason    String?
+  createdAt DateTime       @default(now())
+
+  plan Plan @relation(fields: [planId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Override {
+  id          String   @id @default(uuid())
+  planId      String
+  userId      String
+  reason      String
+  changesJson Json
+  createdAt   DateTime @default(now())
+
+  plan Plan @relation(fields: [planId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+}
+
+model GateCommand {
+  id         String    @id @default(uuid())
+  sensorId   String?
+  planItemId String?
+  commandId  String    @unique
+  action     String
+  payload    Json?
+  issuedAt   DateTime  @default(now())
+  ackedAt    DateTime?
+  status     String    @default("pending")
+
+  sensor Sensor? @relation(fields: [sensorId], references: [id])
+
+  @@index([issuedAt])
+}
+
+model GateFeedback {
+  id          String   @id @default(uuid())
+  sensorId    String
+  commandId   String?
+  positionPct Float?
+  flowLps     Float?
+  ts          DateTime
+  payload     Json?
+
+  sensor Sensor @relation(fields: [sensorId], references: [id])
+
+  @@index([sensorId, ts])
+}
+
+model Event {
+  id        String   @id @default(uuid())
+  planId    String?
+  networkId String?
+  type      String
+  severity  String   @default("info")
+  message   String
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  plan Plan? @relation(fields: [planId], references: [id])
+
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([entity, entityId])
+}
+
+model Experiment {
+  id          String           @id @default(uuid())
+  networkId   String?
+  name        String
+  description String?
+  configYaml  String
+  configHash  String
+  status      ExperimentStatus @default(QUEUED)
+  seedBase    Int?
+  createdAt   DateTime         @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+
+  network IrrigationNetwork? @relation(fields: [networkId], references: [id])
+  runs    ExperimentRun[]
+
+  @@index([status, createdAt])
+}
+
+model ExperimentRun {
+  id           String   @id @default(uuid())
+  experimentId String
+  runIndex     Int
+  scenarioId   String
+  seed         Int
+  method       String
+  sensorCount  Int
+  topology     Topology
+  kFactor      Float?
+  metricsJson  Json
+  parquetPath  String?
+  status       RunStatus @default(QUEUED)
+  startedAt    DateTime?
+  finishedAt   DateTime?
+
+  experiment Experiment         @relation(fields: [experimentId], references: [id])
+  metrics    ExperimentMetric[]
+
+  @@unique([experimentId, runIndex])
+  @@index([experimentId, method])
+}
+
+model ExperimentMetric {
+  id     String  @id @default(uuid())
+  runId  String
+  name   String
+  value  Float
+  unit   String?
+
+  run ExperimentRun @relation(fields: [runId], references: [id])
+
+  @@index([runId, name])
+}
