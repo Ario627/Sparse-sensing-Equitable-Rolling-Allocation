@@ -205,21 +205,23 @@ model Block {
 }
 
 model Sensor {
-  id          String    @id @default(uuid())
+  id          String     @id @default(uuid())
   networkId   String
   nodeId      String?
-  deviceId    String    @unique
+  deviceId    String
   type        SensorType
   unit        String
   installedAt DateTime?
   calibration Json?
-  isActive    Boolean   @default(true)
+  isActive    Boolean    @default(true)
 
   network  IrrigationNetwork @relation(fields: [networkId], references: [id])
   node     Node?             @relation(fields: [nodeId], references: [id])
   readings SensorReading[]
   commands GateCommand[]
   feedback GateFeedback[]
+
+  @@index([deviceId])
 }
 
 model SensorReading {
