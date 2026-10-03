@@ -1,9 +1,10 @@
-import { createHash, scryptSync } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { config as loadEnv } from 'dotenv';
 import { PrismaClient } from '../src/generated/prisma/client.ts';
+import argon2 from 'argon2';
+import { config as loadEnv } from 'dotenv';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEMO_EPOCH = new Date('2026-10-03T00:00:00.000Z');
@@ -13,13 +14,12 @@ const LEDGER_PERIOD_DAYS = 14;
 const LEDGER_PERIOD_HOURS = 6;
 const LEDGER_GAMMA = 0.9;
 const LEDGER_DEBT_MAX_M3 = 40;
-const SCRYPT_PARAMS = {
-  N: 16384,
-  r: 8,
-  p: 1,
-  keylen: 64,
-  maxmem: 64 * 1024 * 1024,
-};
+const ARGON2_OPTIONS = {
+  type: argon2.argon2id,
+  memoryCost: 19_456,
+  timeCost: 2,
+  parallelism: 1,
+} as const;
 
 const NODE_SPECS = [
   { key: 'S', type: 'SOURCE', name: 'Sumber Utama', orderIdx: 0 },
@@ -186,15 +186,8 @@ function requireId(map: ReadonlyMap<string, string>, key: string): string {
   return id;
 }
 
-function hashDemoPassword(password: string): string {
-  const salt = 'sera-demo-v1';
-  const derived = scryptSync(password, salt, SCRYPT_PARAMS.keylen, {
-    N: SCRYPT_PARAMS.N,
-    r: SCRYPT_PARAMS.r,
-    p: SCRYPT_PARAMS.p,
-    maxmem: SCRYPT_PARAMS.maxmem,
-  });
-  return `scrypt$${SCRYPT_PARAMS.N}$${SCRYPT_PARAMS.r}$${SCRYPT_PARAMS.p}$${salt}$${derived.toString('hex')}`;
+async function hashDemoPassword(password: string): Promise<string> {
+  return argon2.hash(password, ARGON2_OPTIONS);
 }
 
 function buildWeatherRows(random: () => number) {
@@ -260,6 +253,7 @@ function createClient(): PrismaClient {
 }
 
 async function resetDemoData(prisma: PrismaClient): Promise<void> {
+  await prisma.refreshToken.deleteMany();
   await prisma.approval.deleteMany();
   await prisma.override.deleteMany();
   await prisma.planItem.deleteMany();
@@ -292,15 +286,19 @@ async function seedOrganization(prisma: PrismaClient) {
   const p3a = await prisma.p3A.create({
     data: { name: 'P3A Sumber Makmur', region: 'Jawa Timur' },
   });
-  const users = await prisma.user.createManyAndReturn({
-    data: USER_SPECS.map((spec) => ({
-      email: spec.email,
-      fullName: spec.fullName,
-      role: spec.role,
-      passwordHash: hashDemoPassword(spec.password),
-    })),
-  });
-  const userIdByEmail = new Map(users.map((user) => [user.email, user.id]));
+    const users = await prisma.user.createManyAndReturn({
+      data: await Promise.all(
+        USER_SPECS.map(async (spec) => ({
+          email: spec.email,
+          fullName: spec.fullName,
+          role: spec.role,
+          passwordHash: await hashDemoPassword(spec.password),
+        })),
+      ),
+    });
+  const userIdByEmail = new Map(
+    users.map((user): [string, string] => [user.email, user.id]),
+  );
   await prisma.membership.createMany({
     data: USER_SPECS.map((spec) => ({
       userId: requireId(userIdByEmail, spec.email),

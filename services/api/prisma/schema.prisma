@@ -109,6 +109,22 @@ model User {
   approvals   Approval[]
   overrides   Override[]
   auditLogs   AuditLog[]
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  familyId  String
+  issuedAt  DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, familyId])
+  @@index([expiresAt])
 }
 
 model P3A {
