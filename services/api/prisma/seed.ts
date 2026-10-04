@@ -360,16 +360,17 @@ async function seedSensors(
   networkId: string,
   nodeIdByKey: ReadonlyMap<string, string>,
 ): Promise<void> {
-  await prisma.sensor.createMany({
-    data: SENSOR_SPECS.map((spec) => ({
-      networkId,
-      nodeId: requireId(nodeIdByKey, spec.nodeKey),
-      deviceId: DEMO_DEVICE_ID,
-      type: spec.type,
-      unit: spec.unit,
-      installedAt: DEMO_EPOCH,
-    })),
-  });
+    await prisma.sensor.createMany({
+      data: SENSOR_SPECS.map((spec) => ({
+        id: spec.id,
+        networkId,
+        nodeId: requireId(nodeIdByKey, spec.nodeKey),
+        deviceId: DEMO_DEVICE_ID,
+        type: spec.type,
+        unit: spec.unit,
+        installedAt: DEMO_EPOCH,
+      })),
+    });
 }
 
 async function seedWeather(

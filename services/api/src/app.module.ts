@@ -12,7 +12,7 @@ import { AuthModule } from './auth/auth.module.ts';
 import { JwtAuthGuard, RolesGuard } from './auth/auth.guard.ts';
 import { UsersModule } from './users/users.module.ts';
 import { NetworksModule } from './networks/networks.module.ts';
-
+import { TelemetryModule } from './telemetry/telemetry.module.ts';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_RATE_LIMIT = { ttl: 60_000, limit: 120 };
@@ -42,6 +42,7 @@ function resolveEnvFiles(): string[] {
     AuthModule,
     UsersModule,
     NetworksModule,
+    TelemetryModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

@@ -64,6 +64,7 @@ export const envSchema = z.object({
     .default(30_000),
   SOLVER_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(2),
   TELEMETRY_MAX_SKEW_S: z.coerce.number().int().min(10).max(3_600).default(300),
+  TELEMETRY_STALE_S: z.coerce.number().int().min(60).max(86_400).default(900),
   COMMAND_TTL_S: z.coerce.number().int().min(10).max(3_600).default(300),
   EXPERIMENT_MAX_RUNS: z.coerce
     .number()
