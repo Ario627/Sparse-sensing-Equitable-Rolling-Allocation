@@ -1,12 +1,12 @@
 import {
-  Injectable,
   ConflictException,
+  Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import type { SortOrder, UserSortField } from '@sera/contracts';
-import type { AuditContext } from '../common/audit/audit-context.ts';
 import type { Prisma, UserRole } from '../generated/prisma/client.ts';
 import { PrismaService } from '../prisma/prisma.service.ts';
+import { AuditContext } from '../common/audit/audit-context.ts';
 
 const USER_NOT_FOUND_MESSAGE = 'User not found';
 const SELF_DEACTIVATION_MESSAGE = 'You cannot deactivate your own account';
@@ -70,8 +70,6 @@ export interface UserUpdateChanges {
   readonly role?: UserRole;
   readonly isActive?: boolean;
 }
-
-
 
 interface MembershipRow {
   readonly role: string;
@@ -169,7 +167,6 @@ function buildUpdateData(
   };
 }
 
-
 function buildAuditDiff(
   current: UserRecord,
   next: UserRecord,
@@ -192,7 +189,6 @@ function losesAdminRights(current: UserRecord, next: UserRecord): boolean {
     (next.role !== ADMIN_ROLE || !next.isActive)
   );
 }
-
 
 @Injectable()
 export class UsersService {
