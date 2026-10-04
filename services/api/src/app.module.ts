@@ -10,6 +10,7 @@ import {ThrottlerGuard, ThrottlerModule}  from "@nestjs/throttler";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { AuthModule } from './auth/auth.module.ts';
 import { JwtAuthGuard, RolesGuard } from './auth/auth.guard.ts';
+import { UsersModule } from './users/users.module.ts';
 
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -38,6 +39,7 @@ function resolveEnvFiles(): string[] {
     PrismaModule,
     HealthModule,
     AuthModule,
+    UsersModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

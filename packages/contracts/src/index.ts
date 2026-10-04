@@ -4,3 +4,6 @@ export * from "./telemetry.ts";
 export * from "./envelope.ts";
 export * from "./json-schema.ts";
 export * from "./auth.ts";
+export * from "./query.ts";
+export * from "./users.ts";
+export * from "./networks.ts";
