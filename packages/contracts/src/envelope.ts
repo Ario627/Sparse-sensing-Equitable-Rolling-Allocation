@@ -15,6 +15,7 @@ export const approvalActionSchema = z.enum([
   "APPROVE",
   "REJECT",
   "REQUEST_CHANGES",
+  "OVERRIDE",
 ]);
 
 export const experimentStatusSchema = z.enum([
@@ -51,7 +52,7 @@ export const telemetryUpdatedPayloadSchema = z.strictObject({
 
 export const planProposedPayloadSchema = z.strictObject({
   plan_id: z.uuid(),
-  status: z.literal("PROPOSED"),
+  status: z.enum(["PROPOSED", "FALLBACK"]),
   profile: policyProfileSchema,
   item_count: z.int().nonnegative(),
   solver_time_ms: z.int().nonnegative().nullable(),
@@ -102,6 +103,19 @@ export const planApprovedEventSchema = z.strictObject({
   payload: planApprovedPayloadSchema,
 });
 
+export const planExecutedPayloadSchema = z.strictObject({
+  plan_id: z.uuid(),
+  status: z.literal("EXECUTED"),
+  dispatched_slot_start: utcTimestampSchema,
+  command_count: z.int().positive(),
+});
+
+export const planExecutedEventSchema = z.strictObject({
+  ...envelopeBaseShape,
+  type: z.literal("plan.executed"),
+  payload: planExecutedPayloadSchema,
+});
+
 export const experimentProgressEventSchema = z.strictObject({
   ...envelopeBaseShape,
   type: z.literal("experiment.progress"),
@@ -118,6 +132,7 @@ export const serverEventSchema = z.discriminatedUnion("type", [
   telemetryUpdatedEventSchema,
   planProposedEventSchema,
   planApprovedEventSchema,
+  planExecutedEventSchema,
   experimentProgressEventSchema,
   alertRaisedEventSchema,
 ]);
@@ -145,3 +160,5 @@ export type ExperimentProgressEvent = z.infer<
 export type AlertRaisedEvent = z.infer<typeof alertRaisedEventSchema>;
 export type ServerEvent = z.infer<typeof serverEventSchema>;
 export type ServerEventType = ServerEvent["type"];
+export type PlanExecutedPayload = z.infer<typeof planExecutedPayloadSchema>;
+export type PlanExecutedEvent = z.infer<typeof planExecutedEventSchema>;

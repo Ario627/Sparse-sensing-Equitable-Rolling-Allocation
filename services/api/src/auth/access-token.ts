@@ -1,4 +1,3 @@
-import type { Request } from 'express';
 import { UserRole } from '../generated/prisma/client.ts';
 
 export interface AccessTokenPayload {
@@ -25,8 +24,10 @@ export function isUserRole(value: unknown): value is UserRole {
   return typeof value === 'string' && Object.hasOwn(UserRole, value);
 }
 
-export function extractBearerToken(request: Request): string | null {
-  const header = request.headers.authorization;
+export function extractBearerToken(headers: {
+  readonly authorization?: string | undefined;
+}): string | null {
+  const header = headers.authorization;
   const match = typeof header === 'string' ? BEARER_PATTERN.exec(header) : null;
   return match?.[1] ?? null;
 }

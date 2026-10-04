@@ -55,6 +55,11 @@ export const envSchema = z.object({
     .string()
     .regex(/^[a-z0-9-]+(?:\/[a-z0-9-]+)*$/)
     .default('sera'),
+  MQTT_SITE_ID: z
+    .string()
+    .regex(/^[a-z0-9-]+$/)
+    .max(64)
+    .default('demo-01'),
   SOLVER_URL: z.url({ protocol: /^https?$/ }).default('http://localhost:8000'),
   SOLVER_TIMEOUT_MS: z.coerce
     .number()
@@ -66,6 +71,8 @@ export const envSchema = z.object({
   TELEMETRY_MAX_SKEW_S: z.coerce.number().int().min(10).max(3_600).default(300),
   TELEMETRY_STALE_S: z.coerce.number().int().min(60).max(86_400).default(900),
   COMMAND_TTL_S: z.coerce.number().int().min(10).max(3_600).default(300),
+  PLAN_HORIZON_H: z.coerce.number().int().min(1).max(168).default(24),
+  PLAN_SLOT_H: z.coerce.number().int().min(1).max(24).default(1),
   EXPERIMENT_MAX_RUNS: z.coerce
     .number()
     .int()

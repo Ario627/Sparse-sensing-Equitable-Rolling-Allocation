@@ -7,12 +7,14 @@ import {
 import { ConfigService } from '@nestjs/config';
 import {
   deviceStatusSchema,
+  Reading,
   telemetrySchema,
   type SensorType,
 } from '@sera/contracts';
 import type { Env } from '../common/config/env.ts';
 import type { Prisma, ReadingQuality } from '../generated/prisma/client.ts';
 import { MqttService, type MqttMessage } from '../mqtt/mqtt.service.ts';
+import { DomainEventBus } from '../common/events/domain-event-bus.service.ts';
 import { PrismaService } from '../prisma/prisma.service.ts';
 
 const TELEMETRY_CHANNEL = 'telemetry';
@@ -26,6 +28,7 @@ const EVENT_TYPE_SYSTEM = 'system';
 const SEVERITY_WARNING = 'warning';
 const SEVERITY_INFO = 'info';
 const STALE_ALERT_CODE = 'stale_data';
+const OFFLINE_ALERT_CODE = 'sensor_offline';
 
 const REASON_INVALID_TOPIC = 'invalid_topic';
 const REASON_PAYLOAD_TOO_LARGE = 'payload_too_large';
@@ -89,6 +92,19 @@ interface EventInput {
   readonly message: string;
   readonly payload: Record<string, unknown>;
   readonly networkId: string | null;
+}
+
+interface IngestOutcome {
+  readonly networkId: string | null;
+  readonly accepted: readonly Reading[];
+  readonly stored: number;
+  readonly duplicates: number;
+  readonly rejectedReadings: number;
+  readonly reasons: Record<string, number>;
+}
+
+interface StoredEvent {
+  readonly id: string;
 }
 
 type JsonParseResult = { ok: true; value: unknown } | { ok: false };
@@ -202,6 +218,7 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly mqtt: MqttService,
     private readonly prisma: PrismaService,
+    private readonly events: DomainEventBus,
     config: ConfigService<Env, true>,
   ) {
     this.prefix = config.get('MQTT_TOPIC_PREFIX', { infer: true });
@@ -357,6 +374,19 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
         outcome.networkId,
       );
     }
+
+    if (outcome.stored > 0) {
+      this.events.publish({
+        type: 'telemetry.updated',
+        network_id: outcome.networkId,
+        payload: {
+          device_id: telemetry.device_id,
+          site_id: telemetry.site_id,
+          seq: telemetry.seq,
+          readings: [...outcome.accepted],
+        },
+      });
+    }
     if (outcome.stored > 0 || outcome.duplicates > 0) {
       this.logger.debug(
         `telemetry ${parsed.device}: stored ${outcome.stored}, duplicates ${outcome.duplicates}`,
@@ -380,10 +410,12 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
     if (status.site_id !== parsed.site || status.device_id !== parsed.device) {
       return;
     }
-    await this.writeEvent({
+
+    const message = `device ${parsed.device} is ${status.status}`;
+    const stored = await this.writeEvent({
       type: EVENT_TYPE_SYSTEM,
       severity: SEVERITY_INFO,
-      message: `device ${parsed.device} is ${status.status}`,
+      message,
       payload: {
         site: parsed.site,
         device: parsed.device,
@@ -392,6 +424,20 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
       },
       networkId: null,
     });
+    if (stored !== null && status.status === 'offline') {
+      this.events.publish({
+        type: 'alert.raised',
+        network_id: null,
+        payload: {
+          alert_id: stored.id,
+          severity: SEVERITY_WARNING,
+          code: OFFLINE_ALERT_CODE,
+          message,
+          block_id: null,
+          plan_id: null,
+        },
+      });
+    }
   }
 
   private async ingest(
@@ -425,6 +471,7 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
       sensorRows.map((row) => [row.id, toSensorMeta(row)]),
     );
     const rows: Prisma.SensorReadingCreateManyInput[] = [];
+    const accepted: Reading[] = [];
     const reasons: Record<string, number> = {};
     let networkId: string | null = null;
     for (const reading of telemetry.readings) {
@@ -442,18 +489,37 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
         continue;
       }
       networkId ??= sensor.networkId;
+      const quality = resolveQuality(
+        sensor.type,
+        reading.value,
+        reading.quality,
+      );
+      accepted.push({
+        sensor_id: reading.sensor_id,
+        type: reading.type,
+        value: reading.value,
+        unit: reading.unit,
+        quality,
+      });
       rows.push({
         sensorId: sensor.id,
         blockId: sensor.blockId,
         ts: new Date(tsMs),
         value: reading.value,
-        quality: resolveQuality(sensor.type, reading.value, reading.quality),
+        quality,
         seq: telemetry.seq,
       });
     }
     const rejectedReadings = telemetry.readings.length - rows.length;
     if (rows.length === 0) {
-      return { networkId, stored: 0, duplicates: 0, rejectedReadings, reasons };
+      return {
+        networkId,
+        accepted,
+        stored: 0,
+        duplicates: 0,
+        rejectedReadings,
+        reasons,
+      };
     }
     const inserted = await this.prisma.sensorReading.createMany({
       data: rows,
@@ -470,6 +536,7 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
     this.stats.duplicates += duplicates;
     return {
       networkId,
+      accepted,
       stored: inserted.count,
       duplicates,
       rejectedReadings,
@@ -502,9 +569,9 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  private async writeEvent(input: EventInput): Promise<void> {
+  private async writeEvent(input: EventInput): Promise<StoredEvent | null> {
     try {
-      await this.prisma.event.create({
+      return await this.prisma.event.create({
         data: {
           networkId: input.networkId,
           type: input.type,
@@ -512,9 +579,11 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
           message: input.message,
           payload: input.payload as Prisma.InputJsonValue,
         },
+        select: { id: true },
       });
     } catch (error) {
       this.logger.warn(`failed to persist event: ${String(error)}`);
+      return null;
     }
   }
 
@@ -561,12 +630,14 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
         expired.push({ device, lastSeen });
       }
     }
+    
     for (const entry of expired) {
       this.lastSeenByDevice.delete(entry.device);
-      await this.writeEvent({
+      const message = `device ${entry.device} is stale: no readings within ${this.staleMs / 1_000} s`;
+      const stored = await this.writeEvent({
         type: EVENT_TYPE_ALERT,
         severity: SEVERITY_WARNING,
-        message: `device ${entry.device} is stale: no readings within ${this.staleMs / 1_000} s`,
+        message,
         payload: {
           device: entry.device,
           code: STALE_ALERT_CODE,
@@ -575,6 +646,20 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
         },
         networkId: null,
       });
+      if (stored !== null) {
+        this.events.publish({
+          type: 'alert.raised',
+          network_id: null,
+          payload: {
+            alert_id: stored.id,
+            severity: SEVERITY_WARNING,
+            code: STALE_ALERT_CODE,
+            message,
+            block_id: null,
+            plan_id: null,
+          },
+        });
+      }
     }
   }
 }

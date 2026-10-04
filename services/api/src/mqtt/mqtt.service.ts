@@ -15,6 +15,11 @@ export interface MqttSubscription {
   readonly handler: MqttMessageHandler;
 }
 
+export interface MqttPublishOptions {
+  readonly qos?: 0 | 1 | 2;
+  readonly retain?: boolean;
+}
+
 const SUBSCRIPTION_QOS = 1;
 const KEEPALIVE_SECONDS = 60;
 const CONNECT_TIMEOUT_MS = 10_000;
@@ -81,27 +86,46 @@ export class MqttService implements OnModuleDestroy {
     this.ensureClient();
   }
 
+  async publish(
+    topic: string,
+    payload: string,
+    options: MqttPublishOptions = {},
+  ): Promise<boolean> {
+    const client = this.client;
+    if (client === undefined || !client.connected) {
+      this.logger.warn(`mqtt publish skipped (not connected): ${topic}`);
+      return false;
+    }
+    try {
+      await client.publishAsync(topic, payload, {
+        qos: options.qos ?? 1,
+        retain: options.retain ?? false,
+      });
+      return true;
+    } catch (error) {
+      this.logger.warn(`mqtt publish failed on ${topic}: ${String(error)}`);
+      return false;
+    }
+  }
+
   async onModuleDestroy(): Promise<void> {
     this.stopped = true;
-    if(this.retryTimer !== undefined) {
-        clearTimeout(this.retryTimer);
-        this.retryTimer = undefined;
+    if (this.retryTimer !== undefined) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = undefined;
     }
 
     const client = this.client;
     this.client = undefined;
-    if(client === undefined) {
-        return ;
+    if (client === undefined) {
+      return;
     }
 
     try {
-        await client.endAsync();
+      await client.endAsync();
     } catch (error) {
-        this.logger.warn(`mqtt disconnect failed: ${String(error)}`);
+      this.logger.warn(`mqtt disconnect failed: ${String(error)}`);
     }
-
-
-      
   }
 
   private ensureClient(): void {

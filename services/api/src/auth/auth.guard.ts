@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
 import type { UserRole } from '../generated/prisma/client.ts';
 import {
+  AuthenticatedUser,
   extractBearerToken,
   toAuthenticatedUser,
   type AccessTokenPayload,
@@ -24,6 +25,22 @@ const INVALID_TOKEN_MESSAGE = 'Invalid or expired access token';
 const MISSING_USER_MESSAGE = 'Authenticated user is required';
 const FORBIDDEN_MESSAGE = 'Insufficient role for this resource';
 
+export async function verifyAccessToken(
+  jwt: JwtService,
+  token: string,
+): Promise<AuthenticatedUser | null> {
+  try {
+    const payload = await jwt.verifyAsync<AccessTokenPayload>(token, {
+      algorithms: [JWT_ALGORITHM],
+      issuer: AUTH_ISSUER,
+      audience: AUTH_AUDIENCE,
+    });
+    return toAuthenticatedUser(payload);
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
@@ -36,12 +53,11 @@ export class JwtAuthGuard implements CanActivate {
       return true;
     }
     const request = context.switchToHttp().getRequest<Request>();
-    const token = extractBearerToken(request);
+    const token = extractBearerToken(request.headers);
     if (token === null) {
       throw new UnauthorizedException(MISSING_TOKEN_MESSAGE);
     }
-    const payload = await this.decodeAccessToken(token);
-    const user = payload === null ? null : toAuthenticatedUser(payload);
+    const user = await verifyAccessToken(this.jwt, token);
     if (user === null) {
       throw new UnauthorizedException(INVALID_TOKEN_MESSAGE);
     }
@@ -58,19 +74,7 @@ export class JwtAuthGuard implements CanActivate {
     );
   }
 
-  private async decodeAccessToken(
-    token: string,
-  ): Promise<AccessTokenPayload | null> {
-    try {
-      return await this.jwt.verifyAsync<AccessTokenPayload>(token, {
-        algorithms: [JWT_ALGORITHM],
-        issuer: AUTH_ISSUER,
-        audience: AUTH_AUDIENCE,
-      });
-    } catch {
-      return null;
-    }
-  }
+  
 }
 
 @Injectable()

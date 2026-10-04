@@ -13,6 +13,8 @@ import { JwtAuthGuard, RolesGuard } from './auth/auth.guard.ts';
 import { UsersModule } from './users/users.module.ts';
 import { NetworksModule } from './networks/networks.module.ts';
 import { TelemetryModule } from './telemetry/telemetry.module.ts';
+import { DomainEventsModule } from './common/events/domain-events.module.ts';
+import { RealtimeModule } from './realtime/realtime.module.ts';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_RATE_LIMIT = { ttl: 60_000, limit: 120 };
@@ -42,6 +44,8 @@ function resolveEnvFiles(): string[] {
     AuthModule,
     UsersModule,
     NetworksModule,
+    DomainEventsModule,
+    RealtimeModule,
     TelemetryModule,
   ],
   providers: [
