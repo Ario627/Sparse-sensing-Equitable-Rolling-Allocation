@@ -15,6 +15,7 @@ import { NetworksModule } from './networks/networks.module.ts';
 import { TelemetryModule } from './telemetry/telemetry.module.ts';
 import { DomainEventsModule } from './common/events/domain-events.module.ts';
 import { RealtimeModule } from './realtime/realtime.module.ts';
+import { PlansModule } from './plans/plans.module.ts';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_RATE_LIMIT = { ttl: 60_000, limit: 120 };
@@ -46,6 +47,7 @@ function resolveEnvFiles(): string[] {
     NetworksModule,
     DomainEventsModule,
     RealtimeModule,
+    PlansModule,
     TelemetryModule,
   ],
   providers: [
