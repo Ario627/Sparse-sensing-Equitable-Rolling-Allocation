@@ -7,13 +7,15 @@ import type { SortOrder, UserSortField } from '@sera/contracts';
 import type { Prisma, UserRole } from '../generated/prisma/client.ts';
 import { PrismaService } from '../prisma/prisma.service.ts';
 import { AuditContext } from '../common/audit/audit-context.ts';
+import {
+  ADMIN_ROLE,
+  LAST_ADMIN_MESSAGE,
+  SELF_DEACTIVATION_MESSAGE,
+  UPDATE_AUDIT_ACTION,
+  USER_ENTITY,
+  USER_NOT_FOUND_MESSAGE,
+} from './users.constant.ts';
 
-const USER_NOT_FOUND_MESSAGE = 'User not found';
-const SELF_DEACTIVATION_MESSAGE = 'You cannot deactivate your own account';
-const LAST_ADMIN_MESSAGE = 'At least one active admin must remain';
-const ADMIN_ROLE: UserRole = 'ADMIN';
-const UPDATE_AUDIT_ACTION = 'user.update';
-const USER_ENTITY = 'User';
 
 const UPDATE_FIELDS = ['fullName', 'role', 'isActive'] as const;
 

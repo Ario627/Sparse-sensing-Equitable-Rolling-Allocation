@@ -286,6 +286,9 @@ async function seedOrganization(prisma: PrismaClient) {
   const p3a = await prisma.p3A.create({
     data: { name: 'P3A Sumber Makmur', region: 'Jawa Timur' },
   });
+  await prisma.p3A.create({
+    data: { name: 'P3A Tirta Kencana', region: 'Jawa Tengah' },
+  });
     const users = await prisma.user.createManyAndReturn({
       data: await Promise.all(
         USER_SPECS.map(async (spec) => ({
@@ -464,5 +467,6 @@ async function main(): Promise<void> {
     await prisma.$disconnect();
   }
 }
+
 
 await main();
