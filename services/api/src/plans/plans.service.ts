@@ -5,9 +5,11 @@ import { PlanDecisionService } from './plans.decision.service.ts';
 import { PlanExecutionService } from './plans.execution.service.ts';
 import { PlanProposalService } from './plans.proposal.service.ts';
 import { PlansRepository } from './plans.repository.ts';
+import { buildPlansCsv } from './plans.export.ts';
 import type {
   PlanDecisionInput,
   PlanDetailRecord,
+  PlanExportQuery,
   PlanListPage,
   PlanListQuery,
   PlanOverrideInput,
@@ -33,6 +35,16 @@ export class PlansService {
       throw new NotFoundException(PLAN_MESSAGES.planNotFound);
     }
     return detail;
+  }
+
+  async export(
+    actorId: string,
+    query: PlanExportQuery,
+    audit: AuditContext,
+  ): Promise<string> {
+    const rows = await this.repository.findExportRows(query);
+    await this.repository.recordExportAudit(actorId, audit, query, rows.length);
+    return buildPlansCsv(rows);
   }
 
   async propose(

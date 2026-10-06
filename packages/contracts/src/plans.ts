@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { policyProfileSchema } from "./envelope.ts";
-import { pageSchema, pageSizeSchema } from "./query.ts";
+import { pageSchema, pageSizeSchema, sortOrderSchema } from "./query.ts";
 
 export const planIdSchema = z.uuid();
 
@@ -17,6 +17,34 @@ export const planDecisionActionSchema = z.enum([
   "reject",
   "request_changes",
 ]);
+
+export const planSortFieldSchema = z.enum([
+  "created_at",
+  "horizon_from",
+  "updated_at",
+]);
+
+function withinRange(value: {
+  readonly from?: string | undefined;
+  readonly to?: string | undefined;
+}): boolean {
+  return (
+    value.from === undefined ||
+    value.to === undefined ||
+    Date.parse(value.from) <= Date.parse(value.to)
+  );
+}
+
+const historyFilterShape = {
+  network_id: z.uuid().optional(),
+  status: planStatusSchema.optional(),
+  profile: policyProfileSchema.optional(),
+  block_id: z.uuid().optional(),
+  from: z.iso.datetime().optional(),
+  to: z.iso.datetime().optional(),
+  sort: planSortFieldSchema.default("created_at"),
+  order: sortOrderSchema.default("desc"),
+} as const;
 
 export const proposePlanRequestSchema = z.strictObject({
   network_id: z.uuid(),
@@ -50,11 +78,29 @@ export const planOverrideRequestSchema = z
     { error: "override items must be unique" },
   );
 
-export const listPlansQuerySchema = z.strictObject({
-  network_id: z.uuid().optional(),
-  status: planStatusSchema.optional(),
-  page: pageSchema,
-  limit: pageSizeSchema,
+export const listPlansQuerySchema = z
+  .strictObject({
+    ...historyFilterShape,
+    page: pageSchema,
+    limit: pageSizeSchema,
+  })
+  .refine(withinRange, { error: "from must not be later than to" });
+
+export const exportPlansQuerySchema = z
+  .strictObject({ ...historyFilterShape })
+  .refine(withinRange, { error: "from must not be later than to" });
+
+export const planApprovalSummarySchema = z.strictObject({
+  action: z.enum(["APPROVE", "REJECT", "REQUEST_CHANGES"]),
+  user_name: z.string().min(1),
+  reason: z.string().nullable(),
+  created_at: z.iso.datetime(),
+});
+
+export const planOverrideSummarySchema = z.strictObject({
+  user_name: z.string().min(1),
+  reason: z.string().min(1),
+  created_at: z.iso.datetime(),
 });
 
 export const planSummarySchema = z.strictObject({
@@ -69,6 +115,9 @@ export const planSummarySchema = z.strictObject({
   solver_time_ms: z.int().nonnegative().nullable(),
   mip_gap: z.number().nonnegative().nullable(),
   item_count: z.int().nonnegative(),
+  override_count: z.int().nonnegative(),
+  last_approval: planApprovalSummarySchema.nullable(),
+  last_override: planOverrideSummarySchema.nullable(),
   created_at: z.iso.datetime(),
   updated_at: z.iso.datetime(),
 });
@@ -123,6 +172,7 @@ export const plansListResponseSchema = z.strictObject({
 
 export type PlanStatus = z.infer<typeof planStatusSchema>;
 export type PlanDecisionAction = z.infer<typeof planDecisionActionSchema>;
+export type PlanSortField = z.infer<typeof planSortFieldSchema>;
 export type ProposePlanRequest = z.infer<typeof proposePlanRequestSchema>;
 export type PlanDecisionRequest = z.infer<typeof planDecisionRequestSchema>;
 export type PlanOverrideItemChange = z.infer<
@@ -130,6 +180,9 @@ export type PlanOverrideItemChange = z.infer<
 >;
 export type PlanOverrideRequest = z.infer<typeof planOverrideRequestSchema>;
 export type ListPlansQuery = z.infer<typeof listPlansQuerySchema>;
+export type ExportPlansQuery = z.infer<typeof exportPlansQuerySchema>;
+export type PlanApprovalSummary = z.infer<typeof planApprovalSummarySchema>;
+export type PlanOverrideSummary = z.infer<typeof planOverrideSummarySchema>;
 export type PlanSummaryResponse = z.infer<typeof planSummarySchema>;
 export type PlanItemResponse = z.infer<typeof planItemSchema>;
 export type PlanApprovalResponse = z.infer<typeof planApprovalSchema>;

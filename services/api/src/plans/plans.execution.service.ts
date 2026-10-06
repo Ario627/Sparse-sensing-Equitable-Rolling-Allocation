@@ -12,6 +12,7 @@ import { DomainEventBus } from '../common/events/domain-event-bus.service.ts';
 import type { Env } from '../common/config/env.ts';
 import type { Prisma, SensorType } from '../generated/prisma/client.ts';
 import { MqttService } from '../mqtt/mqtt.service.ts';
+import { buildCommandTopic } from '../mqtt/mqtt.topic.ts';
 import { PrismaService } from '../prisma/prisma.service.ts';
 import {
   AUDIT_ENTITY,
@@ -41,7 +42,7 @@ interface PreparedCommand {
   readonly sensorId: string | null;
   readonly deviceId: string;
   readonly action: string;
-  readonly payload: Command;
+  readonly wire: Command;
 }
 
 interface PreparedExecution {
@@ -118,7 +119,7 @@ export class PlanExecutionService {
       const expiresAt = new Date(now.getTime() + this.commandTtlS * 1_000);
       const commands: PreparedCommand[] = routes.map((route) => {
         const commandId = randomUUID();
-        const payload: Command = {
+        const wire: Command = {
           schema_version: 1,
           command_id: commandId,
           ts: now.toISOString(),
@@ -132,8 +133,8 @@ export class PlanExecutionService {
           planItemId: route.item.id,
           sensorId: route.sensorId,
           deviceId: route.deviceId,
-          action: payload.action,
-          payload,
+          action: wire.action,
+          wire,
         };
       });
       await tx.gateCommand.createMany({
@@ -142,7 +143,10 @@ export class PlanExecutionService {
           planItemId: command.planItemId,
           sensorId: command.sensorId,
           action: command.action,
-          payload: command.payload as unknown as Prisma.InputJsonValue,
+          payload: {
+            device_id: command.deviceId,
+            command: command.wire,
+          } as unknown as Prisma.InputJsonValue,
           status: 'pending',
         })),
       });
@@ -181,8 +185,8 @@ export class PlanExecutionService {
     let failed = 0;
     for (const command of prepared.commands) {
       const published = await this.mqtt.publish(
-        this.commandTopic(command.deviceId),
-        JSON.stringify(command.payload),
+        buildCommandTopic(this.topicPrefix, this.siteId, command.deviceId),
+        JSON.stringify(command.wire),
       );
       if (!published) {
         failed += 1;
@@ -298,9 +302,7 @@ export class PlanExecutionService {
     return routes;
   }
 
-  private commandTopic(deviceId: string): string {
-    return `${this.topicPrefix}/${this.siteId}/${deviceId}/command`;
-  }
+  
 
   private async recordDispatchFailure(
     networkId: string,

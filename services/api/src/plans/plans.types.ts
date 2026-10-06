@@ -1,3 +1,4 @@
+import type { PlanSortField, SortOrder } from '@sera/contracts';
 import type {
   ApprovalAction,
   LossZone,
@@ -15,6 +16,19 @@ import type {
 
 export type PlanDecisionAction = 'approve' | 'reject' | 'request_changes';
 
+export interface PlanApprovalSummaryRecord {
+  readonly action: ApprovalAction;
+  readonly userName: string;
+  readonly reason: string | null;
+  readonly createdAt: Date;
+}
+
+export interface PlanOverrideSummaryRecord {
+  readonly userName: string;
+  readonly reason: string;
+  readonly createdAt: Date;
+}
+
 export interface PlanSummaryRecord {
   readonly id: string;
   readonly networkId: string;
@@ -27,6 +41,9 @@ export interface PlanSummaryRecord {
   readonly solverTimeMs: number | null;
   readonly mipGap: number | null;
   readonly itemCount: number;
+  readonly overrideCount: number;
+  readonly lastApproval: PlanApprovalSummaryRecord | null;
+  readonly lastOverride: PlanOverrideSummaryRecord | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -71,16 +88,43 @@ export interface PlanDetailRecord extends PlanSummaryRecord {
   readonly bindingFactors: Prisma.JsonValue | null;
 }
 
-export interface PlanListQuery {
+export interface PlanHistoryFilter {
   readonly networkId?: string;
   readonly status?: PlanStatus;
+  readonly profile?: PolicyProfile;
+  readonly blockId?: string;
+  readonly from?: Date;
+  readonly to?: Date;
+  readonly sort: PlanSortField;
+  readonly order: SortOrder;
+}
+
+export interface PlanListQuery extends PlanHistoryFilter {
   readonly page: number;
   readonly limit: number;
 }
 
+export type PlanExportQuery = PlanHistoryFilter;
+
 export interface PlanListPage {
   readonly items: readonly PlanSummaryRecord[];
   readonly total: number;
+}
+
+export interface PlanExportRecord {
+  readonly id: string;
+  readonly networkName: string;
+  readonly status: PlanStatus;
+  readonly profile: PolicyProfile;
+  readonly horizonFrom: Date;
+  readonly horizonTo: Date;
+  readonly itemCount: number;
+  readonly overrideCount: number;
+  readonly solverName: string | null;
+  readonly solverTimeMs: number | null;
+  readonly mipGap: number | null;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
 
 export interface ProposePlanInput {
@@ -161,4 +205,3 @@ export interface FallbackPlanData {
   readonly sourcePlanId: string;
   readonly items: readonly FallbackPlanItem[];
 }
-

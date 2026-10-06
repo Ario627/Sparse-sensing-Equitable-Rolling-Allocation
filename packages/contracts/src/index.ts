@@ -9,3 +9,5 @@ export * from "./users.ts";
 export * from "./networks.ts";
 export * from "./telemetry-read.ts";
 export * from "./plans.ts";
+export * from "./events.ts";
+export * from "./audit.ts";

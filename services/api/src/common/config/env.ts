@@ -71,6 +71,14 @@ export const envSchema = z.object({
   TELEMETRY_MAX_SKEW_S: z.coerce.number().int().min(10).max(3_600).default(300),
   TELEMETRY_STALE_S: z.coerce.number().int().min(60).max(86_400).default(900),
   COMMAND_TTL_S: z.coerce.number().int().min(10).max(3_600).default(300),
+  COMMAND_ACK_TIMEOUT_S: z.coerce.number().int().min(10).max(3_600).default(45),
+  COMMAND_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(2),
+  GATE_POSITION_TOLERANCE_PCT: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(40),
   PLAN_HORIZON_H: z.coerce.number().int().min(1).max(168).default(24),
   PLAN_SLOT_H: z.coerce.number().int().min(1).max(24).default(1),
   EXPERIMENT_MAX_RUNS: z.coerce

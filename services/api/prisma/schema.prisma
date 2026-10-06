@@ -96,20 +96,21 @@ enum RunStatus {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String       @id @default(uuid())
+  email        String       @unique
   passwordHash String
   fullName     String
-  role         UserRole @default(OPERATOR)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         UserRole     @default(OPERATOR)
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
-  memberships Membership[]
-  approvals   Approval[]
-  overrides   Override[]
-  auditLogs   AuditLog[]
+  memberships  Membership[]
+  approvals    Approval[]
+  overrides    Override[]
+  auditLogs    AuditLog[]
   refreshTokens RefreshToken[]
+  acknowledgedEvents Event[] @relation("EventAcknowledgement")
 }
 
 model RefreshToken {
@@ -426,19 +427,22 @@ model Override {
 }
 
 model GateCommand {
-  id         String    @id @default(uuid())
-  sensorId   String?
+  id         String   @id @default(uuid())
+  sensorId   String?  
   planItemId String?
-  commandId  String    @unique
-  action     String
+  commandId  String   @unique
+  action     String   
   payload    Json?
-  issuedAt   DateTime  @default(now())
+  issuedAt   DateTime @default(now())
   ackedAt    DateTime?
-  status     String    @default("pending")
+  status     String   @default("pending")
+  attempts   Int      @default(0)
+  lastAttemptAt DateTime?
 
   sensor Sensor? @relation(fields: [sensorId], references: [id])
 
   @@index([issuedAt])
+  @@index([status, issuedAt])
 }
 
 model GateFeedback {
@@ -459,15 +463,19 @@ model Event {
   id        String   @id @default(uuid())
   planId    String?
   networkId String?
-  type      String
+  type      String   
   severity  String   @default("info")
   message   String
   payload   Json?
+  acknowledgedAt DateTime?
+  acknowledgedByUserId String?
   createdAt DateTime @default(now())
 
-  plan Plan? @relation(fields: [planId], references: [id])
+  plan           Plan? @relation(fields: [planId], references: [id])
+  acknowledgedBy User? @relation("EventAcknowledgement", fields: [acknowledgedByUserId], references: [id])
 
   @@index([createdAt])
+  @@index([type, acknowledgedAt])
 }
 
 model AuditLog {

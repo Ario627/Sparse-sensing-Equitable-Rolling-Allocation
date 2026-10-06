@@ -18,6 +18,9 @@ export const PROPOSE_AUDIT_ACTION = 'plan.propose';
 export const DECIDE_AUDIT_ACTION = 'plan.decide';
 export const OVERRIDE_AUDIT_ACTION = 'plan.override';
 export const EXECUTE_AUDIT_ACTION = 'plan.execute';
+export const EXPORT_AUDIT_ACTION = 'plan.export';
+export const EXPORT_MAX_ROWS = 10_000;
+export const PLAN_EXPORT_FILENAME = 'sera-plans.csv';;
 
 export const STATUS_PROPOSED: PlanStatus = 'PROPOSED';
 export const STATUS_FALLBACK: PlanStatus = 'FALLBACK';

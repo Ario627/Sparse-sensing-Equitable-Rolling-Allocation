@@ -16,6 +16,7 @@ import type { Prisma, ReadingQuality } from '../generated/prisma/client.ts';
 import { MqttService, type MqttMessage } from '../mqtt/mqtt.service.ts';
 import { DomainEventBus } from '../common/events/domain-event-bus.service.ts';
 import { PrismaService } from '../prisma/prisma.service.ts';
+import { parseSeraTopic, type ParsedSeraTopic } from '../mqtt/mqtt.topic.ts';
 
 const TELEMETRY_CHANNEL = 'telemetry';
 const STATUS_CHANNEL = 'status';
@@ -48,11 +49,7 @@ const SANITY_RANGES: Partial<Record<SensorType, { min: number; max: number }>> =
     SOIL_MOISTURE: { min: 0, max: 100 },
   };
 
-interface ParsedTopic {
-  readonly site: string;
-  readonly device: string;
-  readonly channel: string;
-}
+
 
 interface SensorRow {
   readonly id: string;
@@ -122,28 +119,6 @@ function parseJson(payload: Buffer): JsonParseResult {
     }
 }
 
-
-function parseTopic(prefix: string, topic: string): ParsedTopic | null {
-    const expectedPrefix = `${prefix}/`;
-    if(!topic.startsWith(expectedPrefix)) {
-        return null;
-    }
-
-    const segments = topic.slice(expectedPrefix.length).split('/');
-    const site = segments[0];
-    const device = segments[1];
-    const channel = segments[2];
-
-    if(site === undefined || device === undefined || channel === undefined) {
-        return null;
-    }
-
-    if (segments.length !== 3) {
-        return null;
-    }
-
-    return {site, device, channel};
-}
 
 function resolveQuality(
   sensorType: SensorType,
@@ -253,7 +228,7 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async handleMessage(message: MqttMessage): Promise<void> {
-    const parsed = parseTopic(this.prefix, message.topic);
+    const parsed = parseSeraTopic(this.prefix, message.topic);
     if (parsed === null) {
       await this.reportRejection(
         `${REASON_INVALID_TOPIC}:${message.topic}`,
@@ -264,17 +239,17 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
       );
       return;
     }
-    if (parsed.channel === TELEMETRY_CHANNEL) {
+    if (parsed.kind === 'telemetry') {
       await this.handleTelemetry(parsed, message.payload);
       return;
     }
-    if (parsed.channel === STATUS_CHANNEL) {
+    if (parsed.kind === 'status') {
       await this.handleStatus(parsed, message.payload);
     }
   }
 
   private async handleTelemetry(
-    parsed: ParsedTopic,
+    parsed: ParsedSeraTopic,
     payload: Buffer,
   ): Promise<void> {
     const rejectionKey = (reason: string): string =>
@@ -395,7 +370,7 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async handleStatus(
-    parsed: ParsedTopic,
+    parsed: ParsedSeraTopic,
     payload: Buffer,
   ): Promise<void> {
     const json = parseJson(payload);
@@ -441,7 +416,7 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async ingest(
-    parsed: ParsedTopic,
+    parsed: ParsedSeraTopic,
     telemetry: {
       readonly seq: number;
       readonly readings: readonly {
@@ -630,7 +605,7 @@ export class TelemetryService implements OnModuleInit, OnModuleDestroy {
         expired.push({ device, lastSeen });
       }
     }
-    
+
     for (const entry of expired) {
       this.lastSeenByDevice.delete(entry.device);
       const message = `device ${entry.device} is stale: no readings within ${this.staleMs / 1_000} s`;
