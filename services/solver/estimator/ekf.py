@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, Protocol
 
-import numpy as np
+import numpy as np # type: ignore
 
 from app.core.types import DomainInvariantError
 

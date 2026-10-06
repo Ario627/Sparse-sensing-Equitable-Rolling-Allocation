@@ -1,5 +1,5 @@
-import math
 from __future__ import annotations
+import math
 from collections.abc import Iterable
 from app.core.types import (
     DomainInvariantError,

@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Final
 
-import numpy as np
+import numpy as np # type: ignore
 
 from app.core.types import (
     DomainInvariantError,

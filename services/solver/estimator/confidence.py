@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from statistics import NormalDist
 from typing import Final
 
-import numpy as np
-from scipy.special import expit
-from scipy.stats import chi2
+import numpy as np  # type: ignore
+from scipy.special import expit # type: ignore
+from scipy.stats import chi2 # type: ignore
 
 from app.core.types import (
     DomainInvariantError,

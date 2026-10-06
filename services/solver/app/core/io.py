@@ -14,10 +14,10 @@ from datetime import UTC, date, datetime
 from enum import Enum
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Final
+from typing import Final, cast
 
-import numpy as np
-from pydantic import BaseModel
+import numpy as np # type: ignore
+from pydantic import BaseModel # type: ignore
 
 from app.core.types import DomainInvariantError, require_identifier, require_utc
 
@@ -66,11 +66,11 @@ def to_jsonable(value: object) -> JsonValue:
             raise DomainInvariantError("non-finite floats cannot be canonicalized")
         return value
     if isinstance(value, np.generic):
-        return to_jsonable(value.item())
+        return to_jsonable(cast(np.generic, value).item())
     if isinstance(value, np.ndarray):
-        return to_jsonable(value.tolist())
+        return to_jsonable(cast(np.ndarray, value).tolist())
     if isinstance(value, BaseModel):
-        return to_jsonable(value.model_dump(mode="json"))
+        return to_jsonable(cast(BaseModel, value).model_dump(mode="json"))
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return to_jsonable(dataclasses.asdict(value))
     if isinstance(value, datetime):
@@ -197,7 +197,7 @@ def build_meta(
         "git_dirty": state.dirty,
         "python": platform.python_version(),
         "platform": platform.platform(),
-        "dependencies": dependency_versions(),
+        "dependencies": to_jsonable(dependency_versions()),
         "config": to_jsonable(config),
     }
 

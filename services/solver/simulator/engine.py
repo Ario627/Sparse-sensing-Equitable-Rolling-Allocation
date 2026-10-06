@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Final, Protocol
 
-import numpy as np
+import numpy as np # type: ignore
 
 from app.core.rng import generator_for
 from app.core.types import (

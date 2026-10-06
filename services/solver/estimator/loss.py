@@ -4,8 +4,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Final
 
-import numpy as np
-from scipy.special import expit, logit
+import numpy as np # type: ignore
+from scipy.special import expit, logit # type: ignore
 
 from app.core.types import (
     DomainInvariantError,

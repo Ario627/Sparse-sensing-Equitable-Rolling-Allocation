@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from typing import Final
 
-import numpy as np
+import numpy as np # type: ignore
 
 from app.core.types import (
     DomainInvariantError,
