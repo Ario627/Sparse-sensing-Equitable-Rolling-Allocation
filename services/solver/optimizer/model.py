@@ -12,7 +12,6 @@ from app.core.types import (
     require_identifier,
     require_non_negative,
     require_positive,
-    require_probability,
     require_unique,
 )
 from app.core.units import flow_hours_to_volume_m3
@@ -22,9 +21,13 @@ MM_PER_M3_FACTOR: Final = 1000.0
 PROBABILITY_TOLERANCE: Final = 1.0e-6
 
 
-def _variance_free(value: float, name: str) -> float:
-    return require_non_negative(value, name)
-
+def _require_simplex_probability(value: float, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise DomainInvariantError(f"{name} must be a number")
+    number = float(value)
+    if not 0.0 <= number <= 1.0:
+        raise DomainInvariantError(f"{name} must lie in [0, 1]")
+    return number
 
 def _require_vector(values: Sequence[float], expected: int, name: str) -> tuple[float, ...]:
     if len(values) != expected:
@@ -96,7 +99,7 @@ class PlanningScenario:
 
     def __post_init__(self) -> None:
         require_identifier(self.scenario_id, "scenario_id")
-        require_probability(self.probability, "probability")
+        _require_simplex_probability(self.probability, "probability")
         for value in self.supply_lps:
             require_non_negative(value, "supply_lps")
 

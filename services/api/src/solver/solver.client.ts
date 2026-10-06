@@ -1,19 +1,21 @@
 import { randomUUID } from 'node:crypto';
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import type { Env } from '../common/config/env.ts';
+import {
+  SolverContractError,
+  SolverHttpService,
+} from './solver-http.service.ts';
+
+export {
+  SolverUnavailableError,
+  SolverRejectedError,
+  SolverContractError,
+} from './solver-http.service.ts';
 
 const SOLVER_PLAN_PATH = '/v1/plan';
 const SCHEMA_VERSION = 1;
 const MAX_ITEMS = 2_000;
 const MAX_SCENARIOS = 500;
-
-export class SolverUnavailableError extends Error {}
-
-export class SolverRejectedError extends Error {}
-
-export class SolverContractError extends Error {}
 
 const solverPlanItemSchema = z
   .strictObject({
@@ -137,30 +139,13 @@ export interface SolverPlanRequestInput {
   readonly params: Record<string, unknown>;
 }
 
-function extractRejectionDetail(body: unknown): string | null {
-  if (typeof body !== 'object' || body === null) {
-    return null;
-  }
-  const detail = (body as Record<string, unknown>).detail;
-  return typeof detail === 'string' && detail.length > 0 ? detail : null;
-}
-
 @Injectable()
 export class SolverClient {
-  private readonly logger = new Logger(SolverClient.name);
-  private readonly baseUrl: string;
-  private readonly timeoutMs: number;
-
-  constructor(config: ConfigService<Env, true>) {
-    this.baseUrl = config
-      .get('SOLVER_URL', { infer: true })
-      .replace(/\/+$/, '');
-    this.timeoutMs = config.get('SOLVER_TIMEOUT_MS', { infer: true });
-  }
+  constructor(private readonly http: SolverHttpService) {}
 
   async requestPlan(input: SolverPlanRequestInput): Promise<SolverPlanResult> {
     const requestId = randomUUID();
-    const payload = await this.post(SOLVER_PLAN_PATH, {
+    const payload = await this.http.postJson(SOLVER_PLAN_PATH, {
       schema_version: SCHEMA_VERSION,
       request_id: requestId,
       network_id: input.network.id,
@@ -185,44 +170,5 @@ export class SolverClient {
       throw new SolverContractError('solver echoed an unexpected request_id');
     }
     return parsed.data;
-  }
-
-  private async post(path: string, body: unknown): Promise<unknown> {
-    let response: Response;
-    try {
-      response = await fetch(`${this.baseUrl}${path}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(this.timeoutMs),
-      });
-    } catch (error) {
-      throw new SolverUnavailableError(
-        `solver request failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-    if (response.status >= 500) {
-      throw new SolverUnavailableError(`solver responded ${response.status}`);
-    }
-    if (!response.ok) {
-      const detail = await this.readJsonSafely(response);
-      const message =
-        extractRejectionDetail(detail) ?? `solver responded ${response.status}`;
-      this.logger.warn(`solver rejected request: ${message}`);
-      throw new SolverRejectedError(message);
-    }
-    const payload = await this.readJsonSafely(response);
-    if (payload === null) {
-      throw new SolverContractError('solver returned an empty or invalid body');
-    }
-    return payload;
-  }
-
-  private async readJsonSafely(response: Response): Promise<unknown | null> {
-    try {
-      return await response.json();
-    } catch {
-      return null;
-    }
   }
 }

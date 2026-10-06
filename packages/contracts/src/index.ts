@@ -13,3 +13,4 @@ export * from "./events.ts";
 export * from "./audit.ts";
 export * from "./plan-command.ts";
 export * from "./p3a.ts";
+export * from "./experiments.ts";
