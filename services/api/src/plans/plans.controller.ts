@@ -18,6 +18,7 @@ import {
   proposePlanRequestSchema,
   type ExportPlansQuery,
   type ListPlansQuery,
+  type PlanCommandLogResponse,
   type PlanDecisionRequest,
   type PlanDetailResponse,
   type PlanOverrideRequest,
@@ -39,6 +40,10 @@ import type {
   PlanOverrideRecord,
   PlanSummaryRecord,
 } from './plans.types.ts';
+import type {
+  PlanCommandLogEntryRecord,
+  PlanCommandLogPage,
+} from './plans.command-log.types.ts';
 
 const OPERATOR_ROLE = 'OPERATOR' as const;
 const PROPOSE_RATE_LIMIT = { default: { limit: 10, ttl: 60_000 } };
@@ -132,6 +137,62 @@ function toDetailResponse(record: PlanDetailRecord): PlanDetailResponse {
     overrides: record.overrides.map(toOverrideResponse),
     objective: record.objective,
     binding_factors: record.bindingFactors,
+  };
+}
+
+function toCommandLogEntryResponse(
+  record: PlanCommandLogEntryRecord,
+): PlanCommandLogResponse['items'][number] {
+  return {
+    command_id: record.commandId,
+    plan_item_id: record.planItemId,
+    block_id: record.blockId,
+    block_name: record.blockName,
+    device_id: record.deviceId,
+    action: record.action,
+    status: record.status,
+    issued_at: record.issuedAt.toISOString(),
+    acked_at: record.ackedAt === null ? null : record.ackedAt.toISOString(),
+    attempts: record.attempts,
+    last_attempt_at:
+      record.lastAttemptAt === null ? null : record.lastAttemptAt.toISOString(),
+    expires_at:
+      record.expiresAt === null ? null : record.expiresAt.toISOString(),
+    target: record.target,
+    feedback:
+      record.feedback === null
+        ? null
+        : {
+            position_pct: record.feedback.positionPct,
+            flow_lps: record.feedback.flowLps,
+            ts: record.feedback.ts.toISOString(),
+          },
+    mismatch:
+      record.mismatch === null
+        ? null
+        : {
+            expected_pct: record.mismatch.expectedPct,
+            deviation_pct: record.mismatch.deviationPct,
+          },
+  };
+}
+
+function toCommandLogResponse(
+  record: PlanCommandLogPage,
+): PlanCommandLogResponse {
+  return {
+    plan_id: record.planId,
+    items: record.items.map(toCommandLogEntryResponse),
+    summary: {
+      total: record.summary.total,
+      pending: record.summary.pending,
+      accepted: record.summary.accepted,
+      rejected: record.summary.rejected,
+      expired: record.summary.expired,
+      unanswered: record.summary.unanswered,
+      unknown: record.summary.unknown,
+      mismatch_count: record.summary.mismatchCount,
+    },
   };
 }
 
@@ -284,5 +345,12 @@ export class PlansController {
       auditContextFrom(request),
     );
     return toDetailResponse(executed);
+  }
+
+  @Get(':id/commands')
+  async commandLog(
+    @Param('id', { schema: planIdSchema }) id: string,
+  ): Promise<PlanCommandLogResponse> {
+    return toCommandLogResponse(await this.plansService.commandLogFor(id));
   }
 }

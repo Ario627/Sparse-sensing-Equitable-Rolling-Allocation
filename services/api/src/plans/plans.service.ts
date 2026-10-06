@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { AuditContext } from '../common/audit/audit-context.ts';
 import { PLAN_MESSAGES } from './plans.constants.ts';
+import { PlanCommandLogService } from './plans.command-log.service.ts';
+import type { PlanCommandLogPage } from './plans.command-log.types.ts';
 import { PlanDecisionService } from './plans.decision.service.ts';
 import { PlanExecutionService } from './plans.execution.service.ts';
 import { PlanProposalService } from './plans.proposal.service.ts';
@@ -23,10 +25,15 @@ export class PlansService {
     private readonly proposal: PlanProposalService,
     private readonly decisions: PlanDecisionService,
     private readonly execution: PlanExecutionService,
+    private readonly commandLog: PlanCommandLogService,
   ) {}
 
   list(query: PlanListQuery): Promise<PlanListPage> {
     return this.repository.listPlans(query);
+  }
+
+  commandLogFor(planId: string): Promise<PlanCommandLogPage> {
+    return this.commandLog.load(planId);
   }
 
   async getById(id: string): Promise<PlanDetailRecord> {
