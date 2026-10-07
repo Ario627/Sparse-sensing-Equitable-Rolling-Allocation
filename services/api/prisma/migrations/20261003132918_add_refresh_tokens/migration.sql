@@ -610,4 +610,3 @@ ALTER TABLE "ExperimentRun" ADD CONSTRAINT "ExperimentRun_experimentId_fkey" FOR
 
 -- AddForeignKey
 ALTER TABLE "ExperimentMetric" ADD CONSTRAINT "ExperimentMetric_runId_fkey" FOREIGN KEY ("runId") REFERENCES "ExperimentRun"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
