@@ -21,6 +21,8 @@
     --color-warn-soft: #f4eeda;
     --color-crit: #a62d23;
     --color-crit-soft: #f7e5e2;
+    --color-crit-deep: #8c221a;
+    --color-fallback-deep: #7f3a0f;
     --color-fallback: #9e4a15;
     --color-fallback-soft: #f8e7da;
     --color-info: #1e5ca3;

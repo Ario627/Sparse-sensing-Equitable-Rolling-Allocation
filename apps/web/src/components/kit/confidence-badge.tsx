@@ -2,7 +2,7 @@ import { cn } from "@/lib/cn.ts";
 import { formatPercent } from "@/lib/format.ts";
 import type { Tone } from "./status-pill.tsx";
 
-const GAUGE_TICKS = 10;
+const GAUGE_TICKS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 const MAJOR_TICK_EVERY = 5;
 const DEFAULT_LABEL = "Keyakinan";
 
@@ -44,23 +44,23 @@ function clampUnit(value: number): number {
 }
 
 function filledTickCount(value: number): number {
-  return Math.round(clampUnit(value) * GAUGE_TICKS);
+  return Math.round(clampUnit(value) * GAUGE_TICKS.length);
 }
 
 function ConfidenceGauge({ value, tone }: ConfidenceGaugeProps) {
   const filled = filledTickCount(value);
   return (
     <span className="flex items-end gap-px" aria-hidden="true">
-      {Array.from({ length: GAUGE_TICKS }, (_, index) => (
-        <span
-          key={index}
-          className={cn(
-            "w-0.5 rounded-[1px]",
-            (index + 1) % MAJOR_TICK_EVERY === 0 ? "h-3" : "h-2",
-            index < filled ? tickFillClasses[tone] : "bg-line-2",
-          )}
-        />
-      ))}
+        {GAUGE_TICKS.map((tick) => (
+            <span
+            key={tick}
+            className={cn(
+                "w-0.5 rounded-[1px]",
+                tick % MAJOR_TICK_EVERY === 0 ? "h-3" : "h-2",
+                tick <= filled ? tickFillClasses[tone] : "bg-line-2",
+            )}
+            />
+        ))}
     </span>
   );
 }
