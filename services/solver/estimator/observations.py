@@ -5,7 +5,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final, Protocol
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import (
     DomainInvariantError,
@@ -34,12 +34,12 @@ class LevelReadingLike(Protocol):
 @dataclass(frozen=True, slots=True)
 class LevelReading:
     sensor_id: str
-    value_mm: float
+    value: float
     quality: ReadingQuality = ReadingQuality.GOOD
 
     def __post_init__(self) -> None:
         require_identifier(self.sensor_id, "sensor_id")
-        require_finite(self.value_mm, "value_mm")
+        require_finite(self.value, "value")
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,15 +96,11 @@ class MeasurementBatch:
         for block_id in self.block_ids:
             require_identifier(block_id, "block_id")
             if block_id in seen:
-                raise DomainInvariantError(
-                    f"duplicate block in measurement batch: {block_id}"
-                )
+                raise DomainInvariantError(f"duplicate block in measurement batch: {block_id}")
             seen.add(block_id)
         if not np.all(np.isfinite(self.values_mm)):
             raise DomainInvariantError("measurement values must be finite")
-        if not np.all(np.isfinite(self.variances_mm2)) or not np.all(
-            self.variances_mm2 > 0.0
-        ):
+        if not np.all(np.isfinite(self.variances_mm2)) or not np.all(self.variances_mm2 > 0.0):
             raise DomainInvariantError("measurement variances must be finite and positive")
         object.__setattr__(self, "values_mm", _frozen(self.values_mm))
         object.__setattr__(self, "variances_mm2", _frozen(self.variances_mm2))
@@ -167,9 +163,7 @@ def build_measurement_batch(
             continue
         block_id = sensor_block_of.get(reading.sensor_id)
         if block_id is None:
-            raise DomainInvariantError(
-                f"no block mapped for sensor: {reading.sensor_id}"
-            )
+            raise DomainInvariantError(f"no block mapped for sensor: {reading.sensor_id}")
         value = require_finite(float(reading.value), f"reading[{reading.sensor_id}]")
         grouped.setdefault(block_id, []).append(
             (value, base_variance * multiplier, reading.quality)

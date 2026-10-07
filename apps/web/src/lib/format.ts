@@ -98,11 +98,15 @@ export function formatEstimate(
     : `${point} [${formatInterval(interval, digits)}]`;
 }
 
-export function formatClock(iso: string): string {
-  const parts = clockFormatter.formatToParts(new Date(iso));
+export function formatClockMs(ms: number): string {
+  const parts = clockFormatter.formatToParts(new Date(ms));
   const hour = parts.find((part) => part.type === "hour")?.value ?? "00";
   const minute = parts.find((part) => part.type === "minute")?.value ?? "00";
   return `${hour}:${minute}`;
+}
+
+export function formatClock(iso: string): string {
+  return formatClockMs(Date.parse(iso));
 }
 
 export function formatDate(iso: string): string {

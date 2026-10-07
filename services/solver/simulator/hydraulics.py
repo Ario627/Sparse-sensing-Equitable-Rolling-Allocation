@@ -220,7 +220,6 @@ def apply_capacity_limit(
         if total > capacity_volume:
             scale = capacity_volume / total
             for block_id in served:
-                #sementara gini 
                 volumes[block_id] *= scale
             binding.append(edge_id)
     return CapacityAdjustedReleases(

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Sequence, Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Final
 
-from ortools.math_opt import mathopt # type: ignore
+from ortools.math_opt.python import mathopt  # type: ignore
+
 from app.core.types import DomainInvariantError, require_non_negative, require_positive
 
 DEFAULT_TIME_LIMIT_S: Final = 25.0
@@ -40,8 +41,8 @@ _TERMINATION_TO_STATUS: Final[dict[mathopt.TerminationReason, SolveStatus]] = {
     mathopt.TerminationReason.UNBOUNDED: SolveStatus.UNBOUNDED,
     mathopt.TerminationReason.INFEASIBLE_OR_UNBOUNDED: SolveStatus.INFEASIBLE_OR_UNBOUNDED,
     mathopt.TerminationReason.NO_SOLUTION_FOUND: SolveStatus.NO_SOLUTION,
-    mathopt.TerminationReason.NUMERICAL: SolveStatus.NUMERICAL,
-    mathopt.TerminationReason.OTHER: SolveStatus.OTHER,
+    mathopt.TerminationReason.NUMERICAL_ERROR: SolveStatus.NUMERICAL,
+    mathopt.TerminationReason.OTHER_ERROR: SolveStatus.OTHER,
 }
 
 
@@ -109,13 +110,11 @@ def _objective_and_bound(result: mathopt.SolveResult) -> tuple[float | None, flo
     return objective, bound
 
 
-
-def _relative_gap(objective: float | None, bound: float | None) -> float | None :
+def _relative_gap(objective: float | None, bound: float | None) -> float | None:
     if objective is None or bound is None:
         return None
     scale = max(abs(objective), abs(bound), 1.0e-9)
     return abs(objective - bound) / scale
-
 
 
 def _solve_seconds(result: mathopt.SolveResult) -> float:
@@ -132,9 +131,11 @@ def _values_by_name(
 ) -> dict[str, float]:
     if not result.has_primal_feasible_solution():
         return {}
-    values = result.variable_values(*variables)
-    return {variable.name: float(value) for variable, value in values.items()}
-
+    values = result.variable_values(variables)
+    return {
+        variable.name: float(value)
+        for variable, value in zip(variables, values, strict=True)
+    }
 
 
 def solve_model(
@@ -149,14 +150,14 @@ def solve_model(
         time_limit=datetime.timedelta(seconds=budget.time_limit_s),
         relative_gap_tolerance=budget.relative_gap,
         absolute_gap_tolerance=budget.absolute_gap,
-        threads=budget.threads,
+        threads=budget.threads if backend is SolverBackend.SCIP else None,
         random_seed=budget.random_seed,
         enable_output=budget.enable_output,
     )
     result = mathopt.solve(problem, solver_type, params=parameters)
     termination = result.termination
     status = _TERMINATION_TO_STATUS.get(termination.reason, SolveStatus.OTHER)
-    hit_limit = termination.limit is mathopt.Limit.TIME_LIMIT
+    hit_limit = termination.limit is mathopt.Limit.TIME
     objective, bound = _objective_and_bound(result)
     return SolveOutcome(
         status=status,

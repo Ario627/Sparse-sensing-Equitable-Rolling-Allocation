@@ -195,6 +195,9 @@ class PlanDecision:
 class PlanModel:
     def __init__(self, problem: PlanningProblem) -> None:
         self._problem = problem
+        self._position = {
+            block_id: index for index, block_id in enumerate(problem.block_ids)
+        }
         self._model = mathopt.Model(name="sera_plan")
         self._flat: list[mathopt.Variable] = []
         self._y: dict[tuple[str, int, str], mathopt.Variable] = {}
@@ -394,6 +397,7 @@ class PlanModel:
     def _add_storage_constraints(self) -> None:
         for block in self._problem.blocks:
             mm_per_m3 = block.storage_mm_per_m3
+            position = self._position[block.block_id]
             for scenario in self._problem.scenarios:
                 for slot in range(self._problem.slot_count):
                     balance = (
@@ -402,13 +406,11 @@ class PlanModel:
                         - mm_per_m3 * self._x[(block.block_id, slot, scenario.scenario_id)]
                         + self._spill[(block.block_id, slot, scenario.scenario_id)]
                     )
-                    inflow_mm = scenario.rain_effective_mm[
-                        self._problem.block_ids.index(block.block_id)
-                    ][slot]
+                    inflow_mm = scenario.rain_effective_mm[position][slot]
                     outflow_mm = (
-                        scenario.etc_mm[self._problem.block_ids.index(block.block_id)][slot]
-                        + scenario.perc_mm[self._problem.block_ids.index(block.block_id)][slot]
-                        + scenario.wlr_mm[self._problem.block_ids.index(block.block_id)][slot]
+                        scenario.etc_mm[position][slot]
+                        + scenario.perc_mm[position][slot]
+                        + scenario.wlr_mm[position][slot]
                     )
                     deficit = outflow_mm - inflow_mm
                     name = _variable_name("balance", block.block_id, slot, scenario.scenario_id)
@@ -420,14 +422,14 @@ class PlanModel:
             for scenario in self._problem.scenarios:
                 for slot in range(1, self._problem.slot_count + 1):
                     storage = self._storage[(block.block_id, slot, scenario.scenario_id)]
-                    slack = self._rho[(block.block_id, slot, scenario.scenario_id)]
+                    slack = self._rho[(block.block_id, slot - 1, scenario.scenario_id)]
                     self._model.add_linear_constraint(
                         block.min_storage_mm - storage - slack <= 0.0,
                         name=_variable_name("safety", block.block_id, slot, scenario.scenario_id),
                     )
 
     def _fairness_denominator(self, block: PlanningBlockSpec, scenario: PlanningScenario) -> float:
-        position = self._problem.block_ids.index(block.block_id)
+        position = self._position[block.block_id]
         target_sum = sum(scenario.target_fair_m3[position])
         return block.ledger_target_m3 + target_sum
 
@@ -500,7 +502,7 @@ class PlanModel:
             return
         for block in self._problem.blocks:
             for scenario in self._problem.scenarios:
-                position = self._problem.block_ids.index(block.block_id)
+                position = self._position[block.block_id]
                 horizon_target = sum(scenario.target_fair_m3[position])
                 floor = fraction * min(block.debt_m3, horizon_target)
                 if floor <= 0.0:
@@ -518,13 +520,18 @@ class PlanModel:
         for scenario in self._problem.scenarios[1:]:
             for block in self._problem.blocks:
                 for slot in range(self._problem.commit_slots):
-                    for variables in (self._y, self._x):
+                    for tag, variables in (("y", self._y), ("x", self._x)):
                         self._model.add_linear_constraint(
                             variables[(block.block_id, slot, scenario.scenario_id)]
                             - variables[(block.block_id, slot, reference)]
                             <= 0.0,
                             name=_variable_name(
-                                "anticipate", block.block_id, slot, scenario.scenario_id, "up"
+                                "anticipate",
+                                block.block_id,
+                                slot,
+                                scenario.scenario_id,
+                                tag,
+                                "up",
                             ),
                         )
                         self._model.add_linear_constraint(
@@ -532,7 +539,12 @@ class PlanModel:
                             - variables[(block.block_id, slot, scenario.scenario_id)]
                             <= 0.0,
                             name=_variable_name(
-                                "anticipate", block.block_id, slot, scenario.scenario_id, "down"
+                                "anticipate",
+                                block.block_id,
+                                slot,
+                                scenario.scenario_id,
+                                tag,
+                                "down",
                             ),
                         )
 
