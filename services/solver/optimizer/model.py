@@ -392,7 +392,6 @@ class PlanModel:
                     )
 
     def _add_storage_constraints(self) -> None:
-        hours = self._problem.slot_hours
         for block in self._problem.blocks:
             mm_per_m3 = block.storage_mm_per_m3
             for scenario in self._problem.scenarios:
@@ -415,7 +414,6 @@ class PlanModel:
                     name = _variable_name("balance", block.block_id, slot, scenario.scenario_id)
                     self._model.add_linear_constraint(balance <= deficit, name=f"{name}|upper")
                     self._model.add_linear_constraint(-balance <= -deficit, name=f"{name}|lower")
-        _ = hours
 
     def _add_safety_constraints(self) -> None:
         for block in self._problem.blocks:

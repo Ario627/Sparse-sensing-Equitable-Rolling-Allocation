@@ -39,8 +39,6 @@ from .stochastic import (
     robust_ensemble,
 )
 
-DEFAULT_CENTRAL_ID: Final = "central"
-
 
 @dataclass(frozen=True, slots=True)
 class RollingRequest:
