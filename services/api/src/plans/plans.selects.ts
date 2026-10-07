@@ -10,14 +10,7 @@ import type {
   PlanSummaryRecord,
 } from './plans.types.ts';
 
-export function toJsonInput(
-  value: unknown,
-): Prisma.InputJsonValue | typeof Prisma.DbNull {
-  return value === undefined || value === null
-    ? Prisma.DbNull
-    : (value as Prisma.InputJsonValue);
-}
-
+export {toJsonInput} from '../common/prisma/json.ts';
 interface NewestCandidate {
   readonly id: string;
   readonly createdAt: Date;

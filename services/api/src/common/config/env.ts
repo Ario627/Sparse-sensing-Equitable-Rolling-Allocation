@@ -87,6 +87,7 @@ export const envSchema = z.object({
     .min(1)
     .max(100_000)
     .default(5_000),
+  EXPERIMENT_POLL_INTERVAL_S: z.coerce.number().int().min(2).max(600).default(10),
 });
 
 export type Env = z.infer<typeof envSchema>;

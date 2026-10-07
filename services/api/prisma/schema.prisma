@@ -505,6 +505,9 @@ model Experiment {
   configHash  String
   status      ExperimentStatus @default(QUEUED)
   seedBase    Int?
+  solverExperimentId String?          @unique
+  runsTotal          Int?
+  progressJson       Json?
   createdAt   DateTime         @default(now())
   startedAt   DateTime?
   finishedAt  DateTime?
