@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { userRoleSchema } from "./auth.ts";
 import { pageSchema, pageSizeSchema, sortOrderSchema } from "./query.ts";
+import { passwordPolicySchema } from "./password.ts";
 
 export const userIdSchema = z.uuid();
 
@@ -53,6 +54,13 @@ export const usersListResponseSchema = z.strictObject({
   total_pages: z.int().positive(),
 });
 
+export const createUserRequestSchema = z.strictObject({
+  email: z.email(),
+  full_name: z.string().trim().min(1).max(120),
+  role: userRoleSchema,
+  initial_password: passwordPolicySchema,
+});
+
 export const updateUserRequestSchema = z
   .strictObject({
     full_name: z.string().trim().min(1).max(120).optional(),
@@ -71,3 +79,4 @@ export type UserDetailResponse = z.infer<typeof userDetailSchema>;
 export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
 export type UsersListResponse = z.infer<typeof usersListResponseSchema>;
 export type UpdateUserRequest = z.infer<typeof updateUserRequestSchema>;
+export type CreateUserRequest = z.infer<typeof createUserRequestSchema>;

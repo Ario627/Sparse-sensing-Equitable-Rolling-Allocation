@@ -4,9 +4,12 @@ import { JwtModule } from '@nestjs/jwt';
 import type { Env } from '../common/config/env.ts';
 import { AuthController } from './auth.controller.ts';
 import { AUTH_AUDIENCE, AUTH_ISSUER, AuthService } from './auth.service.ts';
+import { UsersModule } from '../users/users.module.ts';
 
 @Module({
   imports: [
+    UsersModule,
+
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>) => ({

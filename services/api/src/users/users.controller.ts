@@ -12,6 +12,8 @@ import {
   listUsersQuerySchema,
   updateUserRequestSchema,
   userIdSchema,
+  createUserRequestSchema,
+  type CreateUserRequest,
   type ListUsersQuery,
   type UpdateUserRequest,
   type UserDetailResponse,
@@ -19,6 +21,7 @@ import {
   type UsersListResponse,
 } from '@sera/contracts';
 import {
+  Post,
   Body,
   Controller,
   Get,
@@ -27,6 +30,7 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
+import { UserCreateService } from './users.create.service.ts';
 
 const ADMIN_ROLE = 'ADMIN' as const;
 
@@ -65,7 +69,10 @@ function toUpdateChanges(body: UpdateUserRequest): UserUpdateChanges {
 @Controller('users')
 @Roles(ADMIN_ROLE)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly createService: UserCreateService,
+  ) {}
 
   @Get()
   async list(
@@ -87,6 +94,25 @@ export class UsersController {
       total: page.total,
       total_pages: Math.max(1, Math.ceil(page.total / query.limit)),
     };
+  }
+
+  @Post()
+  async create(
+    @Body({ schema: createUserRequestSchema }) body: CreateUserRequest,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Req() request: Request,
+  ): Promise<UserSummary> {
+    const created = await this.createService.create(
+      actor.id,
+      {
+        email: body.email,
+        fullName: body.full_name,
+        role: body.role,
+        initialPassword: body.initial_password,
+      },
+      auditContextFrom(request),
+    );
+    return toUserSummary(created);
   }
 
   @Get(':id')

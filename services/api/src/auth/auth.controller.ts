@@ -15,6 +15,7 @@ import {
   Req,
   Res,
   UnauthorizedException,
+  Put,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
@@ -26,6 +27,7 @@ import {
   type AuthenticatedSession,
   type SessionUser,
 } from './auth.service.ts';
+import { changePasswordRequestSchema, type ChangePasswordRequest } from '@sera/contracts';
 
 const REFRESH_COOKIE_NAME = 'sera_refresh';
 const REFRESH_COOKIE_PATH = '/v1/auth';
@@ -34,6 +36,7 @@ const MISSING_REFRESH_MESSAGE = 'Missing refresh token';
 const LOGIN_RATE_LIMIT = { default: { limit: 5, ttl: 60_000 } };
 const REFRESH_RATE_LIMIT = { default: { limit: 30, ttl: 60_000 } };
 const LOGOUT_RATE_LIMIT = { default: { limit: 10, ttl: 60_000 } };
+const CHANGE_PASSWORD_RATE_LIMIT = { default: { limit: 5, ttl: 60_000 } };
 
 function readRefreshToken(request: Request): string {
   const value: unknown = request.cookies[REFRESH_COOKIE_NAME];
@@ -136,6 +139,23 @@ export class AuthController {
     if (token !== null) {
       await this.authService.logout(token);
     }
+    this.clearRefreshCookie(response);
+  }
+
+  @Put('password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(CHANGE_PASSWORD_RATE_LIMIT)
+  async changePassword(
+    @Body({ schema: changePasswordRequestSchema })
+    body: ChangePasswordRequest,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
+    await this.authService.changePassword(
+      user.id,
+      body.current_password,
+      body.new_password,
+    );
     this.clearRefreshCookie(response);
   }
 

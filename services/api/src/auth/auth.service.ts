@@ -2,11 +2,10 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import argon2 from 'argon2';
 import type { Env } from '../common/config/env.ts';
 import type { UserRole } from '../generated/prisma/client.ts';
 import { PrismaService } from '../prisma/prisma.service.ts';
-
+import { Argon2PasswordService } from '../users/users.password.service.ts';
 export const AUTH_ISSUER = 'sera-api';
 export const AUTH_AUDIENCE = 'sera-web';
 
@@ -18,6 +17,8 @@ const REUSE_DETECTED_MESSAGE = 'Refresh token reuse detected';
 const INACTIVE_ACCOUNT_MESSAGE = 'Account is not active';
 const DUMMY_PASSWORD_HASH =
   '$argon2id$v=19$m=19456,p=1,t=2$3J2LU/B3fdehZJfu1muCgw$QPab3dkm8p5ZH+z1RgrLlK+VyLggeNTCvzRFyb13jU0';
+
+const WRONG_PASSWORD_MESSAGE = 'Current password is incorrect';
 
 export interface SessionUser {
   readonly id: string;
@@ -46,16 +47,7 @@ function generateRefreshToken(): string {
   return randomBytes(REFRESH_TOKEN_BYTES).toString('base64url');
 }
 
-async function verifyPassword(
-  passwordHash: string,
-  password: string,
-): Promise<boolean> {
-  try {
-    return await argon2.verify(passwordHash, password);
-  } catch {
-    return false;
-  }
-}
+
 
 @Injectable()
 export class AuthService {
@@ -63,6 +55,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService<Env, true>,
+    private readonly argon2password: Argon2PasswordService,
   ) {}
 
   private async signAccessToken(
@@ -167,7 +160,7 @@ export class AuthService {
         passwordHash: true,
       },
     });
-    const passwordValid = await verifyPassword(
+    const passwordValid = await this.argon2password.verify(
       user?.passwordHash ?? DUMMY_PASSWORD_HASH,
       password,
     );
@@ -230,7 +223,7 @@ export class AuthService {
     };
   }
 
-    async logout(presentedToken: string): Promise<void> {
+  async logout(presentedToken: string): Promise<void> {
     const record = await this.prisma.refreshToken.findUnique({
       where: { tokenHash: hashRefreshToken(presentedToken) },
       select: { familyId: true, revokedAt: true },
@@ -260,5 +253,52 @@ export class AuthService {
       fullName: user.fullName,
       role: user.role,
     };
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        isActive: true,
+        passwordHash: true,
+      },
+    });
+
+    if (user === null || !user.isActive) {
+      throw new UnauthorizedException(INACTIVE_ACCOUNT_MESSAGE);
+    }
+
+    const valid = await this.argon2password.verify(
+      user.passwordHash,
+      currentPassword,
+    );
+
+    if (!valid) {
+      throw new UnauthorizedException(WRONG_PASSWORD_MESSAGE);
+    }
+
+    const passwordHash = await this.argon2password.hash(newPassword);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      });
+
+      await tx.refreshToken.updateMany({
+        where: {
+          userId: user.id,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
+    });
   }
 }
