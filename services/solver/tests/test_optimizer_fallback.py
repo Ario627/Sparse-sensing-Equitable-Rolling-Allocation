@@ -4,8 +4,8 @@ from typing import Final
 
 import pytest
 
-from app.core.types import DomainInvariantError
-from optimizer.fallback import (
+from sera.core.types import DomainInvariantError
+from sera.optimizer.fallback import (
     FallbackContext,
     FallbackDecision,
     FallbackLevel,
@@ -15,7 +15,7 @@ from optimizer.fallback import (
     select_fallback,
     service_ratio_of,
 )
-from optimizer.model import PlanningBlockSpec, PlanningProblem, PlanningScenario
+from sera.optimizer.model import PlanningBlockSpec, PlanningProblem, PlanningScenario
 
 SLOT_HOURS: Final = 6.0
 AREA_M2: Final = 10_000.0
@@ -269,6 +269,12 @@ def test_decision_reason_is_propagated() -> None:
     problem = ledger_problem()
     decision = decide(problem, reason=FallbackReason.SOLVER_ERROR)
     assert decision.reason is FallbackReason.SOLVER_ERROR
+
+
+def test_no_context_reason_stays_explicit() -> None:
+    problem = ledger_problem()
+    decision = decide(problem, reason=FallbackReason.NO_CONTEXT)
+    assert decision.reason is FallbackReason.NO_CONTEXT
 
 
 def test_last_feasible_plan_requires_alignment() -> None:

@@ -7,10 +7,10 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from app.core.rng import generator_for
-from app.core.types import CropStage, DomainInvariantError
-from app.demand.kp01 import water_layer_replacement_mm_per_day
-from simulator.crop import (
+from sera.core.rng import generator_for
+from sera.core.types import CropStage, DomainInvariantError
+from sera.demand.kp01 import water_layer_replacement_mm_per_day
+from sera.simulator.crop import (
     HALF_MONTH_DAYS,
     SEASON_DAYS,
     CropDayTruth,

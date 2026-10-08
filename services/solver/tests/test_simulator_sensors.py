@@ -6,9 +6,9 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from app.core.rng import generator_for
-from app.core.types import DomainInvariantError, ReadingQuality, SensorKind
-from simulator.sensors import (
+from sera.core.rng import generator_for
+from sera.core.types import DomainInvariantError, ReadingQuality, SensorKind
+from sera.simulator.sensors import (
     LevelRating,
     LevelSensorSpec,
     SensorNoiseLevel,

@@ -2,20 +2,20 @@ from __future__ import annotations
 
 from typing import Final
 
-import numpy as np  # type: ignore
+import numpy as np
 import pytest
 
-from app.core.rng import generator_for
-from app.core.types import DomainInvariantError, ReadingQuality
-from app.demand.crop_water import slot_mm_from_daily_rate
-from estimator.confidence import (
+from sera.core.rng import generator_for
+from sera.core.types import DomainInvariantError, ReadingQuality
+from sera.demand.crop_water import slot_mm_from_daily_rate
+from sera.estimator.confidence import (
     calibration_error,
     coverage_rate,
     gaussian_interval,
     storage_intervals,
 )
-from estimator.observations import MeasurementBatch
-from estimator.state import (
+from sera.estimator.observations import MeasurementBatch
+from sera.estimator.state import (
     DEFAULT_INITIAL_SIGMA_MM,
     DEFAULT_INITIAL_STORAGE_MM,
     StorageDynamicsParams,

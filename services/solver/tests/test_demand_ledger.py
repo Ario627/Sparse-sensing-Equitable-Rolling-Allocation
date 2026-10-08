@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import Final
 
-import pytest  # type: ignore
-from hypothesis import given  # type: ignore
-from hypothesis import strategies as st  # type: ignore
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
-from app.core.types import CropStage, DemandTargets, DomainInvariantError
-from app.core.units import storage_mm_to_volume_m3
-from app.demand.crop_water import (
+from sera.core.types import CropStage, DemandTargets, DomainInvariantError
+from sera.core.units import storage_mm_to_volume_m3
+from sera.demand.crop_water import (
     advance_storage_mm,
     demand_targets,
     net_requirement_slot_mm,
@@ -18,20 +18,20 @@ from app.demand.crop_water import (
     storage_shortfall_mm,
     total_consumptive_rate_mm_per_day,
 )
-from app.demand.kp01 import (
+from sera.demand.kp01 import (
     effective_rainfall_paddy_mm,
     is_critical_stage,
     kc_for_stage,
     water_layer_replacement_mm_per_day,
     water_layer_replacement_season_mm,
 )
-from app.ledger.deficit import (
+from sera.ledger.deficit import (
     DeficitBreakdown,
     adequacy_ratio,
     agricultural_deficit_m3,
     structural_deficit_m3,
 )
-from app.ledger.service_debt import ServiceLedgerState, advance_ledger
+from sera.ledger.service_debt import ServiceLedgerState, advance_ledger
 
 HECTARE_M2: Final = 10_000.0
 SLOT_HOURS: Final = 6.0
@@ -532,9 +532,9 @@ def test_agricultural_deficit_never_understates_structural_gap(
 
 def test_deficit_breakdown_reports_both_gaps_and_adequacy() -> None:
     breakdown = DeficitBreakdown.from_volumes(
-        required_m3=100.0,
+        target_req_m3=100.0,
         delivered_m3=50.0,
-        physical_capacity_m3=80.0,
+        target_phys_m3=80.0,
     )
     assert breakdown.agricultural_deficit_m3 == pytest.approx(50.0)
     assert breakdown.structural_deficit_m3 == pytest.approx(20.0)

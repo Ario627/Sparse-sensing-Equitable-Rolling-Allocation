@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from typing import Final
 
-import pytest  # type: ignore
+import pytest
 
-from app.core.types import DomainInvariantError
-from app.core.units import flow_hours_to_volume_m3
-from baselines.base import (
+from sera.baselines.base import (
     BaselineMethod,
     BaselinePlan,
     SlotCapacityBudget,
@@ -16,16 +14,18 @@ from baselines.base import (
     serving_edge_ids,
     slot_supply_gross_m3,
 )
-from baselines.fixed_rotation import FixedRotationStrategy
-from baselines.ledger_greedy import LedgerGreedyStrategy
-from baselines.oracle import OracleStrategy
-from baselines.proportional import ProportionalStrategy, WeightBasis
-from baselines.registry import (
+from sera.baselines.fixed_rotation import FixedRotationStrategy
+from sera.baselines.ledger_greedy import LedgerGreedyStrategy
+from sera.baselines.oracle import OracleStrategy
+from sera.baselines.proportional import ProportionalStrategy, WeightBasis
+from sera.baselines.registry import (
     DEFAULT_REGISTRY,
     BaselineRegistry,
     parse_method,
 )
-from optimizer.model import PlanningBlockSpec, PlanningProblem, PlanningScenario
+from sera.core.types import DomainInvariantError
+from sera.core.units import flow_hours_to_volume_m3
+from sera.optimizer.model import PlanningBlockSpec, PlanningProblem, PlanningScenario
 
 SLOT_HOURS: Final = 6.0
 AREA_M2: Final = 10_000.0

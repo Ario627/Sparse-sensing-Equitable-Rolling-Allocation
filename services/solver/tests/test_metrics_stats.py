@@ -3,12 +3,12 @@ from __future__ import annotations
 import math
 from typing import Final
 
-import numpy as np  # type: ignore
+import numpy as np
 import pytest
 
-from app.core.rng import generator_for
-from app.core.types import DomainInvariantError, Interval
-from experiments.metrics import (
+from sera.core.rng import generator_for
+from sera.core.types import DomainInvariantError, Interval
+from sera.experiments.metrics import (
     SlotRecord,
     SolverTelemetry,
     adequacy,
@@ -34,7 +34,7 @@ from experiments.metrics import (
     tail_deficit_m3,
     worst_service_ratio,
 )
-from experiments.stats import (
+from sera.experiments.stats import (
     SignedRankResult,
     bootstrap_ci,
     holm_adjust,

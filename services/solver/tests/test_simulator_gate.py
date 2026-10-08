@@ -6,9 +6,9 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from app.core.rng import generator_for
-from app.core.types import DomainInvariantError
-from simulator.gate import (
+from sera.core.rng import generator_for
+from sera.core.types import DomainInvariantError
+from sera.simulator.gate import (
     GateFaultSpec,
     GateState,
     GateUnit,

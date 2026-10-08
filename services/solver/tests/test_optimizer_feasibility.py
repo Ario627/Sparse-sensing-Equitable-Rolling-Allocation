@@ -6,9 +6,9 @@ from typing import Final
 
 import pytest
 
-from app.core.types import DomainInvariantError
-from app.core.units import flow_hours_to_volume_m3
-from optimizer.model import (
+from sera.core.types import DomainInvariantError
+from sera.core.units import flow_hours_to_volume_m3
+from sera.optimizer.model import (
     PlanDecision,
     PlanningBlockSpec,
     PlanningProblem,
@@ -16,8 +16,8 @@ from optimizer.model import (
     build_plan_model,
     extract_plan,
 )
-from optimizer.objectives import LexicographicRequest, solve_lexicographic
-from optimizer.solver import SolveBudget, SolveOutcome
+from sera.optimizer.objectives import LexicographicRequest, solve_lexicographic
+from sera.optimizer.solver import SolveBudget, SolveOutcome
 
 SLOT_HOURS: Final = 6.0
 AREA_M2: Final = 10_000.0

@@ -4,14 +4,14 @@ import math
 from dataclasses import replace
 from typing import Final
 
-import pytest  # type: ignore
-from hypothesis import given  # type: ignore
-from hypothesis import strategies as st  # type: ignore
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
-from app.core.rng import generator_for
-from app.core.types import DomainInvariantError, LossZone, NetworkSpec
-from app.core.units import LPS_HOUR_TO_M3
-from simulator.hydraulics import (
+from sera.core.rng import generator_for
+from sera.core.types import DomainInvariantError, LossZone, NetworkSpec
+from sera.core.units import LPS_HOUR_TO_M3
+from sera.simulator.hydraulics import (
     TransportPipe,
     advance_loss_logit,
     apply_capacity_limit,
@@ -22,7 +22,7 @@ from simulator.hydraulics import (
     latency_by_block,
     logit,
 )
-from simulator.network import NetworkIndex, chain_network
+from sera.simulator.network import NetworkIndex, chain_network
 
 RNG_SEED: Final = 20_261_008
 EDGE_LENGTH_M: Final = 100.0

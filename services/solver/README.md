@@ -17,16 +17,21 @@ Service ini satu-satunya tempat logika scientific SERA hidup. Web tidak pernah m
 
 ## Peta modul
 
+Seluruh paket Python berada di bawah satu namespace `sera/`; `sera/app/` hanya entrypoint (settings, CLI, FastAPI app).
+
 | Paket | Tanggung jawab | Rujukan |
 | --- | --- | --- |
-| `app/` | Entrypoint FastAPI, settings, CLI, tipe & satuan inti, demand (KP-01, neraca air), ledger | `04` §5–§7 |
-| `api/` | Endpoint HTTP + skema Pydantic (mirror kontrak) | `05` §6 |
-| `simulator/` | Ground truth: hydraulics, crop, weather, gate, sensors, scenario, recorder | `04` §12 |
-| `estimator/` | State estimation, loss estimation, confidence + NIS | `04` §3–§4 |
-| `sensing/` | Identifiability gate, VOI, regret, sensor selection | `04` §5, §10 |
-| `optimizer/` | Model MILP, lexicographic, stochastic/CVaR, rolling, fallback, event-trigger, binding factors | `04` §8–§9, §13–§14 |
-| `baselines/` | Proportional, fixed rotation, ledger-greedy, oracle | `08` §2 |
-| `experiments/` | Runner, metrics, statistik, reporting | `08` §5–§7 |
+| `sera/app/` | Entrypoint FastAPI, settings, CLI | `04` §5–§7 |
+| `sera/core/` | Tipe & satuan inti, RNG deterministik, canonical JSON + hashing | `04` §2, `05` §7 |
+| `sera/demand/` | KP-01 dan neraca air padi | `04` §6 |
+| `sera/ledger/` | Service ratio, debt, dua jenis deficit | `04` §7 |
+| `sera/api/` | Endpoint HTTP + skema Pydantic (mirror kontrak) | `05` §6 |
+| `sera/simulator/` | Ground truth: hydraulics, crop, weather, gate, sensors, scenario, recorder | `04` §12 |
+| `sera/estimator/` | State estimation, loss estimation, confidence + NIS | `04` §3–§4 |
+| `sera/sensing/` | Identifiability gate, VOI, regret, sensor selection | `04` §5, §10 |
+| `sera/optimizer/` | Model MILP, lexicographic, stochastic/CVaR, rolling, fallback, event-trigger, binding factors | `04` §8–§9, §13–§14 |
+| `sera/baselines/` | Proportional, fixed rotation, ledger-greedy, oracle | `08` §2 |
+| `sera/experiments/` | Runner, metrics, statistik, reporting | `08` §5–§7 |
 
 ## Quickstart
 
@@ -34,7 +39,7 @@ Service ini satu-satunya tempat logika scientific SERA hidup. Web tidak pernah m
 cd services/solver
 cp .env.example .env
 uv sync
-uv run uvicorn app.main:app --reload
+uv run uvicorn sera.app.main:app --reload
 ```
 
 Verifikasi: `curl -fsS http://localhost:8000/health` harus mengembalikan `status`, `version`, dan `schema_version`.
@@ -112,6 +117,6 @@ Aturan yang tidak boleh dilanggar (bug historis v2, `04` §2.4):
 
 ## Urutan baca untuk kontributor baru
 
-`app/settings.py` → `app/core/` → `app/demand/` → `app/ledger/` → `simulator/` → `estimator/` → `optimizer/` → `api/`.
+`sera/app/settings.py` → `sera/core/` → `sera/demand/` → `sera/ledger/` → `sera/simulator/` → `sera/estimator/` → `sera/optimizer/` → `sera/api/`.
 
 

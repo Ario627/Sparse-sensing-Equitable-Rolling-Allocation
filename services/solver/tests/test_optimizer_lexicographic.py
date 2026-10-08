@@ -4,8 +4,8 @@ from typing import Final
 
 import pytest
 
-from app.core.types import DomainInvariantError, PolicyProfile
-from optimizer.model import (
+from sera.core.types import DomainInvariantError, PolicyProfile
+from sera.optimizer.model import (
     PlanModel,
     PlanningBlockSpec,
     PlanningProblem,
@@ -13,7 +13,7 @@ from optimizer.model import (
     build_plan_model,
     extract_plan,
 )
-from optimizer.objectives import (
+from sera.optimizer.objectives import (
     BALANCED_POLICY,
     DEFAULT_ORDER,
     EQUITY_FIRST_POLICY,
@@ -27,7 +27,7 @@ from optimizer.objectives import (
     solve_lexicographic,
     stage_objective,
 )
-from optimizer.solver import SolveBudget, SolverBackend, solve_model
+from sera.optimizer.solver import SolveBudget, SolverBackend, solve_model
 
 SLOT_HOURS: Final = 6.0
 AREA_M2: Final = 10_000.0

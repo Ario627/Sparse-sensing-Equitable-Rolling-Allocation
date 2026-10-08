@@ -3,12 +3,13 @@ from __future__ import annotations
 import math
 from typing import Final
 
-import pytest  # type: ignore
-from hypothesis import given  # type: ignore
-from hypothesis import strategies as st  # type: ignore
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
-from app.core.types import DomainInvariantError
-from app.core.units import (
+from sera.baselines.base import block_gross_per_slot_m3
+from sera.core.types import DomainInvariantError
+from sera.core.units import (
     LPS_HOUR_TO_M3,
     MM_PER_M,
     combined_path_efficiency,
@@ -19,8 +20,7 @@ from app.core.units import (
     storage_mm_to_volume_m3,
     volume_m3_to_storage_mm,
 )
-from baselines.base import block_gross_per_slot_m3
-from optimizer.model import PlanningBlockSpec
+from sera.optimizer.model import PlanningBlockSpec
 
 HECTARE_M2: Final = 10_000.0
 LITRES_PER_M3: Final = 1_000.0

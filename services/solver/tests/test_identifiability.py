@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Final
 
-import numpy as np  # type: ignore
+import numpy as np
 import pytest
 
-from app.core.types import DomainInvariantError
-from estimator.identifiability import (
+from sera.core.types import DomainInvariantError
+from sera.estimator.identifiability import (
     IdentifiabilityFailure,
     IdentifiabilityReport,
     IdentifiabilityThresholds,

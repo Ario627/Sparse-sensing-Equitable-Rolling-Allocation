@@ -6,10 +6,10 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Final
 
-import pytest #type: ignore
-from fastapi.testclient import TestClient #type: ignore
+import pytest
+from fastapi.testclient import TestClient
 
-from app.main import app
+from sera.app.main import app
 
 pytestmark = pytest.mark.integration
 
@@ -236,84 +236,165 @@ def test_plan_conflicting_slot_hours_is_rejected(client: TestClient) -> None:
     assert response.json()["error"]["code"] == "DOMAIN_INVARIANT"
 
 
-def test_estimate_with_network_returns_state_and_loss(client: TestClient) -> None:
-    response = client.post(
-        "/v1/estimate",
-        json={
-            **envelope("contract-estimate"),
-            "network_id": "net-2",
-            "network": small_network(),
-            "observations": [
-                {
-                    "sensor_id": "lvl-b1",
-                    "kind": "water_level",
-                    "recorded_at": "2026-10-08T00:00:00Z",
-                    "value": 55.0,
-                    "target_id": "b1",
-                },
-                {
-                    "sensor_id": "lvl-b2",
-                    "kind": "water_level",
-                    "recorded_at": "2026-10-08T00:00:00Z",
-                    "value": 47.0,
-                    "target_id": "b2",
-                },
-            ],
-            "state_prev": {
-                "slot_index": 0,
-                "entries": [
-                    {"block_id": "b1", "mean_mm": 52.0},
-                    {"block_id": "b2", "mean_mm": 45.0, "std_mm": 10.0},
-                ],
+def estimate_body(
+    request_id: str,
+    *,
+    state_prev: list[dict[str, object]] | None = None,
+    window_minutes: int = 5,
+) -> dict[str, Any]:
+    return {
+        **envelope(request_id),
+        "network_id": "net-2",
+        "network": small_network(),
+        "observations": [
+            {
+                "sensor_id": "lvl-b1",
+                "node_id": "n1",
+                "block_id": "b1",
+                "type": "WATER_LEVEL",
+                "unit": "mm",
+                "value": 55.0,
+                "quality": "GOOD",
+                "ts": "2026-10-08T00:00:00Z",
             },
-        },
-    )
+            {
+                "sensor_id": "lvl-b2",
+                "node_id": "n2",
+                "block_id": "b2",
+                "type": "WATER_LEVEL",
+                "unit": "mm",
+                "value": 47.0,
+                "quality": "GOOD",
+                "ts": "2026-10-08T00:00:00Z",
+            },
+        ],
+        "state_prev": state_prev,
+        "params": {"window_minutes": window_minutes},
+    }
+
+
+def test_estimate_matches_nestjs_contract(client: TestClient) -> None:
+    response = client.post("/v1/estimate", json=estimate_body("contract-estimate"))
     assert response.status_code == 200
     body = response.json()
     assert body["schema_version"] == 1
     assert body["request_id"] == "contract-estimate"
-    assert [entry["block_id"] for entry in body["state"]] == ["b1", "b2"]
-    assert body["loss"]
-    zones = {entry["zone"] for entry in body["loss"]}
-    assert zones <= {"HEAD", "MIDDLE", "TAIL"}
-    assert 0.0 <= body["confidence"] <= 1.0
+    assert "T" in body["ts"]
+    states = body["states"]
+    assert [entry["block_id"] for entry in states] == ["b1", "b2"]
+    for entry in states:
+        assert entry["method"] == "joint-ekf"
+        assert 0.0 <= entry["confidence"] <= 1.0
+        assert entry["state"]["storage_mm"] >= 0.0
+        assert entry["state"]["std_mm"] >= 0.0
+        assert entry["covariance"]["variance_mm2"] >= 0.0
+    losses = body["losses"]
+    assert losses
+    for loss in losses:
+        assert loss["zone"] in {"HEAD", "MIDDLE", "TAIL"}
+        assert loss["eta_lower"] <= loss["eta_mean"] <= loss["eta_upper"]
+        assert isinstance(loss["identified"], bool)
     diagnostics = body["diagnostics"]
+    assert diagnostics["window_minutes"] == 5
+    assert diagnostics["observations_total"] == 2
     assert diagnostics["observations_used"] == 2
     assert diagnostics["observations_ignored"] == 0
-    assert diagnostics["identifiability"] is not None
 
 
-def test_estimate_without_state_or_network_is_rejected(client: TestClient) -> None:
-    response = client.post(
-        "/v1/estimate",
-        json={
-            **envelope("contract-estimate-empty"),
-            "network_id": "net-2",
-            "observations": [],
+def test_estimate_seeds_prior_from_previous_state(client: TestClient) -> None:
+    first = client.post("/v1/estimate", json=estimate_body("contract-estimate-first")).json()
+    previous: list[dict[str, Any]] = [
+        {
+            "block_id": "b1",
+            "ts": "2026-10-08T00:00:00Z",
+            "state": {"storage_mm": 33.0, "std_mm": 4.0},
+            "covariance": {"variance_mm2": 16.0},
         },
-    )
+        {
+            "block_id": "b2",
+            "ts": "2026-10-08T00:00:00Z",
+            "state": first["states"][1]["state"],
+            "covariance": first["states"][1]["covariance"],
+        },
+    ]
+    body = estimate_body("contract-estimate-seeded", state_prev=previous)
+    body["observations"] = [
+        observation for observation in body["observations"] if observation["sensor_id"] == "lvl-b2"
+    ]
+    response = client.post("/v1/estimate", json=body)
+    assert response.status_code == 200
+    states = {entry["block_id"]: entry for entry in response.json()["states"]}
+    assert states["b1"]["state"]["storage_mm"] == pytest.approx(33.0, abs=1.0e-6)
+    assert states["b1"]["covariance"]["variance_mm2"] == pytest.approx(16.0)
+    assert 40.0 <= states["b2"]["state"]["storage_mm"] <= 55.0
+
+
+def test_estimate_ignores_non_level_readings(client: TestClient) -> None:
+    body = estimate_body("contract-estimate-flow")
+    body["observations"] = [
+        {
+            "sensor_id": "flow-b1",
+            "node_id": "n1",
+            "block_id": "b1",
+            "type": "FLOW",
+            "unit": "L/s",
+            "value": 8.7,
+            "quality": "GOOD",
+            "ts": "2026-10-08T00:00:00Z",
+        },
+        {
+            "sensor_id": "lvl-b2",
+            "node_id": "n2",
+            "block_id": "b2",
+            "type": "WATER_LEVEL",
+            "unit": "mm",
+            "value": 48.0,
+            "quality": "GOOD",
+            "ts": "2026-10-08T00:00:00Z",
+        },
+    ]
+    response = client.post("/v1/estimate", json=body)
+    assert response.status_code == 200
+    diagnostics = response.json()["diagnostics"]
+    assert diagnostics["observations_used"] == 1
+    assert diagnostics["observations_ignored"] == 1
+
+
+def test_estimate_gate_reports_unobserved_loss_parameters(client: TestClient) -> None:
+    response = client.post("/v1/estimate", json=estimate_body("contract-estimate-gate"))
+    assert response.status_code == 200
+    losses = response.json()["losses"]
+    assert losses
+    for loss in losses:
+        assert loss["identified"] is False
+        assert loss["eta_mean"] == pytest.approx(0.9, abs=1.0e-9)
+        assert loss["eta_lower"] <= loss["eta_mean"] <= loss["eta_upper"]
+        diagnostics = loss["diagnostics"]
+        assert diagnostics["reason"] == "LOSS_PARAMETERS_UNOBSERVED"
+        assert "RANK_DEFICIENT" in diagnostics["failures"]
+        assert all(value == 0.0 for value in diagnostics["marginal_information"].values())
+
+
+def test_estimate_rejects_unknown_params(client: TestClient) -> None:
+    body = estimate_body("contract-estimate-bad-param")
+    body["params"] = {"window_minutes": 5, "nope": 1}
+    response = client.post("/v1/estimate", json=body)
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "DOMAIN_INVARIANT"
 
 
+def test_estimate_requires_network(client: TestClient) -> None:
+    body = estimate_body("contract-estimate-no-network")
+    body.pop("network")
+    response = client.post("/v1/estimate", json=body)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION"
+
+
 def test_estimate_rejects_naive_timestamp(client: TestClient) -> None:
-    response = client.post(
-        "/v1/estimate",
-        json={
-            **envelope("contract-estimate-naive"),
-            "network_id": "net-2",
-            "observations": [
-                {
-                    "sensor_id": "lvl-b1",
-                    "kind": "water_level",
-                    "recorded_at": "2026-10-08T00:00:00",
-                    "value": 55.0,
-                    "target_id": "b1",
-                }
-            ],
-            "state_prev": {"slot_index": 0, "entries": [{"block_id": "b1", "mean_mm": 50.0}]},
-        },
-    )
+    body = estimate_body("contract-estimate-naive")
+    body["observations"][0]["ts"] = "2026-10-08T00:00:00"
+    response = client.post("/v1/estimate", json=body)
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "VALIDATION"
 

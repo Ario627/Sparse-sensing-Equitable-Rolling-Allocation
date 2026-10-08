@@ -21,14 +21,11 @@ dependencies = [
   "uvicorn[standard]==0.54.0",
   "pydantic==2.13.5",
   "pydantic-settings>=2.13",
-  "structlog>=25.4",
   "numpy==2.5.3",
   "scipy==1.18.1",
   "pandas==3.0.6",
   "pyarrow==25.0.1",
   "ortools==9.15.6755",
-  "highspy==1.15.1",
-  "pykalman==0.11.2",
   "pyyaml==6.0.3",
 ]
 
@@ -37,7 +34,7 @@ scip = ["pyscipopt>=5.5"]
 otel = ["opentelemetry-sdk==1.45.0", "opentelemetry-exporter-otlp==1.45.0"]
 
 [project.scripts]
-sera-exp = "app.cli:main"
+sera-exp = "sera.app.cli:main"
 
 [build-system]
 requires = ["hatchling>=1.30"]
@@ -63,10 +60,10 @@ required-version = ">=0.11.7"
 default-groups = ["dev"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["app", "api", "simulator", "estimator", "optimizer", "sensing", "baselines", "experiments"]
+packages = ["sera"]
 
 [tool.hatch.build.targets.sdist]
-include = ["app", "api", "simulator", "estimator", "optimizer", "sensing", "baselines", "experiments", "tests", "pyproject.toml", "README.md"]
+include = ["sera", "tests", "pyproject.toml", "README.md"]
 
 [tool.ruff]
 target-version = "py314"
@@ -78,7 +75,7 @@ select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "PIE", "PT", "RET", "RUF",
 ignore = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["app", "api", "simulator", "estimator", "optimizer", "sensing", "baselines", "experiments"]
+known-first-party = ["sera"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -86,7 +83,7 @@ indent-style = "space"
 line-ending = "lf"
 
 [tool.pyright]
-include = ["app", "api", "simulator", "estimator", "optimizer", "sensing", "baselines", "experiments", "tests"]
+include = ["sera", "tests"]
 exclude = ["**/__pycache__", ".venv"]
 pythonVersion = "3.14"
 typeCheckingMode = "strict"
@@ -114,7 +111,7 @@ markers = [
 
 [tool.coverage.run]
 branch = true
-source = ["app", "api", "simulator", "estimator", "optimizer", "sensing", "baselines", "experiments"]
+source = ["sera"]
 
 [tool.coverage.report]
 precision = 1

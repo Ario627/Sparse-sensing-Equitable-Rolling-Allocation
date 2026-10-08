@@ -3,14 +3,14 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Final
 
-import numpy as np  # type: ignore
-import pytest  # type: ignore
-from hypothesis import HealthCheck  # type: ignore
-from hypothesis import settings as hypothesis_settings  # type: ignore
+import numpy as np
+import pytest
+from hypothesis import HealthCheck
+from hypothesis import settings as hypothesis_settings
 
-from app.core.rng import generator_for
-from app.core.types import NetworkSpec
-from simulator.network import NetworkIndex, branched_network, chain_network
+from sera.core.rng import generator_for
+from sera.core.types import NetworkSpec
+from sera.simulator.network import NetworkIndex, branched_network, chain_network
 
 TEST_SEED: Final = 20_261_008
 HYPOTHESIS_PROFILE: Final = "sera"

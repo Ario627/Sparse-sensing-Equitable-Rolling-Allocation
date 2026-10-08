@@ -4,16 +4,16 @@ import datetime
 import math
 from typing import Final
 
-from app.core.rng import generator_for
-from app.core.types import LossZone
-from app.demand.kp01 import KP01_PERC_DEFAULT_MM_PER_DAY, kc_for_stage
-from experiments.policies import ObservedSignals, PolicyConfig, SignalSnapshot, TargetTable
-from simulator.crop import stage_for_day
-from simulator.engine import SimulationConfig, SimulationResult, SlotContext, run_simulation
-from simulator.gate import GateFaultSpec
-from simulator.network import NetworkIndex
-from simulator.scenarios import ScenarioSpec, scenario_from_preset
-from simulator.weather import forecast_error_for, forecast_horizon
+from sera.core.rng import generator_for
+from sera.core.types import LossZone
+from sera.demand.kp01 import KP01_PERC_DEFAULT_MM_PER_DAY, kc_for_stage
+from sera.experiments.policies import ObservedSignals, PolicyConfig, SignalSnapshot, TargetTable
+from sera.simulator.crop import stage_for_day
+from sera.simulator.engine import SimulationConfig, SimulationResult, SlotContext, run_simulation
+from sera.simulator.gate import GateFaultSpec
+from sera.simulator.network import NetworkIndex
+from sera.simulator.scenarios import ScenarioSpec, scenario_from_preset
+from sera.simulator.weather import forecast_error_for, forecast_horizon
 
 SEED: Final = 20_261_008
 SLOT_HOURS: Final = 6.0

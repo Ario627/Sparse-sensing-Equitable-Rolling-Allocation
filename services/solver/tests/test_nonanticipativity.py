@@ -5,15 +5,19 @@ from typing import Final
 
 import pytest
 
-from optimizer.model import (
+from sera.optimizer.model import (
     PlanningBlockSpec,
     PlanningProblem,
     PlanningScenario,
     build_plan_model,
     extract_plan,
 )
-from optimizer.objectives import LexicographicOutcome, LexicographicRequest, solve_lexicographic
-from optimizer.solver import SolveBudget
+from sera.optimizer.objectives import (
+    LexicographicOutcome,
+    LexicographicRequest,
+    solve_lexicographic,
+)
+from sera.optimizer.solver import SolveBudget
 
 SLOT_HOURS: Final = 6.0
 AREA_M2: Final = 10_000.0

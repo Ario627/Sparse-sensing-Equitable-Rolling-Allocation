@@ -3,14 +3,14 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Final
 
-import numpy as np  # type: ignore
+import numpy as np
 import pytest
-from scipy.special import logit  # type: ignore
+from scipy.special import logit
 
-from app.core.types import DomainInvariantError, LossZone, ReadingQuality
-from app.core.units import volume_m3_to_storage_mm
-from estimator.ekf import ekf_predict, ekf_update
-from estimator.loss import (
+from sera.core.types import DomainInvariantError, LossZone, ReadingQuality
+from sera.core.units import volume_m3_to_storage_mm
+from sera.estimator.ekf import ekf_predict, ekf_update
+from sera.estimator.loss import (
     JointControl,
     JointEstimateView,
     JointStorageLossModel,
@@ -24,8 +24,8 @@ from estimator.loss import (
     path_efficiency_z_gradient,
     prepare_measurement,
 )
-from estimator.observations import MeasurementBatch
-from simulator.network import NetworkIndex, chain_network
+from sera.estimator.observations import MeasurementBatch
+from sera.simulator.network import NetworkIndex, chain_network
 
 BLOCK_COUNT: Final = 6
 S_MAX_MM: Final = 100.0
