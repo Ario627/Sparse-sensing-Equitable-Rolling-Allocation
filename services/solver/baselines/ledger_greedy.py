@@ -70,9 +70,7 @@ class LedgerGreedyStrategy:
         blocks = problem.blocks
         block_ids = problem.block_ids
         block_by_id = {block.block_id: block for block in blocks}
-        quanta = {
-            block.block_id: _net_quantum_m3(block, problem.slot_hours) for block in blocks
-        }
+        quanta = {block.block_id: _net_quantum_m3(block, problem.slot_hours) for block in blocks}
         quantum_mm = {
             block.block_id: volume_m3_to_storage_mm(quanta[block.block_id], block.area_m2)
             for block in blocks
@@ -115,9 +113,7 @@ class LedgerGreedyStrategy:
                 storage[block.block_id] = _next_storage_mm(
                     storage[block.block_id],
                     block,
-                    net_added_mm=quantum_mm[block.block_id]
-                    if opens[block.block_id][slot]
-                    else 0.0,
+                    net_added_mm=quantum_mm[block.block_id] if opens[block.block_id][slot] else 0.0,
                     rain_mm=scenario.rain_effective_mm[position][slot],
                     consumptive_mm=scenario.etc_mm[position][slot]
                     + scenario.perc_mm[position][slot]

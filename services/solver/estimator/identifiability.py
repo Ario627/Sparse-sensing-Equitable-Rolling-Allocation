@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import DomainInvariantError, require_positive
 
@@ -34,9 +34,7 @@ def information_contribution(
         raise DomainInvariantError("observation_jacobian must be finite")
     noise = _require_square(measurement_covariance, "measurement_covariance")
     if noise.shape[0] != jacobian.shape[0]:
-        raise DomainInvariantError(
-            "measurement_covariance must match the observation dimension"
-        )
+        raise DomainInvariantError("measurement_covariance must match the observation dimension")
     try:
         solved = np.linalg.solve(noise, jacobian)
     except np.linalg.LinAlgError as error:
@@ -47,18 +45,12 @@ def information_contribution(
 
 def information_matrix(contributions: Sequence[np.ndarray]) -> np.ndarray:
     if not contributions:
-        raise DomainInvariantError(
-            "at least one information contribution is required"
-        )
-    total = np.zeros_like(
-        _require_square(contributions[0], "information contribution")
-    )
+        raise DomainInvariantError("at least one information contribution is required")
+    total = np.zeros_like(_require_square(contributions[0], "information contribution"))
     for matrix in contributions:
         current = _require_square(matrix, "information contribution")
         if current.shape != total.shape:
-            raise DomainInvariantError(
-                "information contributions must share one shape"
-            )
+            raise DomainInvariantError("information contributions must share one shape")
         total += current
     return (total + total.T) / 2.0
 
@@ -161,9 +153,7 @@ class InformationWindow:
         return len(self._contributions)
 
     def add(self, contribution: np.ndarray) -> None:
-        self._contributions.append(
-            _require_square(contribution, "information contribution")
-        )
+        self._contributions.append(_require_square(contribution, "information contribution"))
 
     def matrix(self) -> np.ndarray:
         return information_matrix(tuple(self._contributions))

@@ -16,9 +16,7 @@ BaselineFactory = Callable[[], BaselineStrategy]
 
 SERA_PIPELINE_MODULE: Final = "optimizer.rolling"
 
-_SERA_MESSAGE: Final = (
-    f"SERA runs through {SERA_PIPELINE_MODULE} and is not a baseline strategy"
-)
+_SERA_MESSAGE: Final = f"SERA runs through {SERA_PIPELINE_MODULE} and is not a baseline strategy"
 
 
 def parse_method(value: str) -> BaselineMethod:

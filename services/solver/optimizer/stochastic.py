@@ -181,11 +181,7 @@ def ensemble_summary(
     demand_ratios = tuple(_demand_total(item) / demand_reference for item in scenarios)
     probabilities = tuple(item.probability for item in scenarios)
     uniform = max(probabilities) - min(probabilities) <= PROBABILITY_TOLERANCE
-    tail_mass = (
-        require_cvar_support(len(scenarios), cvar_alpha)
-        if cvar_alpha is not None
-        else None
-    )
+    tail_mass = require_cvar_support(len(scenarios), cvar_alpha) if cvar_alpha is not None else None
     return ScenarioEnsembleSummary(
         n_scenarios=len(scenarios),
         supply_ratio_min=min(supply_ratios),

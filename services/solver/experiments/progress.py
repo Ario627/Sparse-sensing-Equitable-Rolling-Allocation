@@ -5,7 +5,6 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Final
 
 from app.core.types import (
     DomainInvariantError,
@@ -53,13 +52,12 @@ class ProgressSnapshot:
                 raise DomainInvariantError(f"{name} must be a non-negative integer")
         if self.runs_done + self.runs_failed > self.runs_total:
             raise DomainInvariantError("finished runs must not exceed runs_total")
-        if self.current_run_index is not None:
-            if (
-                isinstance(self.current_run_index, bool)
-                or not isinstance(self.current_run_index, int)
-                or not 0 <= self.current_run_index < self.runs_total
-            ):
-                raise DomainInvariantError("current_run_index must lie in [0, runs_total)")
+        if self.current_run_index is not None and (
+            isinstance(self.current_run_index, bool)
+            or not isinstance(self.current_run_index, int)
+            or not 0 <= self.current_run_index < self.runs_total
+        ):
+            raise DomainInvariantError("current_run_index must lie in [0, runs_total)")
         require_non_negative(self.wall_seconds, "wall_seconds")
         require_utc(self.updated_at, "updated_at")
         if self.error is not None and not isinstance(self.error, str):

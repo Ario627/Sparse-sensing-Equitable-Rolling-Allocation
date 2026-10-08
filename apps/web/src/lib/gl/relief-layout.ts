@@ -14,7 +14,7 @@ export interface ReliefLayout {
   readonly flow: readonly TerrainFlowPoint[];
 }
 
-interface NodePlacement {
+export interface NodePlacement {
   readonly x: number;
   readonly z: number;
 }
@@ -220,4 +220,10 @@ export function buildReliefLayout(
     }
   }
   return { blocks: toTerrainBlocks(detail, placements, options), flow };
+}
+
+export function layoutNetworkNodes(
+  detail: NetworkDetailResponse,
+): ReadonlyMap<string, NodePlacement> {
+  return centerPlacements(assignPlacements(detail, computeDepths(detail)));
 }

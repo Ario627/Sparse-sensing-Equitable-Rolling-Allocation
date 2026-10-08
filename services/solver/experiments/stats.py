@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Final
+from typing import Any, Final, cast
 
 import numpy as np  # type: ignore
 from scipy.stats import rankdata, spearmanr, wilcoxon  # type: ignore
@@ -191,7 +191,7 @@ def summarize(
         n=int(values.size),
         mean=float(np.mean(values)),
         median=float(np.median(values)),
-        ci=bootstrap_ci(values, level=level, resamples=resamples, seed=seed),
+        ci=bootstrap_ci(tuple(values), level=level, resamples=resamples, seed=seed),
     )
 
 
@@ -218,7 +218,7 @@ def signed_rank(differences: Sequence[float]) -> SignedRankResult:
     effect = (positive - negative) / total if total > 0.0 else 0.0
     return SignedRankResult(
         statistic=positive,
-        p_value=float(outcome.pvalue),
+        p_value=float(cast(Any, outcome).pvalue),
         n_effective=int(nonzero.size),
         rank_biserial=effect,
     )
@@ -234,10 +234,10 @@ def rank_correlation(first: Sequence[float], second: Sequence[float]) -> RankCor
     if np.ptp(left) <= 0.0 or np.ptp(right) <= 0.0:
         raise DomainInvariantError("constant series have undefined rank correlation")
     outcome = spearmanr(left, right)
-    rho = float(outcome.statistic)
+    rho = float(cast(Any, outcome).statistic)
     if not math.isfinite(rho):
         raise DomainInvariantError("rank correlation is undefined")
-    return RankCorrelation(rho=rho, p_value=float(outcome.pvalue), n=int(left.size))
+    return RankCorrelation(rho=rho, p_value=float(cast(Any, outcome).pvalue), n=int(left.size))
 
 
 def knee_point(xs: Sequence[float], ys: Sequence[float]) -> KneePoint | None:

@@ -94,6 +94,7 @@ reportMissingTypeStubs = false
 reportUnknownMemberType = false
 reportUnknownArgumentType = false
 reportUnknownVariableType = false
+reportUnnecessaryIsInstance = false
 venvPath = "."
 venv = ".venv"
 

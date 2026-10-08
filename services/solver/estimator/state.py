@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Final
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import (
     DomainInvariantError,
@@ -46,9 +46,7 @@ class StorageDynamicsParams:
         require_non_negative(self.percolation_mm_per_day, "percolation_mm_per_day")
         require_non_negative(self.wlr_mm_per_day, "wlr_mm_per_day")
         require_positive(self.s_max_mm, "s_max_mm")
-        require_non_negative(
-            self.process_sigma_mm_per_slot, "process_sigma_mm_per_slot"
-        )
+        require_non_negative(self.process_sigma_mm_per_slot, "process_sigma_mm_per_slot")
         require_positive(self.min_variance_mm2, "min_variance_mm2")
 
 
@@ -72,12 +70,8 @@ class StorageEstimate:
             raise DomainInvariantError("slot_index must be a non-negative integer")
         if not np.all(np.isfinite(self.means_mm)):
             raise DomainInvariantError("storage means must be finite")
-        if not np.all(np.isfinite(self.variances_mm2)) or not np.all(
-            self.variances_mm2 >= 0.0
-        ):
-            raise DomainInvariantError(
-                "storage variances must be finite and non-negative"
-            )
+        if not np.all(np.isfinite(self.variances_mm2)) or not np.all(self.variances_mm2 >= 0.0):
+            raise DomainInvariantError("storage variances must be finite and non-negative")
         object.__setattr__(self, "means_mm", _frozen(self.means_mm))
         object.__setattr__(self, "variances_mm2", _frozen(self.variances_mm2))
 
@@ -126,9 +120,7 @@ def delivery_mm_by_block(
     delivery: dict[str, float] = {}
     for block_id, gross_m3 in gross_m3_by_block.items():
         if block_id not in assumed_efficiency_by_block:
-            raise DomainInvariantError(
-                f"missing assumed efficiency for block: {block_id}"
-            )
+            raise DomainInvariantError(f"missing assumed efficiency for block: {block_id}")
         if block_id not in area_m2_by_block:
             raise DomainInvariantError(f"missing area for block: {block_id}")
         delivered_m3 = require_non_negative(gross_m3, f"gross_m3[{block_id}]") * (
@@ -137,9 +129,7 @@ def delivery_mm_by_block(
                 f"assumed_efficiency[{block_id}]",
             )
         )
-        delivery[block_id] = volume_m3_to_storage_mm(
-            delivered_m3, area_m2_by_block[block_id]
-        )
+        delivery[block_id] = volume_m3_to_storage_mm(delivered_m3, area_m2_by_block[block_id])
     return delivery
 
 
@@ -176,12 +166,8 @@ def correct_storage(
         measurement_variance = float(batch.variances_mm2[row])
         gain = prior_variance / (prior_variance + measurement_variance)
         residual = float(batch.values_mm[row]) - float(means[position])
-        means[position] = _clip_storage(
-            float(means[position]) + gain * residual, params.s_max_mm
-        )
-        variances[position] = max(
-            (1.0 - gain) * prior_variance, params.min_variance_mm2
-        )
+        means[position] = _clip_storage(float(means[position]) + gain * residual, params.s_max_mm)
+        variances[position] = max((1.0 - gain) * prior_variance, params.min_variance_mm2)
     return StorageEstimate(
         block_ids=estimate.block_ids,
         means_mm=means,
@@ -213,25 +199,19 @@ def predict_storage(
         if block_id not in forecast.delivered_mm_by_block
     ]
     missing_etc = [
-        block_id
-        for block_id in estimate.block_ids
-        if block_id not in forecast.etc_mm_by_block
+        block_id for block_id in estimate.block_ids if block_id not in forecast.etc_mm_by_block
     ]
     if missing_delivered or missing_etc:
         raise DomainInvariantError(
             f"forecast missing blocks: delivered={missing_delivered} etc={missing_etc}"
         )
-    percolation_slot = slot_mm_from_daily_rate(
-        params.percolation_mm_per_day, forecast.hours
-    )
+    percolation_slot = slot_mm_from_daily_rate(params.percolation_mm_per_day, forecast.hours)
     wlr_slot = slot_mm_from_daily_rate(params.wlr_mm_per_day, forecast.hours)
     process_variance = params.process_sigma_mm_per_slot * params.process_sigma_mm_per_slot
     means = np.empty(len(estimate), dtype=float)
     variances = np.empty(len(estimate), dtype=float)
     for position, block_id in enumerate(estimate.block_ids):
-        etc_slot = slot_mm_from_daily_rate(
-            forecast.etc_mm_by_block[block_id], forecast.hours
-        )
+        etc_slot = slot_mm_from_daily_rate(forecast.etc_mm_by_block[block_id], forecast.hours)
         predicted = (
             float(estimate.means_mm[position])
             + float(forecast.delivered_mm_by_block[block_id])

@@ -1,11 +1,11 @@
 from __future__ import annotations
+
 from functools import cache
 from pathlib import Path
 from typing import Literal, Self
+
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 API_HANDSHAKE_TIMEOUT_S = 30.0

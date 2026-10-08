@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 from app.core.types import DomainInvariantError, require_non_negative
 from baselines.base import BaselineMethod, BaselinePlan, require_step_index
@@ -28,7 +28,7 @@ def _stage_summary(stages: tuple[StageOutcome, ...]) -> str:
 
 @dataclass(frozen=True, slots=True)
 class OracleStrategy:
-    lexicographic: LexicographicRequest = LexicographicRequest()
+    lexicographic: LexicographicRequest = field(default_factory=LexicographicRequest)
 
     @property
     def method(self) -> BaselineMethod:

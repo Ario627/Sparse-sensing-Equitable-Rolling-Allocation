@@ -29,6 +29,7 @@ def _require_simplex_probability(value: float, name: str) -> float:
         raise DomainInvariantError(f"{name} must lie in [0, 1]")
     return number
 
+
 def _require_vector(values: Sequence[float], expected: int, name: str) -> tuple[float, ...]:
     if len(values) != expected:
         raise DomainInvariantError(f"{name} must have length {expected}")
@@ -129,9 +130,7 @@ class PlanningProblem:
         if slot_count < 1:
             raise DomainInvariantError("scenarios must span at least one slot")
         for scenario in self.scenarios:
-            _require_vector(
-                scenario.supply_lps, slot_count, f"supply_lps[{scenario.scenario_id}]"
-            )
+            _require_vector(scenario.supply_lps, slot_count, f"supply_lps[{scenario.scenario_id}]")
             _require_matrix(
                 scenario.etc_mm, len(self.blocks), slot_count, f"etc_mm[{scenario.scenario_id}]"
             )
@@ -205,13 +204,9 @@ class PlanDecision:
 class PlanModel:
     def __init__(self, problem: PlanningProblem) -> None:
         self._problem = problem
-        self._position = {
-            block_id: index for index, block_id in enumerate(problem.block_ids)
-        }
+        self._position = {block_id: index for index, block_id in enumerate(problem.block_ids)}
         self._block_by_id = {block.block_id: block for block in problem.blocks}
-        self._scenario_by_id = {
-            scenario.scenario_id: scenario for scenario in problem.scenarios
-        }
+        self._scenario_by_id = {scenario.scenario_id: scenario for scenario in problem.scenarios}
         self._model = mathopt.Model(name="sera_plan")
         self._flat: list[mathopt.Variable] = []
         self._y: dict[tuple[str, int, str], mathopt.Variable] = {}
@@ -305,9 +300,10 @@ class PlanModel:
     def _declare_variables(self) -> None:
         slot_count = self._problem.slot_count
         for block in self._problem.blocks:
-            potential_net = flow_hours_to_volume_m3(
-                block.nominal_flow_lps, self._problem.slot_hours
-            ) * block.path_efficiency
+            potential_net = (
+                flow_hours_to_volume_m3(block.nominal_flow_lps, self._problem.slot_hours)
+                * block.path_efficiency
+            )
             for scenario in self._problem.scenarios:
                 for slot in range(slot_count + 1):
                     upper = block.initial_storage_mm if slot == 0 else block.max_storage_mm
@@ -380,9 +376,10 @@ class PlanModel:
 
     def _add_gate_link_constraints(self) -> None:
         for block in self._problem.blocks:
-            potential_net = flow_hours_to_volume_m3(
-                block.nominal_flow_lps, self._problem.slot_hours
-            ) * block.path_efficiency
+            potential_net = (
+                flow_hours_to_volume_m3(block.nominal_flow_lps, self._problem.slot_hours)
+                * block.path_efficiency
+            )
             for scenario in self._problem.scenarios:
                 for slot in range(self._problem.slot_count):
                     delivered = self._x[(block.block_id, slot, scenario.scenario_id)]
@@ -449,12 +446,8 @@ class PlanModel:
                     )
                     net_inflow = inflow_mm - outflow_mm
                     name = _variable_name("balance", block.block_id, slot, scenario.scenario_id)
-                    self._model.add_linear_constraint(
-                        balance <= net_inflow, name=f"{name}|upper"
-                    )
-                    self._model.add_linear_constraint(
-                        -balance <= -net_inflow, name=f"{name}|lower"
-                    )
+                    self._model.add_linear_constraint(balance <= net_inflow, name=f"{name}|upper")
+                    self._model.add_linear_constraint(-balance <= -net_inflow, name=f"{name}|lower")
 
     def _add_safety_constraints(self) -> None:
         for block in self._problem.blocks:
@@ -476,8 +469,7 @@ class PlanModel:
         self, block: PlanningBlockSpec, scenario_id: str
     ) -> mathopt.LinearBase:
         return mathopt.fast_sum(
-            self._x[(block.block_id, slot, scenario_id)]
-            for slot in range(self._problem.slot_count)
+            self._x[(block.block_id, slot, scenario_id)] for slot in range(self._problem.slot_count)
         )
 
     def _add_fairness_constraints(self) -> None:
@@ -634,8 +626,7 @@ class PlanModel:
 
     def expected_switching_expression(self) -> mathopt.LinearBase:
         return mathopt.fast_sum(
-            self.scenario(scenario_id).probability
-            * self._s[(block.block_id, slot, scenario_id)]
+            self.scenario(scenario_id).probability * self._s[(block.block_id, slot, scenario_id)]
             for block in self._problem.blocks
             for slot in range(self._problem.slot_count)
             for scenario_id in self._problem.scenario_ids
@@ -702,9 +693,11 @@ def extract_plan(model: PlanModel, outcome: SolveOutcome) -> PlanDecision:
                 switching += weight * outcome.value(
                     _variable_name("s", block.block_id, slot, scenario.scenario_id)
                 )
-                gross += weight * outcome.value(
-                    _variable_name("x", block.block_id, slot, scenario.scenario_id)
-                ) * block.gross_per_net
+                gross += (
+                    weight
+                    * outcome.value(_variable_name("x", block.block_id, slot, scenario.scenario_id))
+                    * block.gross_per_net
+                )
                 slack += weight * outcome.value(
                     _variable_name("rho", block.block_id, slot, scenario.scenario_id)
                 )

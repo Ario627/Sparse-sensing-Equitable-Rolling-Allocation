@@ -193,9 +193,7 @@ def derive_run_seed(
     _require_topology(topology)
     factor = _require_k_factor(k_factor)
     require_non_negative(replicate, "replicate")
-    rng = generator_for(
-        seed_base, "run", scenario_id, n_blocks, topology.value, factor, replicate
-    )
+    rng = generator_for(seed_base, "run", scenario_id, n_blocks, topology.value, factor, replicate)
     return int(rng.integers(0, SEED_CEILING))
 
 
@@ -399,9 +397,7 @@ def _record_from_payload(payload: Mapping[str, object]) -> RunRecord:
         spec = _spec_from_payload(cast(Mapping[str, object], payload["spec"]))
         metrics = _metrics_from_payload(cast(Mapping[str, object], payload["metrics"]))
         extras_raw = payload.get("extras", {})
-        extras = cast(
-            Mapping[str, object], extras_raw if isinstance(extras_raw, Mapping) else {}
-        )
+        extras = cast(Mapping[str, object], extras_raw if isinstance(extras_raw, Mapping) else {})
     except (KeyError, TypeError, ValueError) as error:
         raise DomainInvariantError("checkpoint record is malformed") from error
     return RunRecord(spec=spec, metrics=metrics, extras=extras)
@@ -439,9 +435,7 @@ def load_checkpoint(path: Path) -> CheckpointContents:
     target = path if path.is_absolute() else path.resolve()
     if not target.exists():
         return CheckpointContents(None, None, (), ())
-    lines = [
-        line for line in target.read_text(encoding="utf-8").splitlines() if line.strip()
-    ]
+    lines = [line for line in target.read_text(encoding="utf-8").splitlines() if line.strip()]
     if not lines:
         return CheckpointContents(None, None, (), ())
     payloads: list[Mapping[str, object]] = []
@@ -451,9 +445,7 @@ def load_checkpoint(path: Path) -> CheckpointContents:
         except json.JSONDecodeError as error:
             if position == len(lines) - 1:
                 break
-            raise DomainInvariantError(
-                f"checkpoint line {position + 1} is corrupt"
-            ) from error
+            raise DomainInvariantError(f"checkpoint line {position + 1} is corrupt") from error
     header = payloads[0]
     if header.get("kind") != CHECKPOINT_KIND_HEADER:
         raise DomainInvariantError("checkpoint header is missing")

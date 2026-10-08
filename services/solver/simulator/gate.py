@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from typing import Final
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import (
     DomainInvariantError,
@@ -49,9 +49,7 @@ class GateFaultSpec:
         floor = require_unit_open_closed(self.partial_open_min, "partial_open_min")
         ceiling = require_unit_open_closed(self.partial_open_max, "partial_open_max")
         if ceiling < floor:
-            raise DomainInvariantError(
-                "partial_open_max must be >= partial_open_min"
-            )
+            raise DomainInvariantError("partial_open_max must be >= partial_open_min")
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,16 +140,13 @@ def build_gate_fleet(
         delay_noise = abs(float(rng.standard_normal()))
         bias = fault.flow_bias_sigma * float(rng.standard_normal())
         partial_roll = float(rng.random())
-        factor_roll = float(
-            rng.uniform(fault.partial_open_min, fault.partial_open_max)
-        )
+        factor_roll = float(rng.uniform(fault.partial_open_min, fault.partial_open_max))
         stuck_roll = float(rng.random())
         stuck_open_roll = float(rng.random())
         stuck = stuck_roll < fault.stuck_prob
         fleet[gate_id] = GateUnit(
             gate_id=gate_id,
-            response_delay_min=fault.response_delay_min
-            + fault.delay_jitter_min * delay_noise,
+            response_delay_min=fault.response_delay_min + fault.delay_jitter_min * delay_noise,
             flow_factor=factor_roll if partial_roll < fault.partial_open_prob else 1.0,
             flow_bias=bias,
             stuck=stuck,

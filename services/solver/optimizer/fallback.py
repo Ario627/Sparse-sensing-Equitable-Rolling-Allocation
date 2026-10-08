@@ -164,7 +164,7 @@ def ledger_greedy_opens(problem: PlanningProblem) -> dict[str, bool]:
         edge_id: flow_hours_to_volume_m3(capacity, hours)
         for edge_id, capacity in problem.edge_capacity_lps.items()
     }
-    edge_loads = {edge_id: 0.0 for edge_id in problem.edge_capacity_lps}
+    edge_loads = dict.fromkeys(problem.edge_capacity_lps, 0.0)
     priority = sorted(
         problem.blocks,
         key=lambda block: (service_ratio_of(block), -block.debt_m3, block.block_id),
@@ -236,6 +236,6 @@ def select_fallback(problem: PlanningProblem, context: FallbackContext) -> Fallb
     return FallbackDecision(
         level=FallbackLevel.ALL_CLOSED,
         reason=context.reason,
-        opens={block_id: False for block_id in problem.block_ids},
+        opens=dict.fromkeys(problem.block_ids, False),
         review_required=True,
     )

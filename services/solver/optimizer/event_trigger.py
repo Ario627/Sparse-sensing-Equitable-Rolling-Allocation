@@ -49,12 +49,8 @@ def forecast_shift_ratio(previous: Sequence[float], current: Sequence[float]) ->
         raise DomainInvariantError("forecast series must share one length")
     if not previous:
         raise DomainInvariantError("forecast series must not be empty")
-    past = tuple(
-        require_finite(float(value), "previous forecast value") for value in previous
-    )
-    present = tuple(
-        require_finite(float(value), "current forecast value") for value in current
-    )
+    past = tuple(require_finite(float(value), "previous forecast value") for value in previous)
+    present = tuple(require_finite(float(value), "current forecast value") for value in current)
     scale = max(
         max(abs(value) for value in past),
         max(abs(value) for value in present),
@@ -108,9 +104,7 @@ class TriggerPolicy:
         require_positive(self.heartbeat_interval_min, "heartbeat_interval_min")
         require_non_negative(self.cooldown_min, "cooldown_min")
         if self.cooldown_min > self.heartbeat_interval_min:
-            raise DomainInvariantError(
-                "cooldown must not exceed the heartbeat interval"
-            )
+            raise DomainInvariantError("cooldown must not exceed the heartbeat interval")
 
 
 @dataclass(frozen=True, slots=True)
@@ -165,9 +159,7 @@ def _service_event(inputs: TriggerInputs, policy: TriggerPolicy) -> TriggerEvent
     threshold = inputs.service_floor_target - policy.service_floor_margin
     if inputs.min_service_ratio >= threshold:
         return None
-    return TriggerEvent(
-        TriggerKind.SERVICE_FLOOR_BREACH, inputs.min_service_ratio, threshold
-    )
+    return TriggerEvent(TriggerKind.SERVICE_FLOOR_BREACH, inputs.min_service_ratio, threshold)
 
 
 def _nis_event(inputs: TriggerInputs) -> TriggerEvent | None:
@@ -198,9 +190,7 @@ def _gate_event(inputs: TriggerInputs) -> TriggerEvent | None:
 def _heartbeat_event(inputs: TriggerInputs, policy: TriggerPolicy) -> TriggerEvent | None:
     if inputs.elapsed_min < policy.heartbeat_interval_min:
         return None
-    return TriggerEvent(
-        TriggerKind.HEARTBEAT, inputs.elapsed_min, policy.heartbeat_interval_min
-    )
+    return TriggerEvent(TriggerKind.HEARTBEAT, inputs.elapsed_min, policy.heartbeat_interval_min)
 
 
 @dataclass(frozen=True, slots=True)

@@ -71,10 +71,7 @@ class RollingOutcome:
 
     def execution_by_block(self) -> dict[str, tuple[bool, ...]]:
         if self.fallback is not None:
-            return {
-                block_id: (bool(opens),)
-                for block_id, opens in self.fallback.opens.items()
-            }
+            return {block_id: (bool(opens),) for block_id, opens in self.fallback.opens.items()}
         if self.plan is None:
             raise DomainInvariantError("outcome carries neither plan nor fallback")
         return {
@@ -124,9 +121,7 @@ def _resolve_ensemble(
         ensemble = tuple(problem.scenarios)
         if request.risk_mode is RiskMode.ROBUST:
             ensemble = robust_ensemble(ensemble)
-        summary = ensemble_summary(
-            ensemble, problem.scenarios[0], cvar_alpha=request.cvar_alpha
-        )
+        summary = ensemble_summary(ensemble, problem.scenarios[0], cvar_alpha=request.cvar_alpha)
         return ensemble, summary
     if len(problem.scenarios) != 1:
         raise DomainInvariantError(
@@ -167,9 +162,7 @@ def rolling_solve(
     ensemble, summary = _resolve_ensemble(problem, request, rng)
     expanded = replace(problem, scenarios=ensemble)
     if _low_confidence(request, context):
-        decision = select_fallback(
-            expanded, replace(context, reason=FallbackReason.LOW_CONFIDENCE)
-        )
+        decision = select_fallback(expanded, replace(context, reason=FallbackReason.LOW_CONFIDENCE))
         return RollingOutcome.from_fallback(
             request,
             problem.block_ids,
@@ -186,9 +179,7 @@ def rolling_solve(
     total_seconds = math.fsum(stage.solve_seconds for stage in outcome.stages)
     final = outcome.final
     if final is None or not final.has_solution:
-        decision = select_fallback(
-            expanded, replace(context, reason=_failure_reason(outcome))
-        )
+        decision = select_fallback(expanded, replace(context, reason=_failure_reason(outcome)))
         return RollingOutcome.from_fallback(
             request,
             problem.block_ids,
@@ -217,8 +208,6 @@ def last_feasible_snapshot(outcome: RollingOutcome, step_index: int) -> LastFeas
         step_index=step_index,
         opens_by_block={
             block_id: tuple(row)
-            for block_id, row in zip(
-                outcome.block_ids, outcome.plan.open_by_slot, strict=True
-            )
+            for block_id, row in zip(outcome.block_ids, outcome.plan.open_by_slot, strict=True)
         },
     )

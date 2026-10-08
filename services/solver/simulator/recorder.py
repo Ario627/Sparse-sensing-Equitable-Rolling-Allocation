@@ -125,9 +125,7 @@ class TrajectoryRecorder:
         key = (slot_index, block_id)
         row = self._rows.get(key)
         if row is None:
-            raise DomainInvariantError(
-                f"no row recorded for slot {slot_index} block {block_id}"
-            )
+            raise DomainInvariantError(f"no row recorded for slot {slot_index} block {block_id}")
         self._rows[key] = replace(row, **fields)
 
     def rows(self) -> tuple[TimeseriesRow, ...]:

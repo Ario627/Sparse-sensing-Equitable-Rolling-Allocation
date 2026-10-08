@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Final, Protocol
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.rng import generator_for
 from app.core.types import (
@@ -98,7 +98,7 @@ class SlotPolicy(Protocol):
 
 class AlwaysOpenPolicy:
     def decide(self, context: SlotContext) -> Mapping[str, bool]:
-        return {block_id: True for block_id in context.index.block_ids}
+        return dict.fromkeys(context.index.block_ids, True)
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,9 +179,7 @@ def _build_sensor_states(
     index: NetworkIndex,
 ) -> tuple[dict[str, LevelSensorState], dict[str, str], dict[str, np.random.Generator]]:
     scenario = config.scenario
-    requested = (
-        index.block_ids if scenario.sensor_block_ids is None else scenario.sensor_block_ids
-    )
+    requested = index.block_ids if scenario.sensor_block_ids is None else scenario.sensor_block_ids
     unknown = sorted(set(requested) - set(index.block_ids))
     if unknown:
         raise DomainInvariantError(f"sensor candidate blocks are not in the network: {unknown}")
@@ -246,7 +244,7 @@ def _build_world(config: SimulationConfig) -> tuple[_World, tuple[DailyWeather, 
         sensors=sensors,
         sensor_block_of=sensor_block_of,
         sensor_rngs=sensor_rngs,
-        daily_delivered_mm={block_id: 0.0 for block_id in index.block_ids},
+        daily_delivered_mm=dict.fromkeys(index.block_ids, 0.0),
         crop_days={block_id: [] for block_id in index.block_ids},
         loss_history=[dict(losses)],
     )
@@ -336,9 +334,7 @@ def _release_and_collect(
             path_efficiency=world.pi_true[block_id],
         )
     arrivals = world.pipe.collect(slot_index)
-    return {
-        block_id: arrivals.get(block_id, 0.0) for block_id in world.index.block_ids
-    }
+    return {block_id: arrivals.get(block_id, 0.0) for block_id in world.index.block_ids}
 
 
 def _accumulate_delivered(world: _World, delivered: Mapping[str, float]) -> None:
@@ -354,9 +350,7 @@ def run_simulation(
     active_policy: SlotPolicy = policy if policy is not None else AlwaysOpenPolicy()
     world, weather = _build_world(config)
     slots_per_day = config.slots_per_day
-    capacity_lps = {
-        edge.edge_id: edge.capacity_lps for edge in world.index.network.edges
-    }
+    capacity_lps = {edge.edge_id: edge.capacity_lps for edge in world.index.network.edges}
     outcomes: list[SlotOutcome] = []
     for slot_index in range(config.horizon_slots):
         day_index = slot_index // slots_per_day
@@ -413,8 +407,7 @@ def run_simulation(
                 released_gross_m3=dict(adjusted.gross_m3_by_block),
                 delivered_m3=delivered,
                 storage_mm={
-                    block_id: state.storage_mm
-                    for block_id, state in world.crop_states.items()
+                    block_id: state.storage_mm for block_id, state in world.crop_states.items()
                 },
                 path_efficiency=dict(world.pi_true),
                 supply_lps=supply_lps,
@@ -430,9 +423,7 @@ def run_simulation(
         network=world.index.network,
         outcomes=tuple(outcomes),
         weather=weather,
-        crop_days={
-            block_id: tuple(records) for block_id, records in world.crop_days.items()
-        },
+        crop_days={block_id: tuple(records) for block_id, records in world.crop_days.items()},
         final_storage_mm={
             block_id: state.storage_mm for block_id, state in world.crop_states.items()
         },

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import Final
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import (
     BlockSpec,
@@ -48,7 +48,6 @@ def _walk_path(parent_edge: Mapping[str, EdgeSpec], node_id: str) -> tuple[str, 
     return tuple(edge_ids)
 
 
-
 @dataclass(frozen=True, slots=True)
 class NetworkIndex:
     network: NetworkSpec
@@ -66,9 +65,7 @@ class NetworkIndex:
 
     @classmethod
     def from_spec(cls, network: NetworkSpec) -> NetworkIndex:
-        source_id = next(
-            node.node_id for node in network.nodes if node.kind is NodeKind.SOURCE
-        )
+        source_id = next(node.node_id for node in network.nodes if node.kind is NodeKind.SOURCE)
         children: dict[str, list[EdgeSpec]] = {node.node_id: [] for node in network.nodes}
         parent_edge: dict[str, EdgeSpec] = {}
         for edge in network.edges:
@@ -98,8 +95,7 @@ class NetworkIndex:
                 collected.extend(subtree[edge.to_node_id])
         edge_by_id = {edge.edge_id: edge for edge in network.edges}
         downstream = {
-            edge_id: tuple(subtree[edge_by_id[edge_id].to_node_id])
-            for edge_id in edge_order
+            edge_id: tuple(subtree[edge_by_id[edge_id].to_node_id]) for edge_id in edge_order
         }
         path_edges = {
             block_id: _walk_path(parent_edge, block_by_id[block_id].node_id)
@@ -119,9 +115,8 @@ class NetworkIndex:
             downstream=downstream,
             block_ids=block_ids,
         )
-        
-        
-        
+
+
 def zone_for_distance(distance_m: float, max_distance_m: float) -> LossZone:
     distance = require_non_negative(distance_m, "distance_m")
     span = require_positive(max_distance_m, "max_distance_m")
@@ -133,14 +128,11 @@ def zone_for_distance(distance_m: float, max_distance_m: float) -> LossZone:
     return LossZone.TAIL
 
 
-
 def path_efficiency_map(
     index: NetworkIndex,
     eta_by_edge: Mapping[str, float],
 ) -> dict[str, float]:
-    missing = sorted(
-        edge_id for edge_id in index.edge_order if edge_id not in eta_by_edge
-    )
+    missing = sorted(edge_id for edge_id in index.edge_order if edge_id not in eta_by_edge)
     if missing:
         raise DomainInvariantError(f"missing loss parameters for edges: {missing}")
     return {
@@ -150,7 +142,6 @@ def path_efficiency_map(
         for block_id in index.block_ids
     }
 
-    
 
 @dataclass(slots=True)
 class _Draft:
@@ -223,19 +214,14 @@ class _Draft:
             blocks=tuple(self.blocks),
         )
         index = NetworkIndex.from_spec(provisional)
-        nominal_flow = {
-            block.block_id: block.nominal_flow_lps for block in provisional.blocks
-        }
+        nominal_flow = {block.block_id: block.nominal_flow_lps for block in provisional.blocks}
         capacities = {
-            edge_id: sum(
-                nominal_flow[block_id] for block_id in index.downstream[edge_id]
-            )
+            edge_id: sum(nominal_flow[block_id] for block_id in index.downstream[edge_id])
             * _BUILDER_CAPACITY_SLACK
             for edge_id in index.edge_order
         }
         edges = tuple(
-            replace(edge, capacity_lps=capacities[edge.edge_id])
-            for edge in provisional.edges
+            replace(edge, capacity_lps=capacities[edge.edge_id]) for edge in provisional.edges
         )
         return NetworkSpec(
             network_id=network_id,
@@ -339,9 +325,7 @@ def parameterize_network(
         for block_id, area in areas.items()
     }
     lengths = {
-        edge_id: float(
-            rng.uniform(settings.edge_length_m_min, settings.edge_length_m_max)
-        )
+        edge_id: float(rng.uniform(settings.edge_length_m_min, settings.edge_length_m_max))
         for edge_id in index.edge_order
     }
     node_distance = {index.source_id: 0.0}
@@ -353,9 +337,7 @@ def parameterize_network(
     edges = tuple(
         replace(
             edge,
-            capacity_lps=sum(
-                nominal_flow[block_id] for block_id in index.downstream[edge.edge_id]
-            )
+            capacity_lps=sum(nominal_flow[block_id] for block_id in index.downstream[edge.edge_id])
             * settings.capacity_slack,
             length_m=lengths[edge.edge_id],
             zone=zone_for_distance(node_distance[edge.to_node_id], span),

@@ -71,7 +71,7 @@ def to_jsonable(value: object) -> JsonValue:
     if isinstance(value, np.ndarray):
         return to_jsonable(cast(np.ndarray, value).tolist())
     if isinstance(value, BaseModel):
-        return to_jsonable(cast(BaseModel, value).model_dump(mode="json"))
+        return to_jsonable(value.model_dump(mode="json"))
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return to_jsonable(dataclasses.asdict(value))
     if isinstance(value, datetime):
@@ -157,7 +157,7 @@ def _run_git(working_dir: Path, *arguments: str) -> str | None:
             check=False,
             timeout=10,
         )
-    except (OSError, subprocess.TimeoutExpired):
+    except OSError, subprocess.TimeoutExpired:
         return None
     if completed.returncode != 0:
         return None

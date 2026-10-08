@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import (
     CropStage,
@@ -46,11 +46,7 @@ def _require_persistence(value: float, name: str) -> float:
 
 
 def stage_for_day(day_index: int) -> CropStage:
-    if (
-        isinstance(day_index, bool)
-        or not isinstance(day_index, int)
-        or day_index < 0
-    ):
+    if isinstance(day_index, bool) or not isinstance(day_index, int) or day_index < 0:
         raise DomainInvariantError("day_index must be a non-negative integer")
     half_month = min(day_index // int(HALF_MONTH_DAYS), len(STAGE_BY_HALF_MONTH) - 1)
     return STAGE_BY_HALF_MONTH[half_month]
@@ -100,9 +96,7 @@ class CropTruthSpec:
             raise DomainInvariantError("wlr_start_days must not be empty")
         for start in self.wlr_start_days:
             if isinstance(start, bool) or not isinstance(start, int) or start < 0:
-                raise DomainInvariantError(
-                    "wlr_start_days must contain non-negative integers"
-                )
+                raise DomainInvariantError("wlr_start_days must contain non-negative integers")
         require_unique(self.wlr_start_days, "wlr_start_days")
 
 
@@ -159,8 +153,7 @@ def field_wlr_rate_mm_per_day(spec: CropTruthSpec) -> float:
 
 def _wlr_rate_for_day(day_index: int, spec: CropTruthSpec) -> float:
     active = any(
-        start <= day_index < start + int(spec.wlr_window_days)
-        for start in spec.wlr_start_days
+        start <= day_index < start + int(spec.wlr_window_days) for start in spec.wlr_start_days
     )
     return field_wlr_rate_mm_per_day(spec) if active else 0.0
 

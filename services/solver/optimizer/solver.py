@@ -133,10 +133,7 @@ def _values_by_name(
     if not result.has_primal_feasible_solution():
         return {}
     values = result.variable_values(variables)
-    return {
-        variable.name: float(value)
-        for variable, value in zip(variables, values, strict=True)
-    }
+    return {variable.name: float(value) for variable, value in zip(variables, values, strict=True)}
 
 
 def _solve_parameters(
@@ -178,9 +175,7 @@ def solve_model(
     budget: SolveBudget,
 ) -> SolveOutcome:
     solver_type = _BACKEND_TO_MATHOPT[backend]
-    result = _attempt_solve(
-        problem, solver_type, _solve_parameters(budget, backend, presolve=True)
-    )
+    result = _attempt_solve(problem, solver_type, _solve_parameters(budget, backend, presolve=True))
     if result is None or result.termination.reason is mathopt.TerminationReason.INFEASIBLE:
         retry = _attempt_solve(
             problem, solver_type, _solve_parameters(budget, backend, presolve=False)

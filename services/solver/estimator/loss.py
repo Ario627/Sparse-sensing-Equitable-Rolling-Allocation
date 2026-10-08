@@ -4,8 +4,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Final
 
-import numpy as np # type: ignore
-from scipy.special import expit, logit # type: ignore
+import numpy as np  # type: ignore
+from scipy.special import expit, logit  # type: ignore
 
 from app.core.types import (
     DomainInvariantError,
@@ -53,9 +53,7 @@ class LossGroupSpec:
         known = set(self.group_ids)
         for zone, group in self.zone_to_group.items():
             if group not in known:
-                raise DomainInvariantError(
-                    f"zone {zone} maps to unknown group {group!r}"
-                )
+                raise DomainInvariantError(f"zone {zone} maps to unknown group {group!r}")
 
     @classmethod
     def per_zone(cls, zones: Sequence[LossZone]) -> LossGroupSpec:
@@ -70,7 +68,7 @@ class LossGroupSpec:
         require_identifier(name, "name")
         return cls(
             group_ids=(name,),
-            zone_to_group={zone: name for zone in LossZone},
+            zone_to_group=dict.fromkeys(LossZone, name),
         )
 
     def group_index(self, group_id: str) -> int:
@@ -90,9 +88,7 @@ class JointControl:
 
     def __post_init__(self) -> None:
         if len(self.gross_base_mm) != len(self.etc_mm):
-            raise DomainInvariantError(
-                "gross_base_mm and etc_mm must share one length"
-            )
+            raise DomainInvariantError("gross_base_mm and etc_mm must share one length")
         for value in self.gross_base_mm:
             require_non_negative(value, "gross_base_mm")
         for value in self.etc_mm:
@@ -143,9 +139,7 @@ def group_edge_counts(
     for block_id, edges in path_edges.items():
         require_identifier(block_id, "block_id")
         if not edges:
-            raise DomainInvariantError(
-                f"path for {block_id} must contain at least one edge"
-            )
+            raise DomainInvariantError(f"path for {block_id} must contain at least one edge")
         tally = [0] * len(spec.group_ids)
         for edge_id in edges:
             zone = edge_zone.get(edge_id)
@@ -153,9 +147,7 @@ def group_edge_counts(
                 raise DomainInvariantError(f"missing zone for edge: {edge_id}")
             group = spec.zone_to_group.get(zone)
             if group is None:
-                raise DomainInvariantError(
-                    f"zone {zone} is not mapped by the loss group spec"
-                )
+                raise DomainInvariantError(f"zone {zone} is not mapped by the loss group spec")
             tally[spec.group_index(group)] += 1
         counts[block_id] = tuple(tally)
     return counts
@@ -201,13 +193,9 @@ class JointStorageLossModel:
                 raise DomainInvariantError("counts must align with group_ids")
             for count in tally:
                 if isinstance(count, bool) or not isinstance(count, int) or count < 0:
-                    raise DomainInvariantError(
-                        "counts must contain non-negative integers"
-                    )
+                    raise DomainInvariantError("counts must contain non-negative integers")
             if sum(tally) < 1:
-                raise DomainInvariantError(
-                    "each block must traverse at least one edge"
-                )
+                raise DomainInvariantError("each block must traverse at least one edge")
         require_unique(self.measured_block_ids, "measured_block_id")
         known = set(self.block_ids)
         for block_id in self.measured_block_ids:
@@ -232,9 +220,7 @@ class JointStorageLossModel:
         return len(self.measured_block_ids)
 
     def _measured_positions(self) -> tuple[int, ...]:
-        return tuple(
-            self.block_ids.index(block_id) for block_id in self.measured_block_ids
-        )
+        return tuple(self.block_ids.index(block_id) for block_id in self.measured_block_ids)
 
     def _validated_state(self, state: np.ndarray) -> np.ndarray:
         vector = np.asarray(state, dtype=float)
@@ -252,9 +238,7 @@ class JointStorageLossModel:
         vector = np.asarray(control, dtype=float)
         expected = 2 * self.n_blocks + CONTROL_TAIL_SIZE
         if vector.shape != (expected,):
-            raise DomainInvariantError(
-                f"control must have shape ({expected},), got {vector.shape}"
-            )
+            raise DomainInvariantError(f"control must have shape ({expected},), got {vector.shape}")
         if not np.all(np.isfinite(vector)):
             raise DomainInvariantError("control must be finite")
         blocks = self.n_blocks
@@ -266,9 +250,7 @@ class JointStorageLossModel:
             float(vector[2 * blocks + 2]),
         )
 
-    def with_measurements(
-        self, measured_block_ids: tuple[str, ...]
-    ) -> JointStorageLossModel:
+    def with_measurements(self, measured_block_ids: tuple[str, ...]) -> JointStorageLossModel:
         return replace(self, measured_block_ids=tuple(measured_block_ids))
 
     def transition(self, state: np.ndarray, control: np.ndarray) -> np.ndarray:
@@ -368,9 +350,7 @@ def initial_joint_state(
     eta = require_unit_open_closed(initial_eta, "initial_eta")
     eta_sigma = require_positive(eta_sigma_logit, "eta_sigma_logit")
     center = float(logit(eta))
-    mean = np.array(
-        [storage] * model.n_blocks + [center] * model.n_groups, dtype=float
-    )
+    mean = np.array([storage] * model.n_blocks + [center] * model.n_groups, dtype=float)
     variances = [storage_sigma * storage_sigma] * model.n_blocks + [
         eta_sigma * eta_sigma
     ] * model.n_groups
@@ -427,21 +407,13 @@ def prepare_measurement(
     batch: MeasurementBatch,
 ) -> PreparedMeasurement | None:
     unknown = tuple(
-        sorted(
-            block_id
-            for block_id in batch.block_ids
-            if block_id not in model.measured_block_ids
-        )
+        sorted(block_id for block_id in batch.block_ids if block_id not in model.measured_block_ids)
     )
     if unknown:
         raise DomainInvariantError(
             f"measurement batch contains blocks outside the model: {list(unknown)}"
         )
-    available = tuple(
-        block_id
-        for block_id in model.measured_block_ids
-        if batch.contains(block_id)
-    )
+    available = tuple(block_id for block_id in model.measured_block_ids if batch.contains(block_id))
     if not available:
         return None
     restricted = model.with_measurements(available)
@@ -450,10 +422,7 @@ def prepare_measurement(
         dtype=float,
     )
     variances = np.array(
-        [
-            float(batch.variances_mm2[batch.index_of(block_id)])
-            for block_id in available
-        ],
+        [float(batch.variances_mm2[batch.index_of(block_id)]) for block_id in available],
         dtype=float,
     )
     return PreparedMeasurement(model=restricted, values_mm=values, variances_mm2=variances)

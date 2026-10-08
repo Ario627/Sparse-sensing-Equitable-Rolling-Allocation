@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import math
 from collections.abc import Iterable
+
 from app.core.types import (
     DomainInvariantError,
     require_efficiency,
@@ -31,9 +33,7 @@ def volume_m3_to_storage_mm(volume_m3: float, area_m2: float) -> float:
 
 def storage_mm_to_volume_m3(storage_mm: float, area_m2: float) -> float:
     return (
-        require_finite(storage_mm, "storage_mm")
-        / MM_PER_M
-        * require_positive(area_m2, "area_m2")
+        require_finite(storage_mm, "storage_mm") / MM_PER_M * require_positive(area_m2, "area_m2")
     )
 
 
@@ -62,17 +62,6 @@ def delivered_volume_m3(
     volume = flow_hours_to_volume_m3(flow_lps, hours)
     efficiency = require_efficiency(path_efficiency, "path_efficiency")
     return volume * efficiency if gate_open else 0.0
-
-
-def gross_volume_m3(
-    flow_lps: float,
-    hours: float,
-    gate_open: bool,
-    path_efficiency: float,
-) -> float:
-    volume = flow_hours_to_volume_m3(flow_lps, hours)
-    efficiency = require_efficiency(path_efficiency, "path_efficiency")
-    return volume / efficiency if gate_open else 0.0
 
 
 def storage_delta_mm(

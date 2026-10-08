@@ -6,8 +6,8 @@ from statistics import NormalDist
 from typing import Final
 
 import numpy as np  # type: ignore
-from scipy.special import expit # type: ignore
-from scipy.stats import chi2 # type: ignore
+from scipy.special import expit  # type: ignore
+from scipy.stats import chi2  # type: ignore
 
 from app.core.types import (
     DomainInvariantError,
@@ -149,9 +149,7 @@ def storage_intervals(
     intervals: dict[str, Interval] = {}
     for position, block_id in enumerate(estimate.block_ids):
         std = float(np.sqrt(max(float(estimate.variances_mm2[position]), 0.0)))
-        intervals[block_id] = gaussian_interval(
-            float(estimate.means_mm[position]), std, level
-        )
+        intervals[block_id] = gaussian_interval(float(estimate.means_mm[position]), std, level)
     return intervals
 
 

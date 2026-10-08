@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, Protocol
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import DomainInvariantError
 
@@ -15,9 +15,7 @@ _PSD_TOLERANCE: Final = 1.0e-10
 class NonlinearStateModel(Protocol):
     def transition(self, state: np.ndarray, control: np.ndarray) -> np.ndarray: ...
 
-    def transition_jacobian(
-        self, state: np.ndarray, control: np.ndarray
-    ) -> np.ndarray: ...
+    def transition_jacobian(self, state: np.ndarray, control: np.ndarray) -> np.ndarray: ...
 
     def observe(self, state: np.ndarray) -> np.ndarray: ...
 
@@ -30,18 +28,14 @@ def _frozen(array: np.ndarray) -> np.ndarray:
     return frozen
 
 
-def _require_matrix_shape(
-    matrix: np.ndarray, shape: tuple[int, int], name: str
-) -> None:
+def _require_matrix_shape(matrix: np.ndarray, shape: tuple[int, int], name: str) -> None:
     if matrix.shape != shape:
         raise DomainInvariantError(f"{name} must have shape {shape}, got {matrix.shape}")
 
 
 def _require_vector_shape(vector: np.ndarray, size: int, name: str) -> None:
     if vector.shape != (size,):
-        raise DomainInvariantError(
-            f"{name} must have shape ({size},), got {vector.shape}"
-        )
+        raise DomainInvariantError(f"{name} must have shape ({size},), got {vector.shape}")
 
 
 def _repair_covariance(covariance: np.ndarray, name: str) -> np.ndarray:
@@ -125,23 +119,13 @@ def ekf_predict(
     process_covariance: np.ndarray,
 ) -> GaussianState:
     dimension = state.dimension
-    _require_matrix_shape(
-        process_covariance, (dimension, dimension), "process_covariance"
-    )
+    _require_matrix_shape(process_covariance, (dimension, dimension), "process_covariance")
     predicted_mean = np.asarray(model.transition(state.mean, control), dtype=float)
     _require_vector_shape(predicted_mean, dimension, "transition result")
-    transition_jacobian = np.asarray(
-        model.transition_jacobian(state.mean, control), dtype=float
-    )
-    _require_matrix_shape(
-        transition_jacobian, (dimension, dimension), "transition_jacobian"
-    )
-    process = _repair_covariance(
-        np.asarray(process_covariance, dtype=float), "process_covariance"
-    )
-    covariance = (
-        transition_jacobian @ state.covariance @ transition_jacobian.T + process
-    )
+    transition_jacobian = np.asarray(model.transition_jacobian(state.mean, control), dtype=float)
+    _require_matrix_shape(transition_jacobian, (dimension, dimension), "transition_jacobian")
+    process = _repair_covariance(np.asarray(process_covariance, dtype=float), "process_covariance")
+    covariance = transition_jacobian @ state.covariance @ transition_jacobian.T + process
     return GaussianState(mean=predicted_mean, covariance=covariance)
 
 
@@ -188,8 +172,7 @@ def ekf_update(
     updated_mean = state.mean + gain @ residual
     residual_operator = np.eye(dimension) - gain @ observation_jacobian
     updated_covariance = (
-        residual_operator @ state.covariance @ residual_operator.T
-        + gain @ noise @ gain.T
+        residual_operator @ state.covariance @ residual_operator.T + gain @ noise @ gain.T
     )
     return (
         GaussianState(mean=updated_mean, covariance=updated_covariance),

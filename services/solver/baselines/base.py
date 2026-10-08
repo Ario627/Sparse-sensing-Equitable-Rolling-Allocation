@@ -114,7 +114,7 @@ def slot_supply_gross_m3(problem: PlanningProblem, slot: int) -> float:
 
 
 def block_gross_per_slot_m3(block: PlanningBlockSpec, slot_hours: float) -> float:
-    return flow_hours_to_volume_m3(block.nominal_flow_lps, slot_hours) * block.gross_per_net
+    return flow_hours_to_volume_m3(block.nominal_flow_lps, slot_hours)
 
 
 def serving_edge_ids(problem: PlanningProblem, block_id: str) -> tuple[str, ...]:

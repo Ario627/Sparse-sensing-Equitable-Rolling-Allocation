@@ -259,7 +259,9 @@ def _require_tree(
     source_id: str,
 ) -> None:
     if len(edges) != len(nodes) - 1:
-        raise DomainInvariantError("network must be a tree: edge count must equal node count minus one")
+        raise DomainInvariantError(
+            "network must be a tree: edge count must equal node count minus one"
+        )
     neighbours: dict[str, list[str]] = {node.node_id: [] for node in nodes}
     for edge in edges:
         neighbours[edge.from_node_id].append(edge.to_node_id)
@@ -287,16 +289,16 @@ class NetworkSpec:
     def __post_init__(self) -> None:
         require_identifier(self.network_id, "network_id")
         if not self.nodes or not self.edges or not self.blocks:
-            raise DomainInvariantError("network requires at least one node, one edge, and one block")
+            raise DomainInvariantError(
+                "network requires at least one node, one edge, and one block"
+            )
         require_unique((node.node_id for node in self.nodes), "node_id")
         require_unique((edge.edge_id for edge in self.edges), "edge_id")
         require_unique((block.block_id for block in self.blocks), "block_id")
         require_unique((block.node_id for block in self.blocks), "block terminal node_id")
         endpoint_pairs = ((edge.from_node_id, edge.to_node_id) for edge in self.edges)
         require_unique(endpoint_pairs, "edge endpoints")
-        source_ids = tuple(
-            node.node_id for node in self.nodes if node.kind is NodeKind.SOURCE
-        )
+        source_ids = tuple(node.node_id for node in self.nodes if node.kind is NodeKind.SOURCE)
         if len(source_ids) != 1:
             raise DomainInvariantError("network requires exactly one SOURCE node")
         kinds = {node.node_id: node.kind for node in self.nodes}

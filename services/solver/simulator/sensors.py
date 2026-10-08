@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Final
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import (
     DomainInvariantError,
@@ -28,11 +28,7 @@ def _require_probability(value: float, name: str) -> float:
 
 
 def _require_sample_index(sample_index: int) -> int:
-    if (
-        isinstance(sample_index, bool)
-        or not isinstance(sample_index, int)
-        or sample_index < 0
-    ):
+    if isinstance(sample_index, bool) or not isinstance(sample_index, int) or sample_index < 0:
         raise DomainInvariantError("sample_index must be a non-negative integer")
     return sample_index
 
@@ -168,6 +164,7 @@ def flow_lps_from_level(level_mm: float, rating: LevelRating) -> float:
         return 0.0
     return rating.coefficient_lps_per_m_pow * (level / MM_PER_M) ** rating.exponent
 
+
 def observe_level(
     state: LevelSensorState,
     truth_level_mm: float,
@@ -180,9 +177,7 @@ def observe_level(
     if state.failed_until_index is not None and index < state.failed_until_index:
         return state, None
     active = (
-        replace(state, failed_until_index=None)
-        if state.failed_until_index is not None
-        else state
+        replace(state, failed_until_index=None) if state.failed_until_index is not None else state
     )
     spec = active.spec
     drop_roll = float(rng.random())
@@ -196,11 +191,7 @@ def observe_level(
         if unstuck_roll < spec.unstuck_prob:
             fresh_state = replace(active, stuck=False, stuck_samples=0)
             return _fresh_sample(fresh_state, truth, index, rng, noise_roll, bias_roll)
-        held = (
-            active.last_value_mm
-            if active.last_value_mm is not None
-            else truth + active.bias_mm
-        )
+        held = active.last_value_mm if active.last_value_mm is not None else truth + active.bias_mm
         quality = (
             ReadingQuality.SUSPECT
             if active.stuck_samples < spec.stale_after_samples

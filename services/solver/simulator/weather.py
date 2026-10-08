@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import (
     DomainInvariantError,
@@ -192,11 +192,7 @@ def sample_truth_day(
     day_index: int,
     was_wet: bool,
 ) -> tuple[DailyWeather, bool]:
-    if (
-        isinstance(day_index, bool)
-        or not isinstance(day_index, int)
-        or day_index < 0
-    ):
+    if isinstance(day_index, bool) or not isinstance(day_index, int) or day_index < 0:
         raise DomainInvariantError("day_index must be a non-negative integer")
     wet_roll = float(rng.random())
     amount_roll = float(rng.gamma(regime.rain_shape, regime.rain_scale_mm))
@@ -232,9 +228,7 @@ def sample_truth_series(
     series: list[DailyWeather] = []
     was_wet = initial_wet
     for day_index in range(days):
-        day, was_wet = sample_truth_day(
-            rng, regime, day_index=day_index, was_wet=was_wet
-        )
+        day, was_wet = sample_truth_day(rng, regime, day_index=day_index, was_wet=was_wet)
         series.append(day)
     return tuple(series)
 
@@ -247,18 +241,12 @@ def forecast_horizon(
     horizon: int,
     spec: ForecastErrorSpec,
 ) -> tuple[ForecastDay, ...]:
-    if (
-        isinstance(start_index, bool)
-        or not isinstance(start_index, int)
-        or start_index < 0
-    ):
+    if isinstance(start_index, bool) or not isinstance(start_index, int) or start_index < 0:
         raise DomainInvariantError("start_index must be a non-negative integer")
     if isinstance(horizon, bool) or not isinstance(horizon, int) or horizon < 1:
         raise DomainInvariantError("horizon must be a positive integer")
     if start_index + horizon > len(truth):
-        raise DomainInvariantError(
-            "forecast horizon exceeds available truth series"
-        )
+        raise DomainInvariantError("forecast horizon exceeds available truth series")
     forecast: list[ForecastDay] = []
     for lead in range(horizon):
         day = truth[start_index + lead]
@@ -268,9 +256,7 @@ def forecast_horizon(
         amount_roll = float(rng.standard_normal())
         miss_roll = float(rng.random())
         alarm_roll = float(rng.random())
-        et0 = day.et0_mm_per_day * float(
-            np.exp(spec.et0_sigma_rel * scale * et0_roll)
-        )
+        et0 = day.et0_mm_per_day * float(np.exp(spec.et0_sigma_rel * scale * et0_roll))
         temperature = day.temp_c + spec.temp_sigma_c * scale * temp_roll
         if day.rainfall_mm > 0.0:
             rainfall = (
@@ -281,8 +267,7 @@ def forecast_horizon(
             )
         else:
             rainfall = (
-                spec.false_alarm_mean_mm
-                * float(np.exp(0.5 * scale * amount_roll))
+                spec.false_alarm_mean_mm * float(np.exp(0.5 * scale * amount_roll))
                 if alarm_roll < spec.rain_false_alarm_prob
                 else 0.0
             )

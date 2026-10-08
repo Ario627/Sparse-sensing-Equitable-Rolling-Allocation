@@ -112,11 +112,7 @@ class PairwiseTest:
             raise DomainInvariantError("treatment and control must be BaselineMethod")
         if self.treatment is self.control:
             raise DomainInvariantError("treatment and control must differ")
-        if (
-            isinstance(self.n_pairs, bool)
-            or not isinstance(self.n_pairs, int)
-            or self.n_pairs < 1
-        ):
+        if isinstance(self.n_pairs, bool) or not isinstance(self.n_pairs, int) or self.n_pairs < 1:
             raise DomainInvariantError("n_pairs must be a positive integer")
         require_non_negative(self.statistic, "statistic")
         require_probability(self.p_value, "p_value")
@@ -197,9 +193,7 @@ def known_metrics() -> tuple[str, ...]:
 def metric_value(metric: str, metrics: RunMetrics) -> float | None:
     extractor = METRIC_EXTRACTORS.get(metric)
     if extractor is None:
-        raise DomainInvariantError(
-            f"unknown metric {metric!r}; known metrics: {known_metrics()}"
-        )
+        raise DomainInvariantError(f"unknown metric {metric!r}; known metrics: {known_metrics()}")
     return extractor(metrics)
 
 
@@ -369,8 +363,7 @@ def build_pairwise_tests(
                 )
         adjusted = holm_adjust([test.p_value for test in metric_tests])
         tests.extend(
-            replace(test, p_adjusted=adjusted[index])
-            for index, test in enumerate(metric_tests)
+            replace(test, p_adjusted=adjusted[index]) for index, test in enumerate(metric_tests)
         )
     return tuple(tests), excluded
 
@@ -394,9 +387,7 @@ def build_budget_curve(
             continue
         grouped.setdefault(record.spec.sensor_count, []).append(value)
     if not grouped:
-        raise DomainInvariantError(
-            "no records with the requested metric for this method"
-        )
+        raise DomainInvariantError("no records with the requested metric for this method")
     counts = tuple(sorted(grouped))
     means = tuple(math.fsum(grouped[count]) / len(grouped[count]) for count in counts)
     knee = knee_point(counts, means) if len(counts) >= MIN_ELBOW_POINTS else None
@@ -448,12 +439,8 @@ def build_summary(
     _require_seed(seed)
     method_summaries: list[MethodSummary] = []
     for method in BaselineMethod:
-        method_records = tuple(
-            record for record in items if record.spec.method is method
-        )
-        method_failures = tuple(
-            failure for failure in fails if failure.spec.method is method
-        )
+        method_records = tuple(record for record in items if record.spec.method is method)
+        method_failures = tuple(failure for failure in fails if failure.spec.method is method)
         if not method_records and not method_failures:
             continue
         method_summaries.append(
@@ -467,9 +454,7 @@ def build_summary(
                 seed=seed,
             )
         )
-    pairwise, excluded = build_pairwise_tests(
-        items, metrics=pairwise_metrics, min_pairs=min_pairs
-    )
+    pairwise, excluded = build_pairwise_tests(items, metrics=pairwise_metrics, min_pairs=min_pairs)
     return ExperimentSummary(
         experiment_id=experiment_id,
         config_hash=plan_hash,

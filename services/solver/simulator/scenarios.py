@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Final
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import (
     DomainInvariantError,
@@ -81,7 +81,7 @@ class ScenarioSpec:
     sensor_block_ids: tuple[str, ...] | None = None
     failed_zones: tuple[LossZone, ...] = ()
     forecast_grade: ForecastGrade = ForecastGrade.MODERATE
-    gate_fault: GateFaultSpec = GateFaultSpec()
+    gate_fault: GateFaultSpec = field(default_factory=GateFaultSpec)
     flow_velocity_m_per_s: float = 0.25
 
     def __post_init__(self) -> None:
@@ -119,11 +119,7 @@ class ScenarioSpec:
 
 
 def k_factor_for_day(spec: ScenarioSpec, day_index: int) -> float:
-    if (
-        isinstance(day_index, bool)
-        or not isinstance(day_index, int)
-        or day_index < 0
-    ):
+    if isinstance(day_index, bool) or not isinstance(day_index, int) or day_index < 0:
         raise DomainInvariantError("day_index must be a non-negative integer")
     factor = spec.k_schedule[0][1]
     for start, value in spec.k_schedule:
@@ -200,10 +196,7 @@ def block_zones(index: NetworkIndex) -> dict[str, LossZone]:
             raise DomainInvariantError("network must be parameterized before zoning blocks")
         distances[block_id] = block.distance_from_source_m
     span = max(distances.values())
-    return {
-        block_id: zone_for_distance(distance, span)
-        for block_id, distance in distances.items()
-    }
+    return {block_id: zone_for_distance(distance, span) for block_id, distance in distances.items()}
 
 
 def blocks_in_zones(index: NetworkIndex, zones: tuple[LossZone, ...]) -> tuple[str, ...]:
@@ -211,21 +204,15 @@ def blocks_in_zones(index: NetworkIndex, zones: tuple[LossZone, ...]) -> tuple[s
         return ()
     wanted = set(zones)
     zone_map = block_zones(index)
-    return tuple(
-        sorted(block_id for block_id, zone in zone_map.items() if zone in wanted)
-    )
+    return tuple(sorted(block_id for block_id, zone in zone_map.items() if zone in wanted))
 
 
 _NETWORK_BUILDERS: Final[dict[TopologyKind, Callable[[int, str], NetworkSpec]]] = {
-    TopologyKind.CHAIN: lambda n_blocks, network_id: chain_network(
-        n_blocks, network_id=network_id
-    ),
+    TopologyKind.CHAIN: lambda n_blocks, network_id: chain_network(n_blocks, network_id=network_id),
     TopologyKind.BRANCHED: lambda n_blocks, network_id: branched_network(
         n_blocks, network_id=network_id
     ),
-    TopologyKind.MIXED: lambda n_blocks, network_id: mixed_network(
-        n_blocks, network_id=network_id
-    ),
+    TopologyKind.MIXED: lambda n_blocks, network_id: mixed_network(n_blocks, network_id=network_id),
 }
 
 

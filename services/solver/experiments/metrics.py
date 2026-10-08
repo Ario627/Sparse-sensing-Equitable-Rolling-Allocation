@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import Final
 
 from app.core.types import (
@@ -182,9 +183,7 @@ def efficiency(records: Sequence[SlotRecord]) -> float | None:
 def dependability(records: Sequence[SlotRecord]) -> float:
     items = _require_records(records)
     fulfilled = sum(
-        1
-        for record in items
-        if record.delivered_m3 >= record.fair_target_m3 - FULFILL_TOLERANCE
+        1 for record in items if record.delivered_m3 >= record.fair_target_m3 - FULFILL_TOLERANCE
     )
     return fulfilled / len(items)
 
@@ -277,9 +276,7 @@ def rmse(truth: Sequence[float], estimate: Sequence[float]) -> float:
     predicted = _require_finite_series(estimate, "estimate")
     if len(actual) != len(predicted):
         raise DomainInvariantError("truth and estimate series must share one length")
-    squared = math.fsum(
-        (left - right) ** 2 for left, right in zip(actual, predicted, strict=True)
-    )
+    squared = math.fsum((left - right) ** 2 for left, right in zip(actual, predicted, strict=True))
     return math.sqrt(squared / len(actual))
 
 
@@ -292,9 +289,7 @@ def gate_switch_count(records: Sequence[SlotRecord]) -> int:
     for block_records in by_block.values():
         ordered = sorted(block_records, key=lambda record: record.slot_index)
         switches += sum(
-            1
-            for previous, current in zip(ordered[:-1], ordered[1:], strict=True)
-            if previous.gate_open != current.gate_open
+            1 for previous, current in pairwise(ordered) if previous.gate_open != current.gate_open
         )
     return switches
 
@@ -367,11 +362,7 @@ def compute_run_metrics(
         if truth_storage_mm is not None and estimate_storage_mm is not None
         else None
     )
-    tail = (
-        tail_deficit_m3(items, tail_block_ids)
-        if tail_block_ids is not None
-        else None
-    )
+    tail = tail_deficit_m3(items, tail_block_ids) if tail_block_ids is not None else None
     return RunMetrics(
         adequacy=adequacy(items),
         efficiency=efficiency(items),

@@ -5,7 +5,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Final
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import (
     DomainInvariantError,
@@ -70,9 +70,7 @@ def latency_by_block(
             raise DomainInvariantError(f"edge {edge_id} has no length")
         edge_latency[edge_id] = edge_latency_h(edge.length_m, velocity_m_per_s)
     return {
-        block_id: sum(
-            edge_latency[edge_id] for edge_id in index.path_edges[block_id]
-        )
+        block_id: sum(edge_latency[edge_id] for edge_id in index.path_edges[block_id])
         for block_id in index.block_ids
     }
 
@@ -200,18 +198,14 @@ def apply_capacity_limit(
     if unknown_blocks:
         raise DomainInvariantError(f"unknown blocks in release volumes: {unknown_blocks}")
     volumes = {
-        block_id: require_non_negative(
-            gross_m3_by_block[block_id], f"gross_m3[{block_id}]"
-        )
+        block_id: require_non_negative(gross_m3_by_block[block_id], f"gross_m3[{block_id}]")
         for block_id in index.block_ids
     }
     capacities: dict[str, float] = {}
     for edge_id in index.edge_order:
         if edge_id not in capacity_lps:
             raise DomainInvariantError(f"missing capacity for edge {edge_id}")
-        capacities[edge_id] = require_positive(
-            capacity_lps[edge_id], f"capacity_lps[{edge_id}]"
-        )
+        capacities[edge_id] = require_positive(capacity_lps[edge_id], f"capacity_lps[{edge_id}]")
     binding: list[str] = []
     for edge_id in index.reverse_edge_order:
         capacity_volume = LPS_HOUR_TO_M3 * capacities[edge_id] * duration

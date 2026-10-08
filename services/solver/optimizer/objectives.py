@@ -218,9 +218,7 @@ def _fix_objective(
         )
 
 
-def solve_lexicographic(
-    model: PlanModel, request: LexicographicRequest
-) -> LexicographicOutcome:
+def solve_lexicographic(model: PlanModel, request: LexicographicRequest) -> LexicographicOutcome:
     policy = request.policy()
     stage_budget = request.budget.with_time_limit(
         min(request.budget.time_limit_s, request.stage_time_limit_s)

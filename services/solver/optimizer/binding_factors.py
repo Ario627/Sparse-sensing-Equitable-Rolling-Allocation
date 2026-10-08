@@ -165,10 +165,7 @@ def derive_binding_factors(
         factors.append(BindingFactor.SAFETY_FLOOR)
     if situation.critical_stage:
         factors.append(BindingFactor.CRITICAL_STAGE)
-    if (
-        situation.sensor_confidence is not None
-        and situation.sensor_confidence < threshold
-    ):
+    if situation.sensor_confidence is not None and situation.sensor_confidence < threshold:
         factors.append(BindingFactor.SENSOR_CONFIDENCE)
     if situation.debt_priority:
         factors.append(BindingFactor.DEBT_PRIORITY)
