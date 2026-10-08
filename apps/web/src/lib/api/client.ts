@@ -366,3 +366,8 @@ export async function apiVoid(
     throw await toResponseError(attempt, config);
   }
 }
+
+export async function restoreSession(): Promise<boolean> {
+  const token = await refreshSession();
+  return token !== null;
+}

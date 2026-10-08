@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter #type: ignore
+from fastapi import APIRouter  # type: ignore
 
 from api.deps import RuntimeDep, solver_version
 from api.schemas import HealthResponse, HealthStatus

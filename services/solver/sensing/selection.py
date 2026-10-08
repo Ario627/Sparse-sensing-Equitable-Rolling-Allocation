@@ -347,9 +347,7 @@ def local_swap_refine(
     _require_score_function(score)
     refined = _REFINED_STRATEGY.get(selection.strategy)
     if refined is None:
-        raise DomainInvariantError(
-            "exact selections are globally optimal and cannot be refined"
-        )
+        raise DomainInvariantError("exact selections are globally optimal and cannot be refined")
     selected = _canonical_subset(selection.selected, items)
     current = selection.score
     evaluated = selection.evaluated_subsets
@@ -369,9 +367,7 @@ def local_swap_refine(
                     best_swap = (outgoing, incoming)
         if best_swap is None:
             break
-        survivors = tuple(
-            location for location in selected if location != best_swap[0]
-        )
+        survivors = tuple(location for location in selected if location != best_swap[0])
         selected = _canonical_subset((*survivors, best_swap[1]), items)
         current = best_value
     return replace(
@@ -400,4 +396,5 @@ def select_sensors(
     greedy = greedy_forward(items, size, score)
     if refine:
         return local_swap_refine(items, greedy, score, min_improvement=min_improvement)
+    return greedy
     return greedy

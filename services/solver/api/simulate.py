@@ -4,7 +4,7 @@ import math
 from dataclasses import replace
 from typing import Final
 
-from fastapi import APIRouter #type: ignore
+from fastapi import APIRouter  # type: ignore
 
 from api.schemas import (
     SimulateArtifacts,
@@ -45,11 +45,7 @@ NOMINAL_K_FACTOR: Final = 1.0
 
 def _scenario_spec(request: SimulateRequest) -> ScenarioSpec:
     payload = request.scenario_config
-    k_schedule = (
-        ((0, NOMINAL_K_FACTOR),)
-        if request.k_factor is None
-        else ((0, request.k_factor),)
-    )
+    k_schedule = ((0, NOMINAL_K_FACTOR),) if request.k_factor is None else ((0, request.k_factor),)
     return ScenarioSpec(
         scenario_id=payload.scenario_id,
         topology=payload.topology if request.topology is None else request.topology,
@@ -210,15 +206,12 @@ def _metrics(
             math.fsum(outcome.delivered_m3.values()) for outcome in simulation.outcomes
         ),
         total_gross_m3=math.fsum(
-            math.fsum(outcome.released_gross_m3.values())
-            for outcome in simulation.outcomes
+            math.fsum(outcome.released_gross_m3.values()) for outcome in simulation.outcomes
         ),
         final_storage_min_mm=min(final_storage),
         final_storage_mean_mm=math.fsum(final_storage) / len(final_storage),
         final_storage_max_mm=max(final_storage),
-        supply_binding_slots=sum(
-            1 for outcome in simulation.outcomes if outcome.supply_binding
-        ),
+        supply_binding_slots=sum(1 for outcome in simulation.outcomes if outcome.supply_binding),
         n_resolves=None if telemetry is None else telemetry.n_resolves,
         fallback_count=None if telemetry is None else telemetry.fallback_count,
         nis_violations=None if telemetry is None else telemetry.nis_violations,

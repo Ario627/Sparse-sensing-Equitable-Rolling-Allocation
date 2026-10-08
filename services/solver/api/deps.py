@@ -8,7 +8,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Annotated, Final
 
-from fastapi import Depends, Request #type: ignore
+from fastapi import Depends, Request  # type: ignore
 
 from app.core.io import experiment_dir
 from app.core.types import DomainInvariantError
@@ -28,6 +28,7 @@ from experiments.reporting import (
 )
 from experiments.runner import (
     ERROR_MESSAGE_LIMIT,
+    ExperimentOutcome,
     ExperimentPlan,
     RunFailure,
     RunRecord,
@@ -70,6 +71,14 @@ def _completed_run_indexes(checkpoint_path: Path, plan: ExperimentPlan) -> froze
     return frozenset(
         record.spec.run_index for record in contents.records if record.spec.run_index in known
     )
+
+
+def _all_runs_failed(outcome: ExperimentOutcome) -> str:
+    if not outcome.failures:
+        return "experiment produced no completed runs"
+    first = outcome.failures[0]
+    message = f"all {len(outcome.failures)} runs failed; first: {first.error_type}: {first.message}"
+    return message[:ERROR_MESSAGE_LIMIT]
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,9 +177,7 @@ class ExperimentJobRegistry:
             return tuple(self._jobs.values())
 
     def active_count(self) -> int:
-        return sum(
-            1 for job in self.jobs() if job.tracker.snapshot().status in ACTIVE_STATUSES
-        )
+        return sum(1 for job in self.jobs() if job.tracker.snapshot().status in ACTIVE_STATUSES)
 
     def cancel(self, experiment_id: str) -> ProgressSnapshot:
         tracker = self.get(experiment_id).tracker
@@ -226,6 +233,9 @@ class ExperimentJobRegistry:
                 fail_fast=False,
                 on_result=report,
             )
+            if not outcome.records:
+                tracker.fail(_all_runs_failed(outcome))
+                return
             records = attach_decision_regret(outcome.records)
             summary = build_summary(
                 records,

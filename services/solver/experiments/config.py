@@ -345,21 +345,15 @@ class ExperimentConfig:
         return replace(self, executor=replace(self.executor, timeseries_sink=sink))
 
 
-def load_experiment_config(
-    path: Path,
+def experiment_config_from_mapping(
+    document: object,
     *,
     default_seed_base: int | None = None,
+    source: str = "config",
 ) -> ExperimentConfig:
-    target = path if path.is_absolute() else path.resolve()
-    if not target.exists():
-        raise DomainInvariantError(f"config file not found: {target}")
-    try:
-        document = yaml.safe_load(target.read_text(encoding="utf-8"))
-    except yaml.YAMLError as error:
-        raise DomainInvariantError(f"config file is not valid YAML: {target}") from error
-    root = _require_mapping(document if document is not None else {}, "config")
-    _require_keys(root, ROOT_KEYS, "config")
-    _require_present(root, frozenset({"experiment_id"}), "config")
+    root = _require_mapping(document if document is not None else {}, source)
+    _require_keys(root, ROOT_KEYS, source)
+    _require_present(root, frozenset({"experiment_id"}), source)
     experiment_id = require_identifier(
         _require_text(root["experiment_id"], "experiment_id"), "experiment_id"
     )
@@ -391,4 +385,38 @@ def load_experiment_config(
         executor=executor,
         results_root=results_root,
         payload=payload,
+    )
+
+
+def load_experiment_config_text(
+    text: str,
+    *,
+    default_seed_base: int | None = None,
+    source: str = "config",
+) -> ExperimentConfig:
+    if not isinstance(text, str) or not text.strip():
+        raise DomainInvariantError(f"{source} is empty")
+    try:
+        document = yaml.safe_load(text)
+    except yaml.YAMLError as error:
+        raise DomainInvariantError(f"{source} is not valid YAML") from error
+    return experiment_config_from_mapping(
+        document,
+        default_seed_base=default_seed_base,
+        source=source,
+    )
+
+
+def load_experiment_config(
+    path: Path,
+    *,
+    default_seed_base: int | None = None,
+) -> ExperimentConfig:
+    target = path if path.is_absolute() else path.resolve()
+    if not target.exists():
+        raise DomainInvariantError(f"config file not found: {target}")
+    return load_experiment_config_text(
+        target.read_text(encoding="utf-8"),
+        default_seed_base=default_seed_base,
+        source=str(target),
     )

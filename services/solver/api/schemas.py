@@ -4,7 +4,15 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated, Final, Literal, Self
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator #type: ignore
+from pydantic import (  # type: ignore
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    field_validator,
+    model_validator,
+)
 
 from app.core.types import (
     CropStage,

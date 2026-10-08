@@ -7,8 +7,8 @@ from types import MappingProxyType
 from typing import Final, cast
 
 import numpy as np  # type: ignore
-from fastapi import APIRouter #type: ignore
-from pydantic import JsonValue #type: ignore
+from fastapi import APIRouter  # type: ignore
+from pydantic import JsonValue  # type: ignore
 
 from api.network_payload import network_spec_from_payload
 from api.schemas import (
@@ -21,6 +21,7 @@ from api.schemas import (
     LossEntry,
     NetworkPayload,
 )
+from api.water_model import full_sensing_model
 from app.core.types import DomainInvariantError, LossZone, SensorKind
 from estimator.confidence import (
     DEFAULT_LEVEL,
@@ -35,9 +36,7 @@ from estimator.identifiability import IdentifiabilityReport, information_contrib
 from estimator.loss import (
     JointEstimateView,
     JointStorageLossModel,
-    LossGroupSpec,
     PreparedMeasurement,
-    build_joint_model,
     initial_joint_state,
     prepare_measurement,
 )
@@ -131,9 +130,7 @@ def _tuning(params: Mapping[str, JsonValue]) -> _EstimateTuning:
             _number_param(params, "percolation_mm_per_day"),
             base.percolation_mm_per_day,
         ),
-        wlr_mm_per_day=_override(
-            _number_param(params, "wlr_mm_per_day"), base.wlr_mm_per_day
-        ),
+        wlr_mm_per_day=_override(_number_param(params, "wlr_mm_per_day"), base.wlr_mm_per_day),
         s_max_mm=_override(_number_param(params, "s_max_mm"), base.s_max_mm),
         process_sigma_mm_per_slot=_override(
             _number_param(params, "process_sigma_mm_per_slot"),
@@ -144,9 +141,7 @@ def _tuning(params: Mapping[str, JsonValue]) -> _EstimateTuning:
         assumed_sigma_mm=_override(
             _number_param(params, "assumed_sigma_mm"), DEFAULT_ASSUMED_SIGMA_MM
         ),
-        confidence_level=_override(
-            _number_param(params, "confidence_level"), DEFAULT_LEVEL
-        ),
+        confidence_level=_override(_number_param(params, "confidence_level"), DEFAULT_LEVEL),
         confidence_tolerance_mm=_override(
             _number_param(params, "confidence_tolerance_mm"),
             DEFAULT_CONFIDENCE_TOLERANCE_MM,
@@ -173,40 +168,15 @@ def _collect_readings(request: EstimateRequest) -> ReadingSet:
             continue
         previous = mapping.get(entry.sensor_id)
         if previous is not None and previous != entry.target_id:
-            raise DomainInvariantError(
-                f"sensor {entry.sensor_id!r} maps to multiple blocks"
-            )
+            raise DomainInvariantError(f"sensor {entry.sensor_id!r} maps to multiple blocks")
         mapping[entry.sensor_id] = entry.target_id
         readings.append(
-            LevelReading(
-                sensor_id=entry.sensor_id, value=entry.value, quality=entry.quality
-            )
+            LevelReading(sensor_id=entry.sensor_id, value=entry.value, quality=entry.quality)
         )
     return ReadingSet(
         readings=tuple(readings),
         sensor_block_of=MappingProxyType(mapping),
         total=len(request.observations),
-    )
-
-
-def _joint_layout(index: NetworkIndex) -> tuple[tuple[LossZone, ...], dict[str, LossZone]]:
-    zones = tuple(
-        dict.fromkeys(index.edge_by_id[edge_id].zone for edge_id in index.edge_order)
-    )
-    return zones, {
-        edge_id: index.edge_by_id[edge_id].zone for edge_id in index.edge_order
-    }
-
-
-def _joint_model(index: NetworkIndex, s_max_mm: float) -> JointStorageLossModel:
-    zones, edge_zone = _joint_layout(index)
-    return build_joint_model(
-        index.path_edges,
-        edge_zone,
-        block_ids=index.block_ids,
-        measured_block_ids=index.block_ids,
-        group_spec=LossGroupSpec.per_zone(zones),
-        s_max_mm=s_max_mm,
     )
 
 
@@ -231,9 +201,7 @@ def _joint_prior(
     for entry in previous.entries:
         position = positions.get(entry.block_id)
         if position is None:
-            raise DomainInvariantError(
-                f"state_prev references unknown block: {entry.block_id!r}"
-            )
+            raise DomainInvariantError(f"state_prev references unknown block: {entry.block_id!r}")
         means[position] = entry.mean_mm
         variance = (
             tuning.prior_storage_sigma_mm * tuning.prior_storage_sigma_mm
@@ -346,7 +314,7 @@ def _joint_response(
     tuning: _EstimateTuning,
 ) -> EstimateResponse:
     index = NetworkIndex.from_spec(network_spec_from_payload(network))
-    model = _joint_model(index, tuning.dynamics.s_max_mm)
+    model = full_sensing_model(index, s_max_mm=tuning.dynamics.s_max_mm)
     prior = _joint_prior(model, request, tuning)
     batch = build_measurement_batch(
         cast(Sequence[LevelReadingLike], readings.readings),
@@ -355,9 +323,7 @@ def _joint_response(
     )
     state, innovation, prepared = _joint_update(model, prior, batch)
     view = JointEstimateView.from_state(model, state)
-    verdict = (
-        None if innovation is None else check_innovation(innovation, tuning.confidence_level)
-    )
+    verdict = None if innovation is None else check_innovation(innovation, tuning.confidence_level)
     slot_index = 0 if request.state_prev is None else request.state_prev.slot_index + 1
     diagnostics = EstimateDiagnostics(
         slot_index=slot_index,
@@ -373,7 +339,9 @@ def _joint_response(
     return EstimateResponse(
         request_id=request.request_id,
         network_id=request.network_id,
-        state=_storage_state_entries(model, state, tuning.dynamics.s_max_mm, tuning.confidence_level),
+        state=_storage_state_entries(
+            model, state, tuning.dynamics.s_max_mm, tuning.confidence_level
+        ),
         covariance=_matrix_payload(state.covariance),
         loss=_loss_entries(model, state, tuning.confidence_level),
         confidence=_confidence_from(
@@ -413,19 +381,13 @@ def _restricted_to(
     batch: MeasurementBatch,
     allowed: frozenset[str],
 ) -> MeasurementBatch:
-    keep = [
-        position
-        for position, block_id in enumerate(batch.block_ids)
-        if block_id in allowed
-    ]
+    keep = [position for position, block_id in enumerate(batch.block_ids) if block_id in allowed]
     if not keep:
         return MeasurementBatch.empty()
     return MeasurementBatch(
         block_ids=tuple(batch.block_ids[position] for position in keep),
         values_mm=np.array([batch.values_mm[position] for position in keep], dtype=float),
-        variances_mm2=np.array(
-            [batch.variances_mm2[position] for position in keep], dtype=float
-        ),
+        variances_mm2=np.array([batch.variances_mm2[position] for position in keep], dtype=float),
         qualities=tuple(batch.qualities[position] for position in keep),
     )
 
@@ -433,10 +395,7 @@ def _restricted_to(
 def _diagonal_payload(estimate: StorageEstimate) -> list[list[float]]:
     size = len(estimate.block_ids)
     return [
-        [
-            float(estimate.variances_mm2[row]) if row == column else 0.0
-            for column in range(size)
-        ]
+        [float(estimate.variances_mm2[row]) if row == column else 0.0 for column in range(size)]
         for row in range(size)
     ]
 
@@ -454,9 +413,7 @@ def _storage_response(
     )
     restricted = _restricted_to(batch, frozenset(estimate.block_ids))
     corrected = (
-        estimate
-        if restricted.is_empty
-        else correct_storage(estimate, restricted, tuning.dynamics)
+        estimate if restricted.is_empty else correct_storage(estimate, restricted, tuning.dynamics)
     )
     entries: list[BlockStateEntry] = []
     for position, block_id in enumerate(corrected.block_ids):
