@@ -24,7 +24,9 @@ _DEFAULT_LOSS_UPPER: Final = 0.99
 
 
 def logit(probability: float) -> float:
-    value = require_unit_open_closed(probability, "probability")
+    value = require_finite(probability, "probability")
+    if not 0.0 < value < 1.0:
+        raise DomainInvariantError("probability must lie in (0, 1)")
     return math.log(value / (1.0 - value))
 
 
@@ -53,6 +55,8 @@ def arrival_slot_index(slot_index: int, latency_h: float, slot_hours: float) -> 
 def _check_logit_bounds(lower: float, upper: float) -> tuple[float, float]:
     low = require_unit_open_closed(lower, "lower")
     high = require_unit_open_closed(upper, "upper")
+    if high >= 1.0:
+        raise DomainInvariantError("upper bound must stay below one")
     if high <= low:
         raise DomainInvariantError("upper bound must exceed lower bound")
     return low, high

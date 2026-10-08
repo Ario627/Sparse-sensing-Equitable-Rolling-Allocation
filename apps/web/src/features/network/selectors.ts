@@ -50,15 +50,15 @@ export type BlockSensorSummary = {
   readonly staleCount: number;
   readonly worstQuality: ReadingQuality | null;
 };
-
 export type BlockSlot = {
   readonly slotStart: string;
   readonly slotEnd: string;
   readonly gateOpen: boolean;
   readonly serviceRatio: number | null;
+  readonly volumeDelM3: number | null;
+  readonly volumeGrossM3: number | null;
   readonly upcoming: boolean;
 };
-
 export type BlockSummary = {
   readonly blockId: string;
   readonly nodeId: string;
@@ -201,6 +201,8 @@ function planSlotByBlock(
       slotEnd: chosen.slot_end,
       gateOpen: chosen.gate_open,
       serviceRatio: chosen.service_ratio_est,
+      volumeDelM3: chosen.volume_del_m3,
+      volumeGrossM3: chosen.volume_gross_m3,
       upcoming: upcoming.has(blockId),
     });
   }
@@ -333,4 +335,8 @@ export function buildNetworkView(input: BuildNetworkViewInput): NetworkView {
     flow: buildFlow(input.detail, blockByNodeId, zones),
     summary: buildSummary(blocks, input.telemetry),
   };
+}
+
+export function zoneLabel(zone: LossZone): string {
+  return ZONE_LABELS[zone];
 }

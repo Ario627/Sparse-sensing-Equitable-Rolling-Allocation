@@ -371,3 +371,18 @@ export async function restoreSession(): Promise<boolean> {
   const token = await refreshSession();
   return token !== null;
 }
+async function readTextBody(response: Response): Promise<string> {
+  return response.text().catch(() => "");
+}
+
+export async function apiText(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<string> {
+  const config = toAttemptConfig(path, options);
+  const attempt = await sendWithAuth(config);
+  if (!attempt.response.ok) {
+    throw await toResponseError(attempt, config);
+  }
+  return readTextBody(attempt.response);
+}

@@ -213,7 +213,7 @@ class PolicyConfig:
         require_unit_open_closed(self.prior_eta, "prior_eta")
         require_positive(self.prior_eta_sigma_logit, "prior_eta_sigma_logit")
         require_positive(self.process_storage_sigma_mm, "process_storage_sigma_mm")
-        require_non_negative(self.process_drift_sigma_logit, "process_drift_sigma_logit")
+        require_positive(self.process_drift_sigma_logit, "process_drift_sigma_logit")
         require_non_negative(self.dropout_inflation_mm2, "dropout_inflation_mm2")
         require_positive(self.measurement_sigma_mm, "measurement_sigma_mm")
         require_positive(self.confidence_tolerance_mm, "confidence_tolerance_mm")
