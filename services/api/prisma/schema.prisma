@@ -344,7 +344,7 @@ model ServiceLedger {
   network IrrigationNetwork @relation(fields: [networkId], references: [id])
   block   Block             @relation(fields: [blockId], references: [id])
 
-  @@index([networkId, blockId, periodStart])
+  @@unique([networkId, blockId, periodStart])
 }
 
 model Plan {

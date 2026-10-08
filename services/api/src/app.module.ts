@@ -21,6 +21,8 @@ import { AuditModule } from './audit/audit.module.ts';
 import { ExperimentsModule } from './experiments/experiments.module.ts';
 import { EstimatorModule } from './estimator/estimator.module.ts';
 import { EventsModule } from './events/events.module.ts';
+import { SensorsModule } from './sensors/sensors.module.ts';
+import { LedgerModule } from './ledger/ledger.module.ts';
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_RATE_LIMIT = { ttl: 60_000, limit: 120 };
@@ -59,6 +61,8 @@ function resolveEnvFiles(): string[] {
     ExperimentsModule,
     EventsModule,
     EstimatorModule,
+    SensorsModule,
+    LedgerModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

@@ -15,4 +15,6 @@ export * from "./plan-command.ts";
 export * from "./p3a.ts";
 export * from "./experiments.ts";
 export * from "./estimates.ts";
+export * from "./sensors.ts";
+export * from "./ledger.ts";
 export * from "./password.ts"

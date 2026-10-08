@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { Env } from '../common/config/env.ts';
 import { AuthController } from './auth.controller.ts';
+import { RefreshTokenCleanupService } from './refresh-token-cleanup.service.ts';
 import { AUTH_AUDIENCE, AUTH_ISSUER, AuthService } from './auth.service.ts';
 import { UsersModule } from '../users/users.module.ts';
 
@@ -24,7 +25,7 @@ import { UsersModule } from '../users/users.module.ts';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, RefreshTokenCleanupService],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

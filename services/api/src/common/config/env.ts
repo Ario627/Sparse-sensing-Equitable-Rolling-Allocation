@@ -98,8 +98,22 @@ export const envSchema = z.object({
     .default(500),
   ESTIMATOR_BATCH_NETWORKS: z.coerce.number().int().min(1).max(50).default(10),
   ESTIMATE_STALE_S: z.coerce.number().int().min(60).max(86_400).default(900),
+  LEDGER_PERIOD_H: z.coerce.number().int().min(1).max(168).default(6),
+  LEDGER_GAMMA: z.coerce.number().gt(0).lt(1).default(0.9),
+  LEDGER_DEBT_MAX_M3: z.coerce.number().gt(0).max(1_000_000).default(40),
+  LEDGER_SETTLE_INTERVAL_S: z.coerce
+    .number()
+    .int()
+    .min(60)
+    .max(3_600)
+    .default(600),
+  REFRESH_CLEANUP_INTERVAL_S: z.coerce
+    .number()
+    .int()
+    .min(60)
+    .max(86_400)
+    .default(3_600),
+  REFRESH_TOKEN_RETENTION_D: z.coerce.number().int().min(1).max(365).default(30),
 });
-  
-
 
 export type Env = z.infer<typeof envSchema>;

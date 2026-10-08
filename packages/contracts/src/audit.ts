@@ -65,7 +65,19 @@ export const auditListResponseSchema = z.strictObject({
   total_pages: z.int().positive(),
 });
 
+export const auditFacetSchema = z.strictObject({
+  value: z.string().min(1),
+  count: z.int().nonnegative(),
+});
+
+export const auditFacetsResponseSchema = z.strictObject({
+  actions: z.array(auditFacetSchema),
+  entities: z.array(auditFacetSchema),
+});
+
 export type ListAuditQuery = z.infer<typeof listAuditQuerySchema>;
 export type AuditActorResponse = z.infer<typeof auditActorSchema>;
 export type AuditLogResponse = z.infer<typeof auditLogSchema>;
 export type AuditListResponse = z.infer<typeof auditListResponseSchema>;
+export type AuditFacetResponse = z.infer<typeof auditFacetSchema>;
+export type AuditFacetsResponse = z.infer<typeof auditFacetsResponseSchema>;

@@ -37,3 +37,13 @@ export interface AuditListPage {
   readonly items: readonly AuditLogRecord[];
   readonly total: number;
 }
+
+export interface AuditFacetRecord {
+  readonly value: string;
+  readonly count: number;
+}
+
+export interface AuditFacetsRecord {
+  readonly actions: readonly AuditFacetRecord[];
+  readonly entities: readonly AuditFacetRecord[];
+}

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditRepository } from './audit.repository.ts';
 import { AUDIT_MESSAGES } from './audit.constant.ts';
 import type {
+  AuditFacetsRecord,
   AuditListPage,
   AuditListQuery,
   AuditLogRecord,
@@ -13,6 +14,10 @@ export class AuditService {
 
   list(query: AuditListQuery): Promise<AuditListPage> {
     return this.repository.listAuditLogs(query);
+  }
+
+  facets(): Promise<AuditFacetsRecord> {
+    return this.repository.loadFacets();
   }
 
   async getById(id: string): Promise<AuditLogRecord> {

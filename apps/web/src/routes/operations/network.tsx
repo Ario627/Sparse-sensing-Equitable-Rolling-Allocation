@@ -188,7 +188,7 @@ export function NetworkPage() {
     return (
       <div className="flex flex-col gap-5">
         <PageHeader eyebrow="Operasi" title="Jaringan" />
-        <Skeleton className="h-[420px]" />
+        <Skeleton className="h-105" />
       </div>
     );
   }
@@ -261,7 +261,7 @@ export function NetworkPage() {
                 <Skeleton key={key} className="h-24" />
               ))}
             </div>
-            <Skeleton className="h-[420px]" />
+            <Skeleton className="h-105" />
           </div>
           <Skeleton className="h-72" />
         </div>

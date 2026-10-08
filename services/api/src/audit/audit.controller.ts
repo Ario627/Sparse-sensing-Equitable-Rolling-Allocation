@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   auditLogIdSchema,
   listAuditQuerySchema,
+  type AuditFacetsResponse,
   type AuditListResponse,
   type AuditLogResponse,
   type ListAuditQuery,
@@ -61,6 +62,21 @@ export class AuditController {
       limit: query.limit,
       total: page.total,
       total_pages: Math.max(1, Math.ceil(page.total / query.limit)),
+    };
+  }
+
+  @Get('facets')
+  async facets(): Promise<AuditFacetsResponse> {
+    const facets = await this.auditService.facets();
+    return {
+      actions: facets.actions.map((facet) => ({
+        value: facet.value,
+        count: facet.count,
+      })),
+      entities: facets.entities.map((facet) => ({
+        value: facet.value,
+        count: facet.count,
+      })),
     };
   }
 

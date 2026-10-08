@@ -4,6 +4,7 @@ import type { Prisma } from '../generated/prisma/client.ts';
 import { PrismaService } from '../prisma/prisma.service.ts';
 import { AUDIT_SELECT, toAuditLogRecord } from './audit.selects.ts';
 import type {
+  AuditFacetsRecord,
   AuditListPage,
   AuditListQuery,
   AuditLogRecord,
@@ -68,5 +69,30 @@ export class AuditRepository {
       select: AUDIT_SELECT,
     });
     return row === null ? null : toAuditLogRecord(row);
+  }
+
+  async loadFacets(): Promise<AuditFacetsRecord> {
+    const [actions, entities] = await Promise.all([
+      this.prisma.auditLog.groupBy({
+        by: ['action'],
+        orderBy: { action: 'asc' },
+        _count: { _all: true },
+      }),
+      this.prisma.auditLog.groupBy({
+        by: ['entity'],
+        orderBy: { entity: 'asc' },
+        _count: { _all: true },
+      }),
+    ]);
+    return {
+      actions: actions.map((row) => ({
+        value: row.action,
+        count: row._count._all,
+      })),
+      entities: entities.map((row) => ({
+        value: row.entity,
+        count: row._count._all,
+      })),
+    };
   }
 }
