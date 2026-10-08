@@ -4,7 +4,6 @@ import { ConfirmDialog } from "@/components/kit/confirm-dialog.tsx";
 import { Field, textareaClass } from "@/components/kit/field.tsx";
 import { cn } from "@/lib/cn.ts";
 import { formatClockRange } from "@/lib/format.ts";
-import { zoneLabel } from "@/features/network/selectors.ts";
 import { usePlanActions } from "./use-plan-actions.ts";
 
 const REASON_MAX = 160;

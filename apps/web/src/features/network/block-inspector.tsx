@@ -1,6 +1,7 @@
 import { IconClose } from "@/components/icons.tsx";
 import { Button } from "@/components/kit/button.tsx";
 import { StatusPill } from "@/components/kit/status-pill.tsx";
+import { sensorQualityLabel, sensorQualityTone } from "@/features/sensors/status.ts";
 import { cn } from "@/lib/cn.ts";
 import {
   formatClockRange,
@@ -11,7 +12,6 @@ import {
 } from "@/lib/format.ts";
 import type { BlockSummary } from "./selectors.ts";
 import { zoneLabel } from "./selectors.ts";
-import { sensorQualityLabel, sensorQualityTone } from "./status.ts";
 
 const MAX_REASON_NOTES = 6;
 
@@ -69,7 +69,7 @@ export function BlockInspector({
   onClose,
   className,
 }: BlockInspectorProps) {
-  const notes = readReasonNotes(block.slot === null ? null : block.slot.slotStart);
+  const notes = readReasonNotes(block.slot === null ? null : block.slot.reasonJson);
   const slot = block.slot;
   const areaHa = block.areaM2 / 10_000;
   return (

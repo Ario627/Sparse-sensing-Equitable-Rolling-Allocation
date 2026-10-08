@@ -7,6 +7,7 @@ import type {
   ReadingQuality,
   TelemetryLatestItemResponse,
 } from "@sera/contracts";
+import { worseQuality } from "@/features/sensors/status.ts";
 import { layoutNetworkNodes } from "@/lib/gl/relief-layout.ts";
 import { serviceRatioBand, type StatusBand } from "./status.ts";
 
@@ -15,13 +16,6 @@ const CANVAS_Y_SCALE = 190;
 const NO_PLAN_BAND: StatusBand = {
   tone: "neutral",
   label: "Belum ada rencana",
-};
-
-const QUALITY_RANK: Record<ReadingQuality, number> = {
-  GOOD: 0,
-  SUSPECT: 1,
-  BAD: 2,
-  STALE: 3,
 };
 
 const ZONE_LABELS: Record<LossZone, string> = {
@@ -57,6 +51,7 @@ export type BlockSlot = {
   readonly serviceRatio: number | null;
   readonly volumeDelM3: number | null;
   readonly volumeGrossM3: number | null;
+  readonly reasonJson: unknown;
   readonly upcoming: boolean;
 };
 export type BlockSummary = {
@@ -121,19 +116,6 @@ export interface BuildNetworkViewInput {
   readonly now?: number;
 }
 
-function worseQuality(
-  a: ReadingQuality | null,
-  b: ReadingQuality | null,
-): ReadingQuality | null {
-  if (a === null) {
-    return b;
-  }
-  if (b === null) {
-    return a;
-  }
-  return QUALITY_RANK[a] >= QUALITY_RANK[b] ? a : b;
-}
-
 function zoneByNodeId(
   detail: NetworkDetailResponse,
 ): ReadonlyMap<string, LossZone> {
@@ -196,13 +178,14 @@ function planSlotByBlock(
     if (chosen === undefined) {
       continue;
     }
-    slots.set(blockId, {
+        slots.set(blockId, {
       slotStart: chosen.slot_start,
       slotEnd: chosen.slot_end,
       gateOpen: chosen.gate_open,
       serviceRatio: chosen.service_ratio_est,
       volumeDelM3: chosen.volume_del_m3,
       volumeGrossM3: chosen.volume_gross_m3,
+      reasonJson: chosen.reason_json,
       upcoming: upcoming.has(blockId),
     });
   }

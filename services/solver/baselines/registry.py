@@ -90,4 +90,4 @@ class BaselineRegistry:
         )
 
 
-DEFAULT_REGISTRY: Final = BaselineRegistry()
+DEFAULT_REGISTRY: Final[BaselineRegistry] = BaselineRegistry()

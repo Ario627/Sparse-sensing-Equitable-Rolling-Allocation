@@ -3,7 +3,6 @@ import type {
   AlertSeverity,
   PlanStatus,
   PolicyProfile,
-  ReadingQuality,
 } from "@sera/contracts";
 import type { Tone } from "@/components/kit/status-pill.tsx";
 
@@ -32,20 +31,6 @@ export const kFactorBands: readonly (StatusBand & { readonly min: number })[] =
     { min: 0.7, tone: "warn", label: "Cukup langka" },
     { min: 0.5, tone: "warn", label: "Kekurangan" },
   ];
-
-const sectorRatioTones: Record<ReadingQuality, Tone> = {
-  GOOD: "ok",
-  SUSPECT: "warn",
-  BAD: "crit",
-  STALE: "crit",
-};
-
-const sectorRatioLabels: Record<ReadingQuality, string> = {
-  GOOD: "Baik",
-  SUSPECT: "Perlu dicek",
-  BAD: "Rusak",
-  STALE: "Basi",
-};
 
 const planStatusTones: Record<PlanStatus, Tone> = {
   PROPOSED: "warn",
@@ -113,14 +98,6 @@ export function kFactorBand(value: number | null): StatusBand {
     return K_UNKNOWN_BAND;
   }
   return bandFor(kFactorBands, K_CRIT_BAND, clamp01(value));
-}
-
-export function sensorQualityTone(quality: ReadingQuality | null): Tone {
-  return quality === null ? "neutral" : sectorRatioTones[quality];
-}
-
-export function sensorQualityLabel(quality: ReadingQuality | null): string {
-  return quality === null ? "Belum ada data" : sectorRatioLabels[quality];
 }
 
 export function planStatusTone(status: PlanStatus): Tone {

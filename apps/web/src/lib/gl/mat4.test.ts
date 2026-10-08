@@ -38,11 +38,12 @@ describe("orbitEye", () => {
     expect(distance).toBeCloseTo(5, 10);
   });
 
-  it("berada tepat di sumbu +z saat yaw nol", () => {
+  it("menjepit pitch minimum sehingga kamera tetap di atas bidang", () => {
     const eye = orbitEye([0, 0, 0], 4, 0, 0);
     expect(eye[0]).toBeCloseTo(0, 10);
-    expect(eye[1]).toBeCloseTo(0, 10);
-    expect(eye[2]).toBeCloseTo(4, 10);
+    expect(eye[1]).toBeCloseTo(4 * Math.sin(0.15), 10);
+    expect(eye[2]).toBeCloseTo(4 * Math.cos(0.15), 10);
+    expect(eye[1]).toBeGreaterThan(0);
   });
 
   it("menolak radius yang tidak positif", () => {
@@ -82,17 +83,17 @@ describe("lookAt", () => {
     expect(matrix[14]).toBeCloseTo(-5, 10);
   });
 
-  it("menjaga basis kamera ortonormal untuk mata sembarang", () => {
+  it("menjaga basis kamera ortonormal dalam toleransi float32", () => {
     const matrix = lookAt([3, 4, 5], [0, 0, 0], [0, 1, 0]);
     const x = column(matrix, 0);
     const y = column(matrix, 1);
     const z = column(matrix, 2);
-    expect(length(x)).toBeCloseTo(1, 10);
-    expect(length(y)).toBeCloseTo(1, 10);
-    expect(length(z)).toBeCloseTo(1, 10);
-    expect(dot(x, y)).toBeCloseTo(0, 10);
-    expect(dot(x, z)).toBeCloseTo(0, 10);
-    expect(dot(y, z)).toBeCloseTo(0, 10);
+    expect(length(x)).toBeCloseTo(1, 6);
+    expect(length(y)).toBeCloseTo(1, 6);
+    expect(length(z)).toBeCloseTo(1, 6);
+    expect(dot(x, y)).toBeCloseTo(0, 6);
+    expect(dot(x, z)).toBeCloseTo(0, 6);
+    expect(dot(y, z)).toBeCloseTo(0, 6);
   });
 
   it("menolak mata yang berimpit dengan target", () => {

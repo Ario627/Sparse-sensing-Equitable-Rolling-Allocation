@@ -23,6 +23,7 @@ export interface MeterBarProps {
   readonly marker?: MeterMarker | null;
   readonly tone?: Tone;
   readonly valueLabel?: string;
+  readonly ticks?: boolean;
   readonly className?: string;
 }
 
@@ -65,6 +66,7 @@ export function MeterBar({
   marker = null,
   tone = "neutral",
   valueLabel,
+  ticks = true,
   className,
 }: MeterBarProps) {
   const valuePct = toPercent(value, range);
@@ -100,17 +102,19 @@ export function MeterBar({
             style={{ left: `${markerPct}%` }}
           />
         )}
-        <div aria-hidden="true" className="mt-0.5 flex items-start justify-between">
-          {TICKS.map((tick) => (
-            <span
-              key={tick}
-              className={cn(
-                "w-px bg-line-2",
-                tick % MAJOR_TICK_STEP === 0 ? "h-1.5" : "h-1",
-              )}
-            />
-          ))}
-        </div>
+        {ticks && (
+          <div aria-hidden="true" className="mt-0.5 flex items-start justify-between">
+            {TICKS.map((tick) => (
+              <span
+                key={tick}
+                className={cn(
+                  "w-px bg-line-2",
+                  tick % MAJOR_TICK_STEP === 0 ? "h-1.5" : "h-1",
+                )}
+              />
+            ))}
+          </div>
+        )}
       </div>
       {(valueLabel !== undefined || markerLabel !== undefined) && (
         <span className="flex shrink-0 flex-col items-end gap-0.5">

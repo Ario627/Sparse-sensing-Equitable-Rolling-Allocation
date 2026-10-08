@@ -6,8 +6,6 @@ import {
   planStatusLabel,
   planStatusTone,
   policyProfileLabel,
-  sensorQualityLabel,
-  sensorQualityTone,
   serviceRatioBand,
 } from "./status.ts";
 
@@ -76,22 +74,7 @@ describe("policyProfileLabel", () => {
   });
 });
 
-describe("sensorQualityTone", () => {
-  it("memetakan kualitas bacaan dan keadaan tanpa data", () => {
-    expect(sensorQualityTone("GOOD")).toBe("ok");
-    expect(sensorQualityTone("SUSPECT")).toBe("warn");
-    expect(sensorQualityTone("BAD")).toBe("crit");
-    expect(sensorQualityTone("STALE")).toBe("crit");
-    expect(sensorQualityTone(null)).toBe("neutral");
-  });
-});
 
-describe("sensorQualityLabel", () => {
-  it("menulis kualitas dalam bahasa manusia", () => {
-    expect(sensorQualityLabel("SUSPECT")).toBe("Perlu dicek");
-    expect(sensorQualityLabel(null)).toBe("Belum ada data");
-  });
-});
 
 describe("alertSeverityTone", () => {
   it("memetakan tiga tingkat keparahan", () => {
