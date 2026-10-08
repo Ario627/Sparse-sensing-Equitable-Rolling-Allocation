@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final
 
-from ortools.math_opt.python import mathopt # type: ignore
+from ortools.math_opt.python import mathopt  # type: ignore
 
 from app.core.types import (
     DomainInvariantError,
@@ -43,7 +43,9 @@ def _require_matrix(
 ) -> tuple[tuple[float, ...], ...]:
     if len(rows) != block_count:
         raise DomainInvariantError(f"{name} must have {block_count} rows")
-    return tuple(_require_vector(row, slot_count, f"{name}[{index}]") for index, row in enumerate(rows))
+    return tuple(
+        _require_vector(row, slot_count, f"{name}[{index}]") for index, row in enumerate(rows)
+    )
 
 
 def _variable_name(prefix: str, *parts: object) -> str:
@@ -127,10 +129,18 @@ class PlanningProblem:
         if slot_count < 1:
             raise DomainInvariantError("scenarios must span at least one slot")
         for scenario in self.scenarios:
-            _require_vector(scenario.supply_lps, slot_count, f"supply_lps[{scenario.scenario_id}]")
-            _require_matrix(scenario.etc_mm, len(self.blocks), slot_count, f"etc_mm[{scenario.scenario_id}]")
-            _require_matrix(scenario.perc_mm, len(self.blocks), slot_count, f"perc_mm[{scenario.scenario_id}]")
-            _require_matrix(scenario.wlr_mm, len(self.blocks), slot_count, f"wlr_mm[{scenario.scenario_id}]")
+            _require_vector(
+                scenario.supply_lps, slot_count, f"supply_lps[{scenario.scenario_id}]"
+            )
+            _require_matrix(
+                scenario.etc_mm, len(self.blocks), slot_count, f"etc_mm[{scenario.scenario_id}]"
+            )
+            _require_matrix(
+                scenario.perc_mm, len(self.blocks), slot_count, f"perc_mm[{scenario.scenario_id}]"
+            )
+            _require_matrix(
+                scenario.wlr_mm, len(self.blocks), slot_count, f"wlr_mm[{scenario.scenario_id}]"
+            )
             _require_matrix(
                 scenario.rain_effective_mm,
                 len(self.blocks),
@@ -198,6 +208,10 @@ class PlanModel:
         self._position = {
             block_id: index for index, block_id in enumerate(problem.block_ids)
         }
+        self._block_by_id = {block.block_id: block for block in problem.blocks}
+        self._scenario_by_id = {
+            scenario.scenario_id: scenario for scenario in problem.scenarios
+        }
         self._model = mathopt.Model(name="sera_plan")
         self._flat: list[mathopt.Variable] = []
         self._y: dict[tuple[str, int, str], mathopt.Variable] = {}
@@ -206,6 +220,7 @@ class PlanModel:
         self._storage: dict[tuple[str, int, str], mathopt.Variable] = {}
         self._rho: dict[tuple[str, int, str], mathopt.Variable] = {}
         self._spill: dict[tuple[str, int, str], mathopt.Variable] = {}
+        self._unmet: dict[tuple[str, int, str], mathopt.Variable] = {}
         self._short: dict[tuple[str, int, str], mathopt.Variable] = {}
         self._d: dict[tuple[int, int, str], mathopt.Variable] = {}
         self._z = self._model.add_variable(lb=0.0, ub=1.0, name="z")
@@ -224,6 +239,7 @@ class PlanModel:
         self._add_dispersion_constraints()
         self._add_stability_constraints()
         self._add_debt_floor_constraints()
+        self._add_shortage_constraints()
         self._add_nonanticipativity_constraints()
 
     @property
@@ -263,6 +279,10 @@ class PlanModel:
         return self._short
 
     @property
+    def unmet_variables(self) -> Mapping[tuple[str, int, str], mathopt.Variable]:
+        return self._unmet
+
+    @property
     def dispersion_variables(self) -> Mapping[tuple[int, int, str], mathopt.Variable]:
         return self._d
 
@@ -271,16 +291,16 @@ class PlanModel:
         return self._z
 
     def block(self, block_id: str) -> PlanningBlockSpec:
-        for candidate in self._problem.blocks:
-            if candidate.block_id == block_id:
-                return candidate
-        raise DomainInvariantError(f"unknown block: {block_id}")
+        candidate = self._block_by_id.get(block_id)
+        if candidate is None:
+            raise DomainInvariantError(f"unknown block: {block_id}")
+        return candidate
 
     def scenario(self, scenario_id: str) -> PlanningScenario:
-        for candidate in self._problem.scenarios:
-            if candidate.scenario_id == scenario_id:
-                return candidate
-        raise DomainInvariantError(f"unknown scenario: {scenario_id}")
+        candidate = self._scenario_by_id.get(scenario_id)
+        if candidate is None:
+            raise DomainInvariantError(f"unknown scenario: {scenario_id}")
+        return candidate
 
     def _declare_variables(self) -> None:
         slot_count = self._problem.slot_count
@@ -329,6 +349,18 @@ class PlanModel:
                     )
                     self._spill[(block.block_id, slot, scenario.scenario_id)] = spill
                     self._flat.append(spill)
+                    position = self._position[block.block_id]
+                    unmet = self._model.add_variable(
+                        lb=0.0,
+                        ub=(
+                            scenario.etc_mm[position][slot]
+                            + scenario.perc_mm[position][slot]
+                            + scenario.wlr_mm[position][slot]
+                        ),
+                        name=_variable_name("unmet", block.block_id, slot, scenario.scenario_id),
+                    )
+                    self._unmet[(block.block_id, slot, scenario.scenario_id)] = unmet
+                    self._flat.append(unmet)
                     short = self._model.add_variable(
                         lb=0.0,
                         name=_variable_name("short", block.block_id, slot, scenario.scenario_id),
@@ -360,7 +392,9 @@ class PlanModel:
                         name=_variable_name("link", block.block_id, slot, scenario.scenario_id),
                     )
 
-    def _gross_expression(self, block: PlanningBlockSpec, slot: int, scenario_id: str):
+    def _gross_expression(
+        self, block: PlanningBlockSpec, slot: int, scenario_id: str
+    ) -> mathopt.LinearBase:
         return self._x[(block.block_id, slot, scenario_id)] * block.gross_per_net
 
     def _add_supply_constraints(self) -> None:
@@ -404,6 +438,7 @@ class PlanModel:
                         self._storage[(block.block_id, slot + 1, scenario.scenario_id)]
                         - self._storage[(block.block_id, slot, scenario.scenario_id)]
                         - mm_per_m3 * self._x[(block.block_id, slot, scenario.scenario_id)]
+                        - self._unmet[(block.block_id, slot, scenario.scenario_id)]
                         + self._spill[(block.block_id, slot, scenario.scenario_id)]
                     )
                     inflow_mm = scenario.rain_effective_mm[position][slot]
@@ -412,10 +447,14 @@ class PlanModel:
                         + scenario.perc_mm[position][slot]
                         + scenario.wlr_mm[position][slot]
                     )
-                    deficit = outflow_mm - inflow_mm
+                    net_inflow = inflow_mm - outflow_mm
                     name = _variable_name("balance", block.block_id, slot, scenario.scenario_id)
-                    self._model.add_linear_constraint(balance <= deficit, name=f"{name}|upper")
-                    self._model.add_linear_constraint(-balance <= -deficit, name=f"{name}|lower")
+                    self._model.add_linear_constraint(
+                        balance <= net_inflow, name=f"{name}|upper"
+                    )
+                    self._model.add_linear_constraint(
+                        -balance <= -net_inflow, name=f"{name}|lower"
+                    )
 
     def _add_safety_constraints(self) -> None:
         for block in self._problem.blocks:
@@ -433,7 +472,9 @@ class PlanModel:
         target_sum = sum(scenario.target_fair_m3[position])
         return block.ledger_target_m3 + target_sum
 
-    def _delivered_expression(self, block: PlanningBlockSpec, scenario_id: str):
+    def _delivered_expression(
+        self, block: PlanningBlockSpec, scenario_id: str
+    ) -> mathopt.LinearBase:
         return mathopt.fast_sum(
             self._x[(block.block_id, slot, scenario_id)]
             for slot in range(self._problem.slot_count)
@@ -449,12 +490,6 @@ class PlanModel:
                     target_room <= block.ledger_delivered_m3,
                     name=_variable_name("fair", block.block_id, scenario.scenario_id),
                 )
-
-    def service_ratio_expression(self, block: PlanningBlockSpec, scenario_id: str):
-        scenario = self.scenario(scenario_id)
-        denominator = self._fairness_denominator(block, scenario)
-        delivered = self._delivered_expression(block, scenario_id)
-        return (block.ledger_delivered_m3 + delivered) * (1.0 / denominator)
 
     def _add_dispersion_constraints(self) -> None:
         block_ids = self._problem.block_ids
@@ -492,8 +527,12 @@ class PlanModel:
                     switching = self._s[(block.block_id, slot, scenario.scenario_id)]
                     difference = gate - previous
                     name = _variable_name("stab", block.block_id, slot, scenario.scenario_id)
-                    self._model.add_linear_constraint(difference - switching <= 0.0, name=f"{name}|up")
-                    self._model.add_linear_constraint(-difference - switching <= 0.0, name=f"{name}|down")
+                    self._model.add_linear_constraint(
+                        difference - switching <= 0.0, name=f"{name}|up"
+                    )
+                    self._model.add_linear_constraint(
+                        -difference - switching <= 0.0, name=f"{name}|down"
+                    )
                     previous = gate
 
     def _add_debt_floor_constraints(self) -> None:
@@ -570,15 +609,21 @@ class PlanModel:
             )
         self._cvar_enabled = True
 
-    def shortage_expression(self, scenario_id: str):
+    def shortage_expression(self, scenario_id: str) -> mathopt.LinearBase:
         self.scenario(scenario_id)
-        return mathopt.fast_sum(
+        shortfall = [
             self._short[(block.block_id, slot, scenario_id)]
             for block in self._problem.blocks
             for slot in range(self._problem.slot_count)
-        )
+        ]
+        field_deficit = [
+            self._unmet[(block.block_id, slot, scenario_id)]
+            for block in self._problem.blocks
+            for slot in range(self._problem.slot_count)
+        ]
+        return mathopt.fast_sum(shortfall + field_deficit)
 
-    def cvar_expression(self):
+    def cvar_expression(self) -> mathopt.LinearBase | None:
         if not self._cvar_enabled or self._cvar_theta is None:
             return None
         tail = mathopt.fast_sum(
@@ -587,7 +632,7 @@ class PlanModel:
         )
         return self._cvar_theta + (1.0 / (1.0 - self._cvar_alpha)) * tail
 
-    def expected_switching_expression(self):
+    def expected_switching_expression(self) -> mathopt.LinearBase:
         return mathopt.fast_sum(
             self.scenario(scenario_id).probability
             * self._s[(block.block_id, slot, scenario_id)]
@@ -596,7 +641,7 @@ class PlanModel:
             for scenario_id in self._problem.scenario_ids
         )
 
-    def expected_gross_expression(self):
+    def expected_gross_expression(self) -> mathopt.LinearBase:
         return mathopt.fast_sum(
             self.scenario(scenario_id).probability
             * self._gross_expression(block, slot, scenario_id)
@@ -607,7 +652,7 @@ class PlanModel:
 
     def _add_shortage_constraints(self) -> None:
         for block in self._problem.blocks:
-            position = self._problem.block_ids.index(block.block_id)
+            position = self._position[block.block_id]
             for scenario in self._problem.scenarios:
                 for slot in range(self._problem.slot_count):
                     target = scenario.target_fair_m3[position][slot]
@@ -615,14 +660,14 @@ class PlanModel:
                     short = self._short[(block.block_id, slot, scenario.scenario_id)]
                     self._model.add_linear_constraint(
                         shortfall - short <= 0.0,
-                        name=_variable_name("shortlink", block.block_id, slot, scenario.scenario_id),
+                        name=_variable_name(
+                            "shortlink", block.block_id, slot, scenario.scenario_id
+                        ),
                     )
 
 
 def build_plan_model(problem: PlanningProblem) -> PlanModel:
-    model = PlanModel(problem)
-    model._add_shortage_constraints()
-    return model
+    return PlanModel(problem)
 
 
 def extract_plan(model: PlanModel, outcome: SolveOutcome) -> PlanDecision:
@@ -665,6 +710,9 @@ def extract_plan(model: PlanModel, outcome: SolveOutcome) -> PlanDecision:
                 )
                 shortage += weight * outcome.value(
                     _variable_name("short", block.block_id, slot, scenario.scenario_id)
+                )
+                shortage += weight * outcome.value(
+                    _variable_name("unmet", block.block_id, slot, scenario.scenario_id)
                 )
     terminal = tuple(
         outcome.value(_variable_name("store", block.block_id, planning.slot_count, execution))

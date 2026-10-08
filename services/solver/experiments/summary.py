@@ -7,10 +7,10 @@ from typing import Final
 
 from app.core.types import (
     DomainInvariantError,
+    require_finite,
     require_identifier,
     require_non_negative,
     require_probability,
-    require_utc,
 )
 from baselines.base import BaselineMethod
 from experiments.metrics import RunMetrics
@@ -84,9 +84,9 @@ class MethodSummary:
             or self.failures < 0
         ):
             raise DomainInvariantError("failures must be a non-negative integer")
-        rate = require_probability(self.fallback_rate, "fallback_rate")
-        if rate < 0.0:
-            raise DomainInvariantError("fallback_rate must be non-negative")
+        rate = require_finite(self.fallback_rate, "fallback_rate")
+        if not 0.0 <= rate <= 1.0:
+            raise DomainInvariantError("fallback_rate must lie in [0, 1]")
         for name, summary in self.metrics.items():
             require_identifier(name, "metric name")
             if not isinstance(summary, SampleSummary):

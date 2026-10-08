@@ -43,3 +43,8 @@ Thumbs.db
 
 # npm internal files
 .package-lock.json
+
+
+# Python cache
+__pycache__/
+*.py[cod]

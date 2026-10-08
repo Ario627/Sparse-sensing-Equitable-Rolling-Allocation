@@ -16,8 +16,8 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Final, cast
 
-import numpy as np # type: ignore
-from pydantic import BaseModel # type: ignore
+import numpy as np  # type: ignore
+from pydantic import BaseModel  # type: ignore
 
 from app.core.types import DomainInvariantError, require_identifier, require_utc
 
@@ -37,6 +37,7 @@ DEPENDENCY_DISTRIBUTIONS: Final[tuple[str, ...]] = (
     "scipy",
     "pandas",
     "pyarrow",
+    "pyyaml",
     "ortools",
     "highspy",
     "pykalman",

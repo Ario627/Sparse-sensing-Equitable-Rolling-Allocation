@@ -10,6 +10,7 @@ import type {
 } from "@sera/contracts";
 
 const root = ["sera"] as const;
+export const queryRoot = root;
 
 export const queryKeys = {
   auth: {

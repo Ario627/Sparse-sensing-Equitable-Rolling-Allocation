@@ -772,7 +772,9 @@ class PolicyCore:
                 ),
                 min_storage_mm=self.config.min_storage_mm,
                 max_storage_mm=self.config.max_storage_mm,
-                initial_storage_mm=min(snapshot.storage_mm[block_id], self.config.max_storage_mm),
+                initial_storage_mm=max(
+                    0.0, min(snapshot.storage_mm[block_id], self.config.max_storage_mm)
+                ),
                 ledger_delivered_m3=snapshot.ledger[block_id].delivered_ewma_m3,
                 ledger_target_m3=snapshot.ledger[block_id].target_ewma_m3,
                 debt_m3=snapshot.ledger[block_id].debt_m3,

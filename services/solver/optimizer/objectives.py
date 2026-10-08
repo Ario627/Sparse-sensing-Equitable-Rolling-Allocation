@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Final
 
-from ortools.math_opt.python import mathopt # type: ignore
+from ortools.math_opt.python import mathopt  # type: ignore
 
-from app.core.types import DomainInvariantError, PolicyProfile, require_non_negative, require_positive
+from app.core.types import (
+    DomainInvariantError,
+    PolicyProfile,
+    require_non_negative,
+    require_positive,
+)
 from optimizer.model import PlanModel
-from optimizer.solver import SolveBudget, SolveOutcome, SolveStatus, SolverBackend, solve_model
+from optimizer.solver import SolveBudget, SolveOutcome, SolverBackend, SolveStatus, solve_model
 
 
 class LexicographicStage(StrEnum):
@@ -32,11 +37,11 @@ DEFAULT_ORDER: Final[tuple[LexicographicStage, ...]] = (
 
 @dataclass(frozen=True, slots=True)
 class StageTolerances:
-    safety_m3: float = 1.0e-6
+    safety_m3: float = 1.0e-4
     shortage_m3: float = 0.5
     equity_ratio: float = 0.005
     dispersion_ratio: float = 0.005
-    switching_count: float = 0.0
+    switching_count: float = 1.0e-4
     gross_m3: float = 0.5
 
     def __post_init__(self) -> None:
@@ -101,7 +106,7 @@ PROFILE_POLICIES: Final[dict[PolicyProfile, ProfilePolicy]] = {
 class LexicographicRequest:
     profile: PolicyProfile = PolicyProfile.BALANCED
     backend: SolverBackend = SolverBackend.HIGHS
-    budget: SolveBudget = SolveBudget()
+    budget: SolveBudget = field(default_factory=SolveBudget)
     stage_time_limit_s: float = 6.0
     shortage_lambda: float = 0.0
 
@@ -133,22 +138,20 @@ class LexicographicOutcome:
         return self.final is not None and self.final.has_solution
 
 
-def _safety_expression(model: PlanModel):
-    planning = model.planning
+def _safety_expression(model: PlanModel) -> mathopt.LinearBase:
     return mathopt.fast_sum(
         model.scenario(scenario_id).probability
         * model.rho_variables[(block.block_id, slot, scenario_id)]
-        for block in planning.blocks
-        for slot in range(planning.slot_count)
-        for scenario_id in planning.scenario_ids
+        for block in model.planning.blocks
+        for slot in range(model.planning.slot_count)
+        for scenario_id in model.planning.scenario_ids
     )
 
 
-def _shortage_expression(model: PlanModel, shortage_lambda: float):
-    planning = model.planning
+def _shortage_expression(model: PlanModel, shortage_lambda: float) -> mathopt.LinearBase:
     expected = mathopt.fast_sum(
         model.scenario(scenario_id).probability * model.shortage_expression(scenario_id)
-        for scenario_id in planning.scenario_ids
+        for scenario_id in model.planning.scenario_ids
     )
     cvar = model.cvar_expression()
     if cvar is None or shortage_lambda <= 0.0:
@@ -156,25 +159,22 @@ def _shortage_expression(model: PlanModel, shortage_lambda: float):
     return expected + shortage_lambda * cvar
 
 
-def _equity_expression(model: PlanModel):
+def _equity_expression(model: PlanModel) -> mathopt.LinearBase:
     return model.service_floor_variable
 
 
-def _dispersion_expression(model: PlanModel):
-    planning = model.planning
+def _dispersion_expression(model: PlanModel) -> mathopt.LinearBase:
     return mathopt.fast_sum(
-        model.scenario(scenario_id).probability * model.dispersion_variables[key]
+        model.scenario(key[2]).probability * model.dispersion_variables[key]
         for key in model.dispersion_variables
-        for scenario_id in (key[2],)
-        if True
     )
 
 
-def _stability_expression(model: PlanModel):
+def _stability_expression(model: PlanModel) -> mathopt.LinearBase:
     return model.expected_switching_expression()
 
 
-def _gross_expression(model: PlanModel):
+def _gross_expression(model: PlanModel) -> mathopt.LinearBase:
     return model.expected_gross_expression()
 
 
@@ -183,7 +183,7 @@ def stage_objective(
     stage: LexicographicStage,
     *,
     shortage_lambda: float,
-) -> tuple[object, bool]:
+) -> tuple[mathopt.LinearBase, bool]:
     if stage is LexicographicStage.SAFETY:
         return _safety_expression(model), True
     if stage is LexicographicStage.SHORTAGE_RISK:
@@ -199,7 +199,7 @@ def stage_objective(
 
 def _fix_objective(
     model: PlanModel,
-    expression,
+    expression: mathopt.LinearBase,
     *,
     optimum: float,
     tolerance: float,
@@ -218,7 +218,9 @@ def _fix_objective(
         )
 
 
-def solve_lexicographic(model: PlanModel, request: LexicographicRequest) -> LexicographicOutcome:
+def solve_lexicographic(
+    model: PlanModel, request: LexicographicRequest
+) -> LexicographicOutcome:
     policy = request.policy()
     stage_budget = request.budget.with_time_limit(
         min(request.budget.time_limit_s, request.stage_time_limit_s)

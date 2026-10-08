@@ -3,10 +3,11 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, replace
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import DomainInvariantError
-from .fallback import ( # type: ignore
+
+from .fallback import (  # type: ignore
     FallbackContext,
     FallbackDecision,
     FallbackPolicy,
@@ -34,7 +35,6 @@ from .stochastic import (
     ScenarioEnsembleSummary,
     build_ensemble,
     ensemble_summary,
-    require_cvar_support,
     robust_ensemble,
 )
 

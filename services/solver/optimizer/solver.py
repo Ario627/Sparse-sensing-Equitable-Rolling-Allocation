@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Final
 
 from ortools.math_opt.python import mathopt  # type: ignore
+from ortools.math_opt.solvers import highs_pb2  # type: ignore
 
 from app.core.types import DomainInvariantError, require_non_negative, require_positive
 
@@ -138,6 +139,37 @@ def _values_by_name(
     }
 
 
+def _solve_parameters(
+    budget: SolveBudget,
+    backend: SolverBackend,
+    *,
+    presolve: bool,
+) -> mathopt.SolveParameters:
+    return mathopt.SolveParameters(
+        time_limit=datetime.timedelta(seconds=budget.time_limit_s),
+        relative_gap_tolerance=budget.relative_gap,
+        absolute_gap_tolerance=budget.absolute_gap,
+        threads=budget.threads if backend is SolverBackend.SCIP else None,
+        random_seed=budget.random_seed,
+        enable_output=budget.enable_output,
+        highs=highs_pb2.HighsOptionsProto(
+            bool_options={"log_to_console": budget.enable_output},
+            string_options={} if presolve else {"presolve": "off"},
+        ),
+    )
+
+
+def _attempt_solve(
+    problem: mathopt.Model,
+    solver_type: mathopt.SolverType,
+    parameters: mathopt.SolveParameters,
+) -> mathopt.SolveResult | None:
+    try:
+        return mathopt.solve(problem, solver_type, params=parameters)
+    except Exception:
+        return None
+
+
 def solve_model(
     problem: mathopt.Model,
     variables: Sequence[mathopt.Variable],
@@ -146,15 +178,25 @@ def solve_model(
     budget: SolveBudget,
 ) -> SolveOutcome:
     solver_type = _BACKEND_TO_MATHOPT[backend]
-    parameters = mathopt.SolveParameters(
-        time_limit=datetime.timedelta(seconds=budget.time_limit_s),
-        relative_gap_tolerance=budget.relative_gap,
-        absolute_gap_tolerance=budget.absolute_gap,
-        threads=budget.threads if backend is SolverBackend.SCIP else None,
-        random_seed=budget.random_seed,
-        enable_output=budget.enable_output,
+    result = _attempt_solve(
+        problem, solver_type, _solve_parameters(budget, backend, presolve=True)
     )
-    result = mathopt.solve(problem, solver_type, params=parameters)
+    if result is None or result.termination.reason is mathopt.TerminationReason.INFEASIBLE:
+        retry = _attempt_solve(
+            problem, solver_type, _solve_parameters(budget, backend, presolve=False)
+        )
+        if retry is not None:
+            result = retry
+    if result is None:
+        return SolveOutcome(
+            status=SolveStatus.NUMERICAL,
+            hit_time_limit=False,
+            objective_value=None,
+            best_bound=None,
+            relative_gap=None,
+            solve_seconds=0.0,
+            variable_values={},
+        )
     termination = result.termination
     status = _TERMINATION_TO_STATUS.get(termination.reason, SolveStatus.OTHER)
     hit_limit = termination.limit is mathopt.Limit.TIME

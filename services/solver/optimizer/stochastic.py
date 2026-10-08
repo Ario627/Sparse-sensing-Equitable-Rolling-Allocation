@@ -5,12 +5,13 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Final
 
-import numpy as np # type: ignore
+import numpy as np  # type: ignore
 
 from app.core.types import DomainInvariantError, require_non_negative, require_positive
 from optimizer.model import PlanningScenario
 
 PROBABILITY_TOLERANCE: Final = 1.0e-6
+TAIL_MASS_TOLERANCE: Final = 1.0e-9
 
 
 class RiskMode(StrEnum):
@@ -118,18 +119,17 @@ def generate_scenarios(
     _require_unit_probability(central)
     if config.n_scenarios == 1:
         return (central,)
-    scenarios: list[PlanningScenario] = []
-    for index in range(config.n_scenarios):
-        scenarios.append(
-            _perturb(
-                central,
-                config,
-                index,
-                float(rng.standard_normal()),
-                float(rng.standard_normal()),
-                float(rng.standard_normal()),
-            )
+    scenarios = [
+        _perturb(
+            central,
+            config,
+            index,
+            float(rng.standard_normal()),
+            float(rng.standard_normal()),
+            float(rng.standard_normal()),
         )
+        for index in range(config.n_scenarios)
+    ]
     return tuple(scenarios)
 
 
@@ -162,7 +162,7 @@ def require_cvar_support(n_scenarios: int, alpha: float) -> float:
     if not 0.0 < alpha < 1.0:
         raise DomainInvariantError("alpha must lie in (0, 1)")
     tail_mass = n_scenarios * (1.0 - alpha)
-    if tail_mass < 1.0:
+    if tail_mass < 1.0 - TAIL_MASS_TOLERANCE:
         raise DomainInvariantError("too few scenarios for cvar tail estimation")
     return tail_mass
 
