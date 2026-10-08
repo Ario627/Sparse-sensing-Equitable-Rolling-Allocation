@@ -59,7 +59,17 @@ export interface DataTableProps<TData extends object> {
   readonly emptyDescription?: string;
   readonly emptyAction?: ReactNode;
   readonly getRowId?: (row: TData, index: number) => string;
+  readonly sortable?: boolean;
+  readonly serverPager?: ServerPager;
   readonly className?: string;
+}
+
+export interface ServerPager {
+  readonly page: number;
+  readonly pageSize: number;
+  readonly totalPages: number;
+  readonly total: number;
+  readonly onPageChange: (page: number) => void;
 }
 
 interface PagerProps {
@@ -119,6 +129,54 @@ function Pager({
   );
 }
 
+interface ServerPagerBarProps {
+  readonly pager: ServerPager;
+  readonly visibleCount: number;
+}
+
+function ServerPagerBar({ pager, visibleCount }: ServerPagerBarProps) {
+  const first = (pager.page - 1) * pager.pageSize + 1;
+  const last = Math.min(
+    pager.total,
+    (pager.page - 1) * pager.pageSize + visibleCount,
+  );
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2">
+      <p className="font-mono text-xs text-ink-3 tabular">
+        {formatNumber(first)}–{formatNumber(last)} / {formatNumber(pager.total)}
+      </p>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-ink-3">
+          Hal {formatNumber(pager.page)}/
+          {formatNumber(Math.max(1, pager.totalPages))}
+        </span>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={pager.page <= 1}
+          onClick={() => {
+            pager.onPageChange(pager.page - 1);
+          }}
+          aria-label="Halaman sebelumnya"
+        >
+          <IconChevronRight size={14} className="rotate-180" />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={pager.page >= Math.max(1, pager.totalPages)}
+          onClick={() => {
+            pager.onPageChange(pager.page + 1);
+          }}
+          aria-label="Halaman berikutnya"
+        >
+          <IconChevronRight size={14} />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 interface EmptyRowProps {
   readonly colSpan: number;
   readonly title: string;
@@ -150,6 +208,8 @@ export function DataTable<TData extends object>({
   emptyDescription = EMPTY_DESCRIPTION,
   emptyAction,
   getRowId,
+  sortable = true,
+  serverPager,
   className,
 }: DataTableProps<TData>) {
   const table = useTable({
@@ -188,7 +248,8 @@ export function DataTable<TData extends object>({
                       scope="col"
                       className="border-b border-line px-3 py-2 text-left"
                     >
-                      {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                      {header.isPlaceholder ? null : header.column.getCanSort() &&
+                        sortable ? (
                         <button
                           type="button"
                           onClick={header.column.getToggleSortingHandler()}
@@ -255,22 +316,28 @@ export function DataTable<TData extends object>({
           </tbody>
         </table>
       </div>
-      {rowCount > 0 && (
-        <Pager
-          pageIndex={pagination.pageIndex}
-          pageSize={pagination.pageSize}
-          rowCount={rowCount}
-          visibleCount={rows.length}
-          pageCount={pageCount}
-          canPrevious={table.getCanPreviousPage()}
-          canNext={table.getCanNextPage()}
-          onPrevious={() => {
-            table.previousPage();
-          }}
-          onNext={() => {
-            table.nextPage();
-          }}
-        />
+      {serverPager === undefined ? (
+        rowCount > 0 && (
+          <Pager
+            pageIndex={pagination.pageIndex}
+            pageSize={pagination.pageSize}
+            rowCount={rowCount}
+            visibleCount={rows.length}
+            pageCount={pageCount}
+            canPrevious={table.getCanPreviousPage()}
+            canNext={table.getCanNextPage()}
+            onPrevious={() => {
+              table.previousPage();
+            }}
+            onNext={() => {
+              table.nextPage();
+            }}
+          />
+        )
+      ) : (
+        rows.length > 0 && (
+          <ServerPagerBar pager={serverPager} visibleCount={rows.length} />
+        )
       )}
     </div>
   );

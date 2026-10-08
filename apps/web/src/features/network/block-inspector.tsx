@@ -10,35 +10,14 @@ import {
   formatPercent,
   formatUnit,
 } from "@/lib/format.ts";
+import { readReasonNotes } from "@/lib/notes.ts";
 import type { BlockSummary } from "./selectors.ts";
 import { zoneLabel } from "./selectors.ts";
-
-const MAX_REASON_NOTES = 6;
 
 export interface BlockInspectorProps {
   readonly block: BlockSummary;
   readonly onClose?: () => void;
   readonly className?: string;
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
-function readReasonNotes(value: unknown): readonly string[] {
-  if (Array.isArray(value)) {
-    return value.filter(isNonEmptyString).slice(0, MAX_REASON_NOTES);
-  }
-  if (typeof value === "object" && value !== null) {
-    const notes: string[] = [];
-    for (const [key, entry] of Object.entries(value)) {
-      if (isNonEmptyString(entry)) {
-        notes.push(`${key}: ${entry}`);
-      }
-    }
-    return notes.slice(0, MAX_REASON_NOTES);
-  }
-  return [];
 }
 
 function Fact({

@@ -3,11 +3,11 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, replace
 
-import numpy as np  # type: ignore
+import numpy as np
 
 from app.core.types import DomainInvariantError
 
-from .fallback import (  # type: ignore
+from .fallback import (
     FallbackContext,
     FallbackDecision,
     FallbackPolicy,

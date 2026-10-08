@@ -46,14 +46,15 @@ export function useNetworks(overrides: Partial<ListNetworksQuery> = {}) {
   });
 }
 
-export function useNetwork(networkId: string) {
+export function useNetwork(networkId: string | null) {
   return useQuery({
-    queryKey: queryKeys.networks.detail(networkId),
+    queryKey: queryKeys.networks.detail(networkId ?? ""),
     queryFn: () =>
       apiFetch(
         networkDetailSchema,
-        `/networks/${encodeURIComponent(networkId)}`,
+        `/networks/${encodeURIComponent(networkId ?? "")}`,
       ),
+    enabled: networkId !== null,
     staleTime: NETWORK_STALE_MS,
   });
 }

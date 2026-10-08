@@ -1,8 +1,6 @@
 import type { PolicyProfile } from '../generated/prisma/client.ts';
+import { buildSolverNetwork } from '../solver/network-payload.ts';
 import type {
-  SolverNetworkBlock,
-  SolverNetworkEdge,
-  SolverNetworkNode,
   SolverNetworkPayload,
   SolverPlanItem,
   SolverPlanRequestInput,
@@ -74,40 +72,7 @@ export function shiftFallbackPlan(
 }
 
 function assembleNetwork(data: PlanProposalData): SolverNetworkPayload {
-  return {
-    id: data.network.id,
-    name: data.network.name,
-    topology: data.network.topology,
-    nodes: data.nodes.map(
-      (node): SolverNetworkNode => ({
-        id: node.id,
-        type: node.type,
-        name: node.name,
-        order_idx: node.orderIdx,
-      }),
-    ),
-    edges: data.edges.map(
-      (edge): SolverNetworkEdge => ({
-        id: edge.id,
-        from_node_id: edge.fromNodeId,
-        to_node_id: edge.toNodeId,
-        capacity_lps: edge.capacityLps,
-        zone: edge.zone,
-        length_m: edge.lengthM,
-      }),
-    ),
-    blocks: data.blocks.map(
-      (block): SolverNetworkBlock => ({
-        id: block.id,
-        node_id: block.nodeId,
-        name: block.name,
-        area_m2: block.areaM2,
-        crop_type: block.cropType,
-        nominal_flow_lps: block.nominalFlowLps,
-        distance_from_source_m: block.distanceFromSourceM,
-      }),
-    ),
-  };
+  return buildSolverNetwork(data.network, data.nodes, data.edges, data.blocks);
 }
 
 export function buildSolverRequest(input: {

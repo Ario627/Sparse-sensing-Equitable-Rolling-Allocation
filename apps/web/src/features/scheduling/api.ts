@@ -97,11 +97,15 @@ export function usePlans(overrides: Partial<ListPlansQuery> = {}) {
   });
 }
 
-export function usePlan(planId: string) {
+export function usePlan(planId: string | null) {
   return useQuery({
-    queryKey: queryKeys.plans.detail(planId),
+    queryKey: queryKeys.plans.detail(planId ?? ""),
     queryFn: () =>
-      apiFetch(planDetailSchema, `/plans/${encodeURIComponent(planId)}`),
+      apiFetch(
+        planDetailSchema,
+        `/plans/${encodeURIComponent(planId ?? "")}`,
+      ),
+    enabled: planId !== null,
     staleTime: PLAN_STALE_MS,
   });
 }

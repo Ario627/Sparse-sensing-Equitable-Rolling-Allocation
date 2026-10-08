@@ -88,6 +88,18 @@ export const envSchema = z.object({
     .max(100_000)
     .default(5_000),
   EXPERIMENT_POLL_INTERVAL_S: z.coerce.number().int().min(2).max(600).default(10),
+  ESTIMATOR_INTERVAL_S: z.coerce.number().int().min(30).max(3_600).default(300),
+  ESTIMATOR_WINDOW_MIN: z.coerce.number().int().min(1).max(1_440).default(15),
+  ESTIMATOR_MAX_OBSERVATIONS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(500)
+    .default(500),
+  ESTIMATOR_BATCH_NETWORKS: z.coerce.number().int().min(1).max(50).default(10),
+  ESTIMATE_STALE_S: z.coerce.number().int().min(60).max(86_400).default(900),
 });
+  
+
 
 export type Env = z.infer<typeof envSchema>;
