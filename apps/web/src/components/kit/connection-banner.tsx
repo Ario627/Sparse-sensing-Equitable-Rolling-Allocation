@@ -34,7 +34,10 @@ const visuals: Record<Exclude<ConnectionState, "connected">, BannerVisual> = {
   },
 };
 
-function syncFragment(lastSyncIso: string | null | undefined, now: number | undefined): string {
+function syncFragment(
+  lastSyncIso: string | null | undefined,
+  now: number | undefined,
+): string {
   if (lastSyncIso === undefined || lastSyncIso === null) {
     return "Belum ada data diterima";
   }
@@ -70,9 +73,7 @@ export function ConnectionBanner({
         )}
       />
       <p className="text-xs font-medium text-ink">{visual.title}</p>
-      <p className="text-xs text-ink-2">
-        {syncFragment(lastSyncIso, now)}
-      </p>
+      <p className="text-xs text-ink-2">{syncFragment(lastSyncIso, now)}</p>
       {state === "disconnected" && onRetry !== undefined && (
         <Button size="sm" variant="ghost" onClick={onRetry} className="ml-auto">
           Coba lagi

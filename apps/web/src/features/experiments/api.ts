@@ -1,9 +1,9 @@
 import {
+  type CreateExperimentRequest,
+  type ExperimentStatus,
   experimentDetailSchema,
   experimentRunsResponseSchema,
   experimentsListResponseSchema,
-  type CreateExperimentRequest,
-  type ExperimentStatus,
   type ListExperimentRunsQuery,
   type ListExperimentsQuery,
 } from "@sera/contracts";
@@ -57,10 +57,7 @@ export function useExperiments(overrides: Partial<ListExperimentsQuery> = {}) {
   return useQuery({
     queryKey: queryKeys.experiments.list(query),
     queryFn: () =>
-      apiFetch(
-        experimentsListResponseSchema,
-        `/experiments?${listSearchParams(query)}`,
-      ),
+      apiFetch(experimentsListResponseSchema, `/experiments?${listSearchParams(query)}`),
     staleTime: LIST_STALE_MS,
     placeholderData: keepPreviousData,
   });
@@ -109,10 +106,7 @@ export function useCreateExperiment() {
         body: request,
       }),
     onSuccess: (experiment) => {
-      client.setQueryData(
-        queryKeys.experiments.detail(experiment.id),
-        experiment,
-      );
+      client.setQueryData(queryKeys.experiments.detail(experiment.id), experiment);
       invalidateExperiments(client);
     },
   });
@@ -128,10 +122,7 @@ export function useCancelExperiment(experimentId: string) {
         { method: "POST" },
       ),
     onSuccess: (experiment) => {
-      client.setQueryData(
-        queryKeys.experiments.detail(experiment.id),
-        experiment,
-      );
+      client.setQueryData(queryKeys.experiments.detail(experiment.id), experiment);
       invalidateExperiments(client);
     },
   });

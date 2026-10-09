@@ -12,10 +12,7 @@ import { ErrorState } from "@/components/kit/error-state.tsx";
 import { inputClass } from "@/components/kit/field.tsx";
 import { PageHeader } from "@/components/kit/page-header.tsx";
 import { StatusPill } from "@/components/kit/status-pill.tsx";
-import {
-  TimeRangePicker,
-  type TimeRange,
-} from "@/components/kit/time-range-picker.tsx";
+import { type TimeRange, TimeRangePicker } from "@/components/kit/time-range-picker.tsx";
 import { useNetwork, useNetworks } from "@/features/network/api.ts";
 import {
   planStatusLabel,
@@ -196,18 +193,14 @@ export function HistoryPage() {
   const canExport = role === "OPERATOR" || role === "ADMIN";
   const networksQuery = useNetworks({ limit: 50 });
   const networks = networksQuery.data?.items ?? [];
-  const networkQuery = useNetwork(
-    filters.networkId === ALL ? null : filters.networkId,
-  );
+  const networkQuery = useNetwork(filters.networkId === ALL ? null : filters.networkId);
   const blocks = networkQuery.data?.blocks ?? [];
   const plansQuery = usePlans({
     ...(filters.networkId === ALL ? {} : { network_id: filters.networkId }),
     ...(filters.status === ALL ? {} : { status: filters.status }),
     ...(filters.profile === ALL ? {} : { profile: filters.profile }),
     ...(filters.blockId === ALL ? {} : { block_id: filters.blockId }),
-    ...(filters.range === null
-      ? {}
-      : { from: filters.range.from, to: filters.range.to }),
+    ...(filters.range === null ? {} : { from: filters.range.from, to: filters.range.to }),
     page,
     limit: HISTORY_LIMIT,
   });
@@ -249,9 +242,7 @@ export function HistoryPage() {
         exportFilename(),
       );
     } catch (cause) {
-      setExportError(
-        isApiError(cause) ? cause.message : "Ekspor gagal. Coba lagi.",
-      );
+      setExportError(isApiError(cause) ? cause.message : "Ekspor gagal. Coba lagi.");
     } finally {
       setExporting(false);
     }
@@ -290,9 +281,7 @@ export function HistoryPage() {
             aria-label="Status plan"
             value={filters.status}
             onChange={(event) => {
-              const next = statusValues.find(
-                (value) => value === event.target.value,
-              );
+              const next = statusValues.find((value) => value === event.target.value);
               update({ status: next ?? ALL });
             }}
             className={cn(inputClass, "w-auto")}
@@ -308,9 +297,7 @@ export function HistoryPage() {
             aria-label="Profil kebijakan"
             value={filters.profile}
             onChange={(event) => {
-              const next = profileValues.find(
-                (value) => value === event.target.value,
-              );
+              const next = profileValues.find((value) => value === event.target.value);
               update({ profile: next ?? ALL });
             }}
             className={cn(inputClass, "w-auto")}

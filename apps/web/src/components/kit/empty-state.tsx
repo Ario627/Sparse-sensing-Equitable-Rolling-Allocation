@@ -33,9 +33,7 @@ export function EmptyState({
           {description}
         </p>
       )}
-      {action !== undefined && (
-        <div className={compact ? "mt-2" : "mt-3"}>{action}</div>
-      )}
+      {action !== undefined && <div className={compact ? "mt-2" : "mt-3"}>{action}</div>}
     </div>
   );
 }

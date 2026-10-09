@@ -31,15 +31,11 @@ function emitScalar(value: YamlScalar): string {
 
 function isScalar(value: YamlValue): value is YamlScalar {
   return (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
+    typeof value === "string" || typeof value === "number" || typeof value === "boolean"
   );
 }
 
-function isPlainObject(
-  value: YamlValue,
-): value is { readonly [key: string]: YamlValue } {
+function isPlainObject(value: YamlValue): value is { readonly [key: string]: YamlValue } {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

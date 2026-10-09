@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { cn } from "@/lib/cn.ts";
 import { copyText } from "@/lib/clipboard.ts";
+import { cn } from "@/lib/cn.ts";
 import { Button } from "./button.tsx";
 import { textareaClass } from "./field.tsx";
 
@@ -21,7 +21,7 @@ export interface CopyConfigButtonProps {
 export function CopyConfigButton({
   text,
   label = DEFAULT_LABEL,
-  className,
+  className = "cursor-pointer",
 }: CopyConfigButtonProps) {
   const [state, setState] = useState<CopyState>("idle");
 
@@ -42,9 +42,7 @@ export function CopyConfigButton({
         >
           {label}
         </Button>
-        {state === "copied" && (
-          <span className="text-xs text-ok">{COPIED_NOTE}</span>
-        )}
+        {state === "copied" && <span className="text-xs text-ok">{COPIED_NOTE}</span>}
       </div>
       {state === "manual" && (
         <div className="flex flex-col gap-1">

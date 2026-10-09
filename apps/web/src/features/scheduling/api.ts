@@ -1,13 +1,13 @@
 import {
-  planCommandLogResponseSchema,
-  planDetailSchema,
-  plansListResponseSchema,
   type ExportPlansQuery,
   type ListPlansQuery,
   type PlanDecisionRequest,
   type PlanDetailResponse,
   type PlanOverrideRequest,
   type ProposePlanRequest,
+  planCommandLogResponseSchema,
+  planDetailSchema,
+  plansListResponseSchema,
 } from "@sera/contracts";
 import {
   keepPreviousData,
@@ -38,10 +38,7 @@ const defaultExportQuery: ExportPlansQuery = {
   order: "desc",
 };
 
-function appendCommonFilters(
-  params: URLSearchParams,
-  query: ExportPlansQuery,
-): void {
+function appendCommonFilters(params: URLSearchParams, query: ExportPlansQuery): void {
   if (query.network_id !== undefined) {
     params.set("network_id", query.network_id);
   }
@@ -90,8 +87,7 @@ export function usePlans(overrides: Partial<ListPlansQuery> = {}) {
   const query = { ...defaultListQuery, ...overrides };
   return useQuery({
     queryKey: queryKeys.plans.list(query),
-    queryFn: () =>
-      apiFetch(plansListResponseSchema, `/plans?${listSearchParams(query)}`),
+    queryFn: () => apiFetch(plansListResponseSchema, `/plans?${listSearchParams(query)}`),
     staleTime: PLAN_STALE_MS,
     placeholderData: keepPreviousData,
   });
@@ -101,10 +97,7 @@ export function usePlan(planId: string | null) {
   return useQuery({
     queryKey: queryKeys.plans.detail(planId ?? ""),
     queryFn: () =>
-      apiFetch(
-        planDetailSchema,
-        `/plans/${encodeURIComponent(planId ?? "")}`,
-      ),
+      apiFetch(planDetailSchema, `/plans/${encodeURIComponent(planId ?? "")}`),
     enabled: planId !== null,
     staleTime: PLAN_STALE_MS,
   });
@@ -139,11 +132,10 @@ export function usePlanDecision(planId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: PlanDecisionRequest) =>
-      apiFetch(
-        planDetailSchema,
-        `/plans/${encodeURIComponent(planId)}/decision`,
-        { method: "POST", body: request },
-      ),
+      apiFetch(planDetailSchema, `/plans/${encodeURIComponent(planId)}/decision`, {
+        method: "POST",
+        body: request,
+      }),
     onSuccess: (plan) => {
       cachePlanDetail(client, plan);
       invalidatePlans(client);
@@ -155,11 +147,10 @@ export function usePlanOverride(planId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: PlanOverrideRequest) =>
-      apiFetch(
-        planDetailSchema,
-        `/plans/${encodeURIComponent(planId)}/override`,
-        { method: "POST", body: request },
-      ),
+      apiFetch(planDetailSchema, `/plans/${encodeURIComponent(planId)}/override`, {
+        method: "POST",
+        body: request,
+      }),
     onSuccess: (plan) => {
       cachePlanDetail(client, plan);
       invalidatePlans(client);
@@ -171,11 +162,9 @@ export function usePlanExecute(planId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      apiFetch(
-        planDetailSchema,
-        `/plans/${encodeURIComponent(planId)}/execute`,
-        { method: "POST" },
-      ),
+      apiFetch(planDetailSchema, `/plans/${encodeURIComponent(planId)}/execute`, {
+        method: "POST",
+      }),
     onSuccess: (plan) => {
       cachePlanDetail(client, plan);
       invalidatePlans(client);

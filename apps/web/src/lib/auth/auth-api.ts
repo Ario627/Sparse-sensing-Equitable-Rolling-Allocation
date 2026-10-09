@@ -1,17 +1,15 @@
 import {
-  authSessionResponseSchema,
-  meResponseSchema,
   type AuthSessionResponse,
+  authSessionResponseSchema,
   type ChangePasswordRequest,
   type LoginRequest,
   type MeResponse,
+  meResponseSchema,
 } from "@sera/contracts";
 import { apiFetch, apiVoid } from "@/lib/api/client.ts";
 import { clearSession, setSession } from "./session-store.ts";
 
-export async function login(
-  request: LoginRequest,
-): Promise<AuthSessionResponse> {
+export async function login(request: LoginRequest): Promise<AuthSessionResponse> {
   const session = await apiFetch(authSessionResponseSchema, "/auth/login", {
     method: "POST",
     body: request,
@@ -32,9 +30,7 @@ export async function logout(): Promise<void> {
   }
 }
 
-export async function changePassword(
-  request: ChangePasswordRequest,
-): Promise<void> {
+export async function changePassword(request: ChangePasswordRequest): Promise<void> {
   await apiVoid("/auth/password", {
     method: "PUT",
     body: request,

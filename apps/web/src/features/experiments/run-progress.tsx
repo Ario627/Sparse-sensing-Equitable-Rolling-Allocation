@@ -3,11 +3,7 @@ import { MeterBar } from "@/components/kit/meter-bar.tsx";
 import { StatusPill } from "@/components/kit/status-pill.tsx";
 import { cn } from "@/lib/cn.ts";
 import { formatNumber, formatPercent } from "@/lib/format.ts";
-import {
-  experimentStatusLabel,
-  experimentStatusTone,
-  progressRatio,
-} from "./status.ts";
+import { experimentStatusLabel, experimentStatusTone, progressRatio } from "./status.ts";
 
 const EMPTY_VALUE = "—";
 const INDETERMINATE_WIDTH = "34%";
@@ -53,11 +49,7 @@ export function RunProgress({
   return (
     <div className={cn("flex flex-col gap-2.5", className)}>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-        <StatusPill
-          tone={tone}
-          size="md"
-          label={experimentStatusLabel(status)}
-        />
+        <StatusPill tone={tone} size="md" label={experimentStatusLabel(status)} />
         {ratio !== null && (
           <span className="font-mono text-sm font-medium text-ink tabular">
             {formatPercent(ratio)}
@@ -75,19 +67,12 @@ export function RunProgress({
           />
         </div>
       ) : (
-        <MeterBar
-          value={ratio}
-          tone={tone}
-          ticks={false}
-          valueLabel={doneLabel}
-        />
+        <MeterBar value={ratio} tone={tone} ticks={false} valueLabel={doneLabel} />
       )}
       <dl className="flex flex-wrap gap-x-8 gap-y-2">
         <MetricPair
           label="Median regret"
-          value={
-            medianRegret === null ? EMPTY_VALUE : formatPercent(medianRegret, 1)
-          }
+          value={medianRegret === null ? EMPTY_VALUE : formatPercent(medianRegret, 1)}
         />
         <MetricPair
           label="SR terburuk"

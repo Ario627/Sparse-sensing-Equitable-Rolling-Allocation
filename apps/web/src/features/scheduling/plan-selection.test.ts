@@ -1,13 +1,10 @@
-import type {
-  PlanItemResponse,
-  PlanStatus,
-  PlanSummaryResponse,
-} from "@sera/contracts";
+import type { PlanItemResponse, PlanStatus, PlanSummaryResponse } from "@sera/contracts";
 import { describe, expect, it } from "vitest";
 import {
   isActionableStatus,
   nextUpcomingItem,
   pickActionablePlan,
+  upcomingItems,
 } from "./plan-selection.ts";
 
 const CREATED = "2026-10-08T02:00:00.000Z";
@@ -78,18 +75,12 @@ describe("pickActionablePlan", () => {
   });
 
   it("jatuh ke approved bila tidak ada yang butuh tindakan", () => {
-    const plans = [
-      makePlan("p-exec", "EXECUTED"),
-      makePlan("p-app", "APPROVED"),
-    ];
+    const plans = [makePlan("p-exec", "EXECUTED"), makePlan("p-app", "APPROVED")];
     expect(pickActionablePlan(plans)?.id).toBe("p-app");
   });
 
   it("jatuh ke plan pertama bila semua status lain", () => {
-    const plans = [
-      makePlan("p-exec", "EXECUTED"),
-      makePlan("p-sup", "SUPERSEDED"),
-    ];
+    const plans = [makePlan("p-exec", "EXECUTED"), makePlan("p-sup", "SUPERSEDED")];
     expect(pickActionablePlan(plans)?.id).toBe("p-exec");
   });
 
@@ -128,5 +119,27 @@ describe("nextUpcomingItem", () => {
 
   it("mengembalikan null untuk daftar kosong", () => {
     expect(nextUpcomingItem([], NOW)).toBeNull();
+  });
+});
+
+describe("upcomingItems", () => {
+  it("menyaring yang lampau, mengurutkan menaik, dan membatasi jumlah", () => {
+    const items = [
+      makeItem("c", "2026-10-08T12:00:00.000Z"),
+      makeItem("a", "2026-10-08T09:30:00.000Z"),
+      makeItem("lama", "2026-10-08T08:00:00.000Z"),
+      makeItem("b", "2026-10-08T10:30:00.000Z"),
+    ];
+    const upcoming = upcomingItems(items, NOW, 2);
+    expect(upcoming.map((item) => item.id)).toEqual(["a", "b"]);
+  });
+
+  it("mengabaikan waktu tidak valid dan batas nol", () => {
+    const items = [
+      makeItem("rusak", "bukan-tanggal"),
+      makeItem("ok", "2026-10-08T11:00:00.000Z"),
+    ];
+    expect(upcomingItems(items, NOW, 0)).toEqual([]);
+    expect(upcomingItems(items, NOW, 5).map((item) => item.id)).toEqual(["ok"]);
   });
 });

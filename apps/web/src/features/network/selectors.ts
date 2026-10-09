@@ -9,7 +9,7 @@ import type {
 } from "@sera/contracts";
 import { worseQuality } from "@/features/sensors/status.ts";
 import { layoutNetworkNodes } from "@/lib/gl/relief-layout.ts";
-import { serviceRatioBand, type StatusBand } from "./status.ts";
+import { type StatusBand, serviceRatioBand } from "./status.ts";
 
 const CANVAS_X_SCALE = 260;
 const CANVAS_Y_SCALE = 190;
@@ -116,9 +116,7 @@ export interface BuildNetworkViewInput {
   readonly now?: number;
 }
 
-function zoneByNodeId(
-  detail: NetworkDetailResponse,
-): ReadonlyMap<string, LossZone> {
+function zoneByNodeId(detail: NetworkDetailResponse): ReadonlyMap<string, LossZone> {
   const zones = new Map<string, LossZone>();
   for (const edge of detail.edges) {
     if (!zones.has(edge.to_node_id)) {
@@ -155,20 +153,14 @@ function planSlotByBlock(
   for (const item of items) {
     const start = Date.parse(item.slot_start);
     const currentLatest = latest.get(item.block_id);
-    if (
-      currentLatest === undefined ||
-      Date.parse(currentLatest.slot_start) < start
-    ) {
+    if (currentLatest === undefined || Date.parse(currentLatest.slot_start) < start) {
       latest.set(item.block_id, item);
     }
     if (start < now) {
       continue;
     }
     const currentUpcoming = upcoming.get(item.block_id);
-    if (
-      currentUpcoming === undefined ||
-      Date.parse(currentUpcoming.slot_start) > start
-    ) {
+    if (currentUpcoming === undefined || Date.parse(currentUpcoming.slot_start) > start) {
       upcoming.set(item.block_id, item);
     }
   }
@@ -178,7 +170,7 @@ function planSlotByBlock(
     if (chosen === undefined) {
       continue;
     }
-        slots.set(blockId, {
+    slots.set(blockId, {
       slotStart: chosen.slot_start,
       slotEnd: chosen.slot_end,
       gateOpen: chosen.gate_open,
@@ -322,4 +314,97 @@ export function buildNetworkView(input: BuildNetworkViewInput): NetworkView {
 
 export function zoneLabel(zone: LossZone): string {
   return ZONE_LABELS[zone];
+}
+
+export interface FlowReading {
+  readonly sensorId: string;
+  readonly valueLps: number;
+  readonly stale: boolean;
+  readonly ageS: number | null;
+  readonly nodeId: string | null;
+  readonly nodeName: string | null;
+}
+
+function bestFlowReading(
+  items: readonly TelemetryLatestItemResponse[],
+  nodeId: string | null,
+  restrictToNode: boolean,
+): FlowReading | null {
+  let best: FlowReading | null = null;
+  let bestAge = Number.POSITIVE_INFINITY;
+  for (const item of items) {
+    if (item.type !== "FLOW" || item.value === null) {
+      continue;
+    }
+    if (restrictToNode && item.node_id !== nodeId) {
+      continue;
+    }
+    const age = item.age_s ?? Number.POSITIVE_INFINITY;
+    if (age < bestAge) {
+      bestAge = age;
+      best = {
+        sensorId: item.sensor_id,
+        valueLps: item.value,
+        stale: item.stale,
+        ageS: item.age_s,
+        nodeId: item.node_id,
+        nodeName: item.node_name,
+      };
+    }
+  }
+  return best;
+}
+
+export function sourceFlowReading(
+  items: readonly TelemetryLatestItemResponse[],
+  sourceNodeId: string | null,
+): FlowReading | null {
+  if (sourceNodeId === null) {
+    return null;
+  }
+  return bestFlowReading(items, sourceNodeId, true);
+}
+
+export function freshestFlowReading(
+  items: readonly TelemetryLatestItemResponse[],
+): FlowReading | null {
+  return bestFlowReading(items, null, false);
+}
+
+export interface ZoneServiceSummary {
+  readonly zone: LossZone;
+  readonly blockCount: number;
+  readonly sampledCount: number;
+  readonly averageRatio: number | null;
+  readonly weakestBlockName: string | null;
+}
+
+export function zoneServiceSummary(
+  blocks: readonly BlockSummary[],
+): readonly ZoneServiceSummary[] {
+  const zones: readonly LossZone[] = ["HEAD", "MIDDLE", "TAIL"];
+  return zones.map((zone) => {
+    const members = blocks.filter((block) => block.zone === zone);
+    let sum = 0;
+    let sampled = 0;
+    let weakest: BlockSummary | null = null;
+    for (const block of members) {
+      const ratio = block.serviceRatio;
+      if (ratio === null) {
+        continue;
+      }
+      sum += ratio;
+      sampled += 1;
+      if (weakest === null || ratio < (weakest.serviceRatio ?? 1)) {
+        weakest = block;
+      }
+    }
+    return {
+      zone,
+      blockCount: members.length,
+      sampledCount: sampled,
+      averageRatio: sampled === 0 ? null : sum / sampled,
+      weakestBlockName: weakest === null ? null : weakest.name,
+    };
+  });
 }

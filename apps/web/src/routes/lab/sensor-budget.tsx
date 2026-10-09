@@ -5,21 +5,23 @@ import { CopyConfigButton } from "@/components/kit/copy-config-button.tsx";
 import { DataTable, type SeraColumnDef } from "@/components/kit/data-table.tsx";
 import { inputClass } from "@/components/kit/field.tsx";
 import { PageHeader } from "@/components/kit/page-header.tsx";
+import { RoleGate } from "@/components/kit/role-gate.tsx";
 import { useCreateExperiment } from "@/features/experiments/api.ts";
-import { NumberInput } from "@/features/simulation/scenario-form.tsx";
 import {
   buildExperimentYaml,
   defaultSensorSet,
-  generateExperimentId,
   type ExperimentMethod,
+  generateExperimentId,
 } from "@/features/simulation/run.ts";
 import {
   defaultScenario,
   randomSeed,
-  scenarioPresets,
   type ScenarioPresetKey,
+  scenarioPresets,
 } from "@/features/simulation/scenario.ts";
+import { NumberInput } from "@/features/simulation/scenario-form.tsx";
 import { isApiError } from "@/lib/api/client.ts";
+import { labRoles } from "@/lib/auth/roles.ts";
 import { formatNumber } from "@/lib/format.ts";
 import { buildSearch, readSearchString } from "@/lib/search.ts";
 
@@ -53,9 +55,7 @@ const budgetColumns: SeraColumnDef<BudgetRow>[] = [
     accessorKey: "sensorSet",
     header: "Titik ukur",
     cell: (info) => (
-      <span className="font-mono text-xs text-ink-2">
-        {info.row.original.sensorSet}
-      </span>
+      <span className="font-mono text-xs text-ink-2">{info.row.original.sensorSet}</span>
     ),
   },
   {
@@ -97,9 +97,7 @@ function parsePreset(raw: string | null): ScenarioPresetKey {
 }
 
 function presetLabel(preset: ScenarioPresetKey): string {
-  return (
-    scenarioPresets.find((entry) => entry.key === preset)?.label ?? preset
-  );
+  return scenarioPresets.find((entry) => entry.key === preset)?.label ?? preset;
 }
 
 function budgetRows(blocks: number, sensorMax: number): BudgetRow[] {
@@ -114,6 +112,18 @@ function budgetRows(blocks: number, sensorMax: number): BudgetRow[] {
 }
 
 export function SensorBudgetPage() {
+  return (
+    <RoleGate
+      allow={labRoles}
+      title="Halaman riset khusus peneliti"
+      description="Pengujian jumlah sensor hanya terbuka untuk peran peneliti atau admin."
+    >
+      <SensorBudgetContent />
+    </RoleGate>
+  );
+}
+
+function SensorBudgetContent() {
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
   const presetId = useId();
@@ -196,7 +206,7 @@ export function SensorBudgetPage() {
         description="Jalankan kurva jumlah sensor k = 0…m pada skenario dan seed yang sama, lalu bandingkan kualitas keputusan di halaman Hasil."
       />
       <section className="flex flex-col gap-4 rounded-md border border-line bg-surface p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(4,minmax(0,1fr))]">
           <div className="flex flex-col gap-1.5">
             <label htmlFor={presetId} className="text-sm font-medium text-ink">
               Skenario
@@ -278,9 +288,9 @@ export function SensorBudgetPage() {
           />
         </div>
         <p className="text-xs text-ink-3">
-          Dijalankan pada faktor K = 1 (nominal) dengan {BUDGET_METHODS.length}{" "}
-          metode per titik — {formatNumber(totalRuns)} run total. Oracle =
-          penginderaan penuh sebagai referensi atas.
+          Dijalankan pada faktor K = 1 (nominal) dengan {BUDGET_METHODS.length} metode per
+          titik — {formatNumber(totalRuns)} run total. Oracle = penginderaan penuh sebagai
+          referensi atas.
         </p>
         <div className="flex flex-col gap-2.5">
           <Button

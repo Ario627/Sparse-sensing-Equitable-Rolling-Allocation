@@ -7,12 +7,7 @@ const DEFAULT_REPLICATES = 1;
 const DEFAULT_METHODS: readonly ExperimentMethod[] = ["sera"];
 const DEFAULT_K_FACTORS: readonly number[] = [1];
 
-export type ExperimentMethod =
-  | "sera"
-  | "proportional"
-  | "rotation"
-  | "greedy"
-  | "oracle";
+export type ExperimentMethod = "sera" | "proportional" | "rotation" | "greedy" | "oracle";
 
 export interface ExperimentConfigInput {
   readonly experimentId: string;
@@ -37,10 +32,7 @@ export function defaultSensorSet(
   );
 }
 
-export function generateExperimentId(
-  seed: number,
-  now: number = Date.now(),
-): string {
+export function generateExperimentId(seed: number, now: number = Date.now()): string {
   return `exp${now.toString(36)}${Math.abs(Math.round(seed)).toString(36)}`;
 }
 

@@ -4,10 +4,10 @@ import { StatusPill } from "@/components/kit/status-pill.tsx";
 import { sensorQualityLabel, sensorQualityTone } from "@/features/sensors/status.ts";
 import { cn } from "@/lib/cn.ts";
 import {
+  formatCappedPercent,
   formatClockRange,
   formatDate,
   formatNumber,
-  formatPercent,
   formatUnit,
 } from "@/lib/format.ts";
 import { readReasonNotes } from "@/lib/notes.ts";
@@ -43,11 +43,7 @@ function SectionTitle({ children }: { readonly children: React.ReactNode }) {
   return <p className="label-caps text-ink-3">{children}</p>;
 }
 
-export function BlockInspector({
-  block,
-  onClose,
-  className,
-}: BlockInspectorProps) {
+export function BlockInspector({ block, onClose, className }: BlockInspectorProps) {
   const notes = readReasonNotes(block.slot === null ? null : block.slot.reasonJson);
   const slot = block.slot;
   const areaHa = block.areaM2 / 10_000;
@@ -63,9 +59,7 @@ export function BlockInspector({
           <p className="label-caps text-ink-3">
             {block.zone === null ? "Blok" : `Blok · ${zoneLabel(block.zone)}`}
           </p>
-          <h3 className="mt-0.5 truncate text-sm font-semibold text-ink">
-            {block.name}
-          </h3>
+          <h3 className="mt-0.5 truncate text-sm font-semibold text-ink">{block.name}</h3>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <StatusPill tone={block.band.tone} label={block.band.label} />
@@ -86,11 +80,7 @@ export function BlockInspector({
           <SectionTitle>Layanan</SectionTitle>
           <dl className="flex flex-col gap-1.5">
             <Fact label="Rasio layanan">
-              <MonoValue>
-                {block.serviceRatio === null
-                  ? "—"
-                  : formatPercent(block.serviceRatio, 1)}
-              </MonoValue>
+              <MonoValue>{formatCappedPercent(block.serviceRatio, 1)}</MonoValue>
             </Fact>
             <Fact label="Luas blok">
               <MonoValue>{formatUnit(areaHa, "ha", 2)}</MonoValue>
@@ -139,9 +129,7 @@ export function BlockInspector({
               )}
               {slot.volumeGrossM3 !== null && (
                 <Fact label="Volume dialokasikan">
-                  <MonoValue>
-                    {formatUnit(slot.volumeGrossM3, "m³", 1)}
-                  </MonoValue>
+                  <MonoValue>{formatUnit(slot.volumeGrossM3, "m³", 1)}</MonoValue>
                 </Fact>
               )}
             </dl>

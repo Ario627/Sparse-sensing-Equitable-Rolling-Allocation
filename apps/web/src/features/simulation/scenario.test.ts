@@ -73,9 +73,9 @@ describe("parseSimulationSearch", () => {
 describe("toSimulationSearch", () => {
   it("menghilangkan nilai default dari URL", () => {
     expect(toSimulationSearch(defaultScenario)).toEqual({});
-    expect(
-      toSimulationSearch({ ...defaultScenario, preset: "loss_severe" }),
-    ).toEqual({ scenario: "loss_severe" });
+    expect(toSimulationSearch({ ...defaultScenario, preset: "loss_severe" })).toEqual({
+      scenario: "loss_severe",
+    });
   });
 
   it("menulis topologi dalam huruf kecil", () => {
@@ -96,9 +96,7 @@ describe("toSimulationSearch", () => {
       blocks: 8,
       horizonDays: 14,
     };
-    expect(parseSimulationSearch(toSimulationSearch(scenario))).toEqual(
-      scenario,
-    );
+    expect(parseSimulationSearch(toSimulationSearch(scenario))).toEqual(scenario);
     expect(parseSimulationSearch(toSimulationSearch(defaultScenario))).toEqual(
       defaultScenario,
     );

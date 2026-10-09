@@ -18,7 +18,7 @@ import { usePlan, usePlans } from "@/features/scheduling/api.ts";
 import { pickActionablePlan } from "@/features/scheduling/plan-selection.ts";
 import { useLatestTelemetry } from "@/features/sensors/api.ts";
 import { cn } from "@/lib/cn.ts";
-import { formatNumber, formatPercent } from "@/lib/format.ts";
+import { formatCappedPercent, formatNumber } from "@/lib/format.ts";
 import { useNow } from "@/lib/hooks.ts";
 import { buildSearch, readSearchString } from "@/lib/search.ts";
 
@@ -58,9 +58,7 @@ function buildBlockColumns(
       header: "Zona",
       cell: (info) => (
         <span className="text-xs text-ink-2">
-          {info.row.original.zone === null
-            ? "—"
-            : zoneLabel(info.row.original.zone)}
+          {info.row.original.zone === null ? "—" : zoneLabel(info.row.original.zone)}
         </span>
       ),
     },
@@ -70,9 +68,7 @@ function buildBlockColumns(
       header: "Rasio",
       cell: (info) => (
         <span className="font-mono text-xs text-ink tabular">
-          {info.row.original.serviceRatio === null
-            ? "—"
-            : formatPercent(info.row.original.serviceRatio)}
+          {formatCappedPercent(info.row.original.serviceRatio)}
         </span>
       ),
     },
@@ -104,9 +100,7 @@ function buildBlockColumns(
             )}
           >
             {formatNumber(sensors.sensorCount)}
-            {sensors.staleCount > 0
-              ? ` · ${formatNumber(sensors.staleCount)} basi`
-              : ""}
+            {sensors.staleCount > 0 ? ` · ${formatNumber(sensors.staleCount)} basi` : ""}
           </span>
         );
       },
@@ -254,9 +248,9 @@ export function NetworkPage() {
           }
         />
       ) : view === null ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+            <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-[repeat(3,minmax(0,1fr))]">
               {SKELETON_KEYS.map((key) => (
                 <Skeleton key={key} className="h-24" />
               ))}
@@ -266,16 +260,12 @@ export function NetworkPage() {
           <Skeleton className="h-72" />
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+            <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-[repeat(3,minmax(0,1fr))]">
               <MetricCard
                 label="Rasio layanan"
-                value={
-                  view.summary.averageServiceRatio === null
-                    ? "—"
-                    : formatPercent(view.summary.averageServiceRatio)
-                }
+                value={formatCappedPercent(view.summary.averageServiceRatio)}
                 note={
                   view.summary.weakestBlockName === null
                     ? "Belum ada slot plan"
@@ -291,10 +281,7 @@ export function NetworkPage() {
                     : "Semua segar"
                 }
               />
-              <MetricCard
-                label="Blok"
-                value={formatNumber(view.summary.blockCount)}
-              />
+              <MetricCard label="Blok" value={formatNumber(view.summary.blockCount)} />
             </div>
             <NetworkCanvas
               flow={view.flow}

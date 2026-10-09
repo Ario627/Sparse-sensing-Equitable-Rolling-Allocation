@@ -74,8 +74,6 @@ describe("policyProfileLabel", () => {
   });
 });
 
-
-
 describe("alertSeverityTone", () => {
   it("memetakan tiga tingkat keparahan", () => {
     expect(alertSeverityTone("info")).toBe("info");

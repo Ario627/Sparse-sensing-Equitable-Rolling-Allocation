@@ -1,19 +1,19 @@
 import {
+  type Edge,
   Handle,
   MarkerType,
-  Position,
-  ReactFlow,
-  type Edge,
   type Node,
   type NodeProps,
   type NodeTypes,
+  Position,
+  ReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useMemo } from "react";
-import { cn } from "@/lib/cn.ts";
-import { formatNumber, formatPercent } from "@/lib/format.ts";
-import { palette } from "@/lib/palette.ts";
 import type { Tone } from "@/components/kit/status-pill.tsx";
+import { cn } from "@/lib/cn.ts";
+import { formatCappedPercent, formatNumber } from "@/lib/format.ts";
+import { palette } from "@/lib/palette.ts";
 import type { NetworkFlowModel, NetworkNodeData } from "./selectors.ts";
 
 const DEFAULT_HEIGHT = 420;
@@ -75,7 +75,7 @@ function BlockNode({ data, selected }: NodeProps) {
       <p className="truncate text-xs font-medium text-ink">{block.name}</p>
       <p className="mt-1 flex items-baseline gap-1">
         <span className="font-mono text-lg leading-none font-medium text-ink tabular">
-          {block.serviceRatio === null ? "—" : formatPercent(block.serviceRatio)}
+          {formatCappedPercent(block.serviceRatio)}
         </span>
         <span className="label-caps text-ink-3">{block.band.label}</span>
       </p>
@@ -86,9 +86,7 @@ function BlockNode({ data, selected }: NodeProps) {
         />
       </div>
       <p className="mt-1.5 flex items-center justify-between text-2xs text-ink-3">
-        <span className="tabular">
-          {formatNumber(block.areaM2 / 10_000, 1)} ha
-        </span>
+        <span className="tabular">{formatNumber(block.areaM2 / 10_000, 1)} ha</span>
         {block.sensors.sensorCount > 0 && (
           <span className={cn(block.sensors.staleCount > 0 && "text-crit")}>
             {block.sensors.staleCount > 0
@@ -196,6 +194,7 @@ export function NetworkCanvas({
 
   return (
     <div
+      role="img"
       aria-label="Kanvas jaringan"
       style={{ height }}
       className={cn(

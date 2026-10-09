@@ -21,20 +21,15 @@ const toneClasses: Record<Tone, string> = {
 };
 
 const sizeClasses: Record<PillSize, string> = {
-  sm: "px-1.5 py-0.5",
-  md: "px-2 py-1",
+  sm: "px-2 py-0.5",
+  md: "px-2.5 py-1",
 };
 
-export function StatusPill({
-  tone,
-  label,
-  size = "sm",
-  className,
-}: StatusPillProps) {
+export function StatusPill({ tone, label, size = "sm", className }: StatusPillProps) {
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center gap-1.5 rounded-xs border label-caps",
+        "inline-flex w-fit items-center gap-1.5 rounded-full border label-caps",
         sizeClasses[size],
         toneClasses[tone],
         className,

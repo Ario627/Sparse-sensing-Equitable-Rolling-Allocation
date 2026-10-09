@@ -51,8 +51,5 @@ export function downloadCsv(
   delimiter: string = DEFAULT_DELIMITER,
 ): void {
   const payload = `${BOM}${toCsv(rows, delimiter)}`;
-  downloadBlob(
-    filename,
-    new Blob([payload], { type: "text/csv;charset=utf-8" }),
-  );
+  downloadBlob(filename, new Blob([payload], { type: "text/csv;charset=utf-8" }));
 }

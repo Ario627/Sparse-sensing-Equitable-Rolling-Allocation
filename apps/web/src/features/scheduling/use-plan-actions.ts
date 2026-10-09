@@ -1,7 +1,4 @@
-import type {
-  PlanDecisionRequest,
-  PlanOverrideItemChange,
-} from "@sera/contracts";
+import type { PlanDecisionRequest, PlanOverrideItemChange } from "@sera/contracts";
 import { useState } from "react";
 import { isApiError } from "@/lib/api/client.ts";
 import { usePlanDecision, usePlanExecute, usePlanOverride } from "./api.ts";
@@ -38,9 +35,7 @@ export function usePlanActions(planId: string): PlanActions {
   const decision = usePlanDecision(planId);
   const overrideMutation = usePlanOverride(planId);
   const executeMutation = usePlanExecute(planId);
-  const [pendingAction, setPendingAction] = useState<PlanActionName | null>(
-    null,
-  );
+  const [pendingAction, setPendingAction] = useState<PlanActionName | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function run(
@@ -97,10 +92,7 @@ export function usePlanActions(planId: string): PlanActions {
       setError(EMPTY_REASON_ERROR);
       return false;
     }
-    return decide(
-      { action: "request_changes", reason: trimmed },
-      "request_changes",
-    );
+    return decide({ action: "request_changes", reason: trimmed }, "request_changes");
   }
 
   async function override(

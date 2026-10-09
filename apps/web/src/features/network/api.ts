@@ -1,7 +1,7 @@
 import {
+  type ListNetworksQuery,
   networkDetailSchema,
   networksListResponseSchema,
-  type ListNetworksQuery,
 } from "@sera/contracts";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client.ts";
@@ -37,10 +37,7 @@ export function useNetworks(overrides: Partial<ListNetworksQuery> = {}) {
   return useQuery({
     queryKey: queryKeys.networks.list(query),
     queryFn: () =>
-      apiFetch(
-        networksListResponseSchema,
-        `/networks?${listSearchParams(query)}`,
-      ),
+      apiFetch(networksListResponseSchema, `/networks?${listSearchParams(query)}`),
     staleTime: NETWORK_STALE_MS,
     placeholderData: keepPreviousData,
   });
@@ -50,10 +47,7 @@ export function useNetwork(networkId: string | null) {
   return useQuery({
     queryKey: queryKeys.networks.detail(networkId ?? ""),
     queryFn: () =>
-      apiFetch(
-        networkDetailSchema,
-        `/networks/${encodeURIComponent(networkId ?? "")}`,
-      ),
+      apiFetch(networkDetailSchema, `/networks/${encodeURIComponent(networkId ?? "")}`),
     enabled: networkId !== null,
     staleTime: NETWORK_STALE_MS,
   });

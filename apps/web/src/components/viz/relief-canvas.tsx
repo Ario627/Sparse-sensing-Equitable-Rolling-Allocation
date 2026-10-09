@@ -5,13 +5,7 @@ import {
   useState,
 } from "react";
 import { cn } from "@/lib/cn.ts";
-import {
-  clampPitch,
-  lookAt,
-  orbitEye,
-  perspective,
-  type Vec3,
-} from "@/lib/gl/mat4.ts";
+import { clampPitch, lookAt, orbitEye, perspective, type Vec3 } from "@/lib/gl/mat4.ts";
 import {
   buildTerrainGeometry,
   type TerrainBlock,
@@ -197,10 +191,7 @@ function createVao(gl: WebGL2RenderingContext): WebGLVertexArrayObject {
   return vao;
 }
 
-function uniformLocations(
-  gl: WebGL2RenderingContext,
-  program: WebGLProgram,
-): Uniforms {
+function uniformLocations(gl: WebGL2RenderingContext, program: WebGLProgram): Uniforms {
   return {
     projection: gl.getUniformLocation(program, "uProjection"),
     view: gl.getUniformLocation(program, "uView"),
@@ -355,8 +346,7 @@ function stopLoop(scene: Scene): void {
 
 function startLoop(scene: Scene): void {
   const frame = (now: number): void => {
-    const delta =
-      scene.lastNow === 0 ? 0 : Math.min(0.05, (now - scene.lastNow) / 1000);
+    const delta = scene.lastNow === 0 ? 0 : Math.min(0.05, (now - scene.lastNow) / 1000);
     scene.lastNow = now;
     if (!scene.reduced) {
       scene.time += delta;
@@ -401,9 +391,7 @@ export function ReliefCanvas({
 }: ReliefCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<Scene | null>(null);
-  const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(
-    null,
-  );
+  const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const [fallback, setFallback] = useState<FallbackKind | null>(null);
 
   useEffect(() => {
@@ -490,9 +478,7 @@ export function ReliefCanvas({
       return;
     }
     scene.yaw -= (event.clientX - drag.x) * DRAG_SENSITIVITY;
-    scene.pitch = clampPitch(
-      scene.pitch - (event.clientY - drag.y) * DRAG_SENSITIVITY,
-    );
+    scene.pitch = clampPitch(scene.pitch - (event.clientY - drag.y) * DRAG_SENSITIVITY);
     drag.x = event.clientX;
     drag.y = event.clientY;
     scene.needsDraw = true;

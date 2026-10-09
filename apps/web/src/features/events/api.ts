@@ -92,11 +92,9 @@ export function useAcknowledgeEvent() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (eventId: string) =>
-      apiFetch(
-        eventSchema,
-        `/events/${encodeURIComponent(eventId)}/acknowledge`,
-        { method: "POST" },
-      ),
+      apiFetch(eventSchema, `/events/${encodeURIComponent(eventId)}/acknowledge`, {
+        method: "POST",
+      }),
     onSuccess: () => {
       invalidateEvents(client);
     },

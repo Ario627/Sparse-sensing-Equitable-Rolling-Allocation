@@ -1,7 +1,4 @@
-import type {
-  NetworkDetailResponse,
-  NetworkNodeResponse,
-} from "@sera/contracts";
+import type { NetworkDetailResponse, NetworkNodeResponse } from "@sera/contracts";
 import type { TerrainBlock, TerrainFlowPoint, TerrainTone } from "./terrain.ts";
 
 export interface ReliefLayoutOptions {
@@ -43,9 +40,7 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-function findRoot(
-  nodes: readonly NetworkNodeResponse[],
-): NetworkNodeResponse | null {
+function findRoot(nodes: readonly NetworkNodeResponse[]): NetworkNodeResponse | null {
   const source = nodes.find((node) => node.type === "SOURCE");
   return source ?? nodes.at(0) ?? null;
 }

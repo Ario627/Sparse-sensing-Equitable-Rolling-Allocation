@@ -21,9 +21,7 @@ export async function ensureSession(): Promise<SessionUserResponse | null> {
   return restored ? useSessionStore.getState().user : null;
 }
 
-export async function requireSession(
-  href: string,
-): Promise<SessionUserResponse> {
+export async function requireSession(href: string): Promise<SessionUserResponse> {
   const user = await ensureSession();
   if (user === null) {
     throw redirect({ to: "/login", search: { redirect: href } });

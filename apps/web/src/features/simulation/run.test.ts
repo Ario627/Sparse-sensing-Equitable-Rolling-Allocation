@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { toYaml } from "@/lib/yaml.ts";
-import { defaultScenario } from "./scenario.ts";
 import {
   buildExperimentConfig,
   buildExperimentYaml,
   defaultSensorSet,
   generateExperimentId,
 } from "./run.ts";
+import { defaultScenario } from "./scenario.ts";
 
 describe("defaultSensorSet", () => {
   it("memetakan jumlah sensor ke id blok b1 sampai bN", () => {
@@ -30,9 +30,7 @@ describe("generateExperimentId", () => {
   });
 
   it("berbeda saat waktu berbeda", () => {
-    expect(generateExperimentId(1, 1_000)).not.toBe(
-      generateExperimentId(1, 2_000),
-    );
+    expect(generateExperimentId(1, 1_000)).not.toBe(generateExperimentId(1, 2_000));
   });
 });
 
@@ -126,9 +124,9 @@ describe("toYaml", () => {
   });
 
   it("menulis skalar, daftar, dan objek bersarang", () => {
-    expect(
-      toYaml({ a: 1, b: true, c: ["x", 2], d: { e: "y" } }),
-    ).toBe("a: 1\nb: true\nc:\n  - 'x'\n  - 2\nd:\n  e: 'y'\n");
+    expect(toYaml({ a: 1, b: true, c: ["x", 2], d: { e: "y" } })).toBe(
+      "a: 1\nb: true\nc:\n  - 'x'\n  - 2\nd:\n  e: 'y'\n",
+    );
   });
 
   it("menulis daftar dan objek kosong secara inline", () => {

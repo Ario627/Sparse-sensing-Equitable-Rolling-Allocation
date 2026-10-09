@@ -3,8 +3,8 @@ import { ErrorState } from "@/components/kit/error-state.tsx";
 import { MetricCard } from "@/components/kit/metric-card.tsx";
 import { PageHeader } from "@/components/kit/page-header.tsx";
 import { Skeleton } from "@/components/kit/skeleton.tsx";
-import { DeviceTable } from "@/features/sensors/device-table.tsx";
 import { useLatestTelemetry } from "@/features/sensors/api.ts";
+import { DeviceTable } from "@/features/sensors/device-table.tsx";
 import { devicesFromLatest } from "@/features/sensors/status.ts";
 import { formatAge, formatNumber } from "@/lib/format.ts";
 import { useNow } from "@/lib/hooks.ts";
@@ -51,14 +51,14 @@ export function HardwarePage() {
           }
         />
       ) : latestQuery.isPending ? (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-[repeat(4,minmax(0,1fr))]">
           {["a", "b", "c", "d"].map((key) => (
             <Skeleton key={key} className="h-24" />
           ))}
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-[repeat(4,minmax(0,1fr))]">
             <MetricCard
               label="Perangkat aktif"
               value={formatNumber(devices.length)}
@@ -77,9 +77,7 @@ export function HardwarePage() {
               label="Sensor basi"
               value={formatNumber(staleSensors)}
               note={
-                staleSensors > 0
-                  ? "Perlu pemeriksaan lapangan"
-                  : "Semua dalam ambang"
+                staleSensors > 0 ? "Perlu pemeriksaan lapangan" : "Semua dalam ambang"
               }
             />
             <MetricCard

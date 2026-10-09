@@ -32,10 +32,7 @@ const seraTableFeatures = tableFeatures({
 });
 
 export type SeraTableFeatures = typeof seraTableFeatures;
-export type SeraColumnDef<TData extends object> = ColumnDef<
-  SeraTableFeatures,
-  TData
->;
+export type SeraColumnDef<TData extends object> = ColumnDef<SeraTableFeatures, TData>;
 
 const ARIA_SORT = { asc: "ascending", desc: "descending" } as const;
 
@@ -136,10 +133,7 @@ interface ServerPagerBarProps {
 
 function ServerPagerBar({ pager, visibleCount }: ServerPagerBarProps) {
   const first = (pager.page - 1) * pager.pageSize + 1;
-  const last = Math.min(
-    pager.total,
-    (pager.page - 1) * pager.pageSize + visibleCount,
-  );
+  const last = Math.min(pager.total, (pager.page - 1) * pager.pageSize + visibleCount);
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2">
       <p className="font-mono text-xs text-ink-3 tabular">
@@ -147,8 +141,7 @@ function ServerPagerBar({ pager, visibleCount }: ServerPagerBarProps) {
       </p>
       <div className="flex items-center gap-1.5">
         <span className="text-xs text-ink-3">
-          Hal {formatNumber(pager.page)}/
-          {formatNumber(Math.max(1, pager.totalPages))}
+          Hal {formatNumber(pager.page)}/{formatNumber(Math.max(1, pager.totalPages))}
         </span>
         <Button
           size="sm"
@@ -304,41 +297,39 @@ export function DataTable<TData extends object>({
                   key={row.id}
                   className="border-b border-line/70 transition-colors last:border-b-0 hover:bg-water-soft/35"
                 >
-                  {row.getVisibleCells().map(
-                    (cell: ReturnType<typeof row.getVisibleCells>[number]) => (
+                  {row
+                    .getVisibleCells()
+                    .map((cell: ReturnType<typeof row.getVisibleCells>[number]) => (
                       <td key={cell.id} className="px-3 py-2 align-middle text-ink-2">
                         <table.FlexRender cell={cell} />
                       </td>
-                    ),
-                  )}
+                    ))}
                 </tr>
               ))}
           </tbody>
         </table>
       </div>
-      {serverPager === undefined ? (
-        rowCount > 0 && (
-          <Pager
-            pageIndex={pagination.pageIndex}
-            pageSize={pagination.pageSize}
-            rowCount={rowCount}
-            visibleCount={rows.length}
-            pageCount={pageCount}
-            canPrevious={table.getCanPreviousPage()}
-            canNext={table.getCanNextPage()}
-            onPrevious={() => {
-              table.previousPage();
-            }}
-            onNext={() => {
-              table.nextPage();
-            }}
-          />
-        )
-      ) : (
-        rows.length > 0 && (
-          <ServerPagerBar pager={serverPager} visibleCount={rows.length} />
-        )
-      )}
+      {serverPager === undefined
+        ? rowCount > 0 && (
+            <Pager
+              pageIndex={pagination.pageIndex}
+              pageSize={pagination.pageSize}
+              rowCount={rowCount}
+              visibleCount={rows.length}
+              pageCount={pageCount}
+              canPrevious={table.getCanPreviousPage()}
+              canNext={table.getCanNextPage()}
+              onPrevious={() => {
+                table.previousPage();
+              }}
+              onNext={() => {
+                table.nextPage();
+              }}
+            />
+          )
+        : rows.length > 0 && (
+            <ServerPagerBar pager={serverPager} visibleCount={rows.length} />
+          )}
     </div>
   );
 }

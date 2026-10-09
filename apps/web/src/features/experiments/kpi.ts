@@ -203,8 +203,7 @@ export function computeMetricDelta(
     Math.abs(signed) < EPSILON ? "same" : signed > 0 ? "better" : "worse";
   return {
     delta,
-    relativePercent:
-      reference === 0 ? null : (delta / Math.abs(reference)) * 100,
+    relativePercent: reference === 0 ? null : (delta / Math.abs(reference)) * 100,
     verdict,
   };
 }

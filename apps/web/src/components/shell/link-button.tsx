@@ -6,16 +6,14 @@ export type LinkButtonVariant = "primary" | "outline" | "ghost";
 export type LinkButtonSize = "sm" | "md";
 
 const variantClasses: Record<LinkButtonVariant, string> = {
-  primary:
-    "border border-transparent bg-water text-surface hover:bg-water-deep",
-  outline:
-    "border border-line-2 bg-surface text-ink hover:border-ink-3/60 hover:bg-sunk",
+  primary: "border border-transparent bg-water text-surface hover:bg-water-deep",
+  outline: "border border-line-2 bg-surface text-ink hover:border-ink-3/60 hover:bg-sunk",
   ghost: "border border-transparent text-ink-2 hover:bg-sunk hover:text-ink",
 };
 
 const sizeClasses: Record<LinkButtonSize, string> = {
-  sm: "h-8 gap-1.5 px-2.5 text-xs",
-  md: "h-9 gap-1.5 px-3.5 text-sm",
+  sm: "min-h-9 gap-1.5 px-3 text-xs",
+  md: "min-h-11 gap-2 px-4 text-sm",
 };
 
 export function linkButtonClass(
@@ -24,7 +22,7 @@ export function linkButtonClass(
   className?: string,
 ): string {
   return cn(
-    "inline-flex select-none items-center justify-center rounded-sm font-medium whitespace-nowrap transition-colors",
+    "inline-flex min-h-10 select-none items-center justify-center rounded-md font-medium whitespace-nowrap transition-[background-color,color,border-color,transform] duration-200 active:scale-[0.98]",
     sizeClasses[size],
     variantClasses[variant],
     className,

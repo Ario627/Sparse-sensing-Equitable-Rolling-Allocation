@@ -113,12 +113,7 @@ function asString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-function parseInteger(
-  raw: unknown,
-  fallback: number,
-  min: number,
-  max: number,
-): number {
+function parseInteger(raw: unknown, fallback: number, min: number, max: number): number {
   const text = asString(raw);
   if (text === undefined) {
     return fallback;
@@ -130,12 +125,7 @@ function parseInteger(
   return Math.min(max, Math.max(min, parsed));
 }
 
-function parseDecimal(
-  raw: unknown,
-  fallback: number,
-  min: number,
-  max: number,
-): number {
+function parseDecimal(raw: unknown, fallback: number, min: number, max: number): number {
   const text = asString(raw);
   if (text === undefined) {
     return fallback;
@@ -191,12 +181,7 @@ export function parseSimulationSearch(
       SUPPLY_MIN,
       SUPPLY_MAX,
     ),
-    blocks: parseInteger(
-      search.blocks,
-      defaultScenario.blocks,
-      BLOCKS_MIN,
-      BLOCKS_MAX,
-    ),
+    blocks: parseInteger(search.blocks, defaultScenario.blocks, BLOCKS_MIN, BLOCKS_MAX),
     horizonDays: parseInteger(
       search.horizon,
       defaultScenario.horizonDays,
@@ -206,9 +191,7 @@ export function parseSimulationSearch(
   };
 }
 
-export function toSimulationSearch(
-  scenario: SimulationScenario,
-): SimulationSearch {
+export function toSimulationSearch(scenario: SimulationScenario): SimulationSearch {
   const search: SimulationSearch = {};
   if (scenario.preset !== defaultScenario.preset) {
     search.scenario = scenario.preset;

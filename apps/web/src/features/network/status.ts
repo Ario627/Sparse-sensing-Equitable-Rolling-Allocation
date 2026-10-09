@@ -25,12 +25,11 @@ export const serviceRatioBands: readonly (StatusBand & {
   { min: 0.7, tone: "warn", label: "Cukup" },
 ];
 
-export const kFactorBands: readonly (StatusBand & { readonly min: number })[] =
-  [
-    { min: 0.9, tone: "ok", label: "Normal" },
-    { min: 0.7, tone: "warn", label: "Cukup langka" },
-    { min: 0.5, tone: "warn", label: "Kekurangan" },
-  ];
+export const kFactorBands: readonly (StatusBand & { readonly min: number })[] = [
+  { min: 0.9, tone: "ok", label: "Normal" },
+  { min: 0.7, tone: "warn", label: "Cukup langka" },
+  { min: 0.5, tone: "warn", label: "Kekurangan" },
+];
 
 const planStatusTones: Record<PlanStatus, Tone> = {
   PROPOSED: "warn",

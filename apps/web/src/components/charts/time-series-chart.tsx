@@ -1,17 +1,15 @@
 import type { LineSeriesOption } from "echarts/charts";
-import type {
-  GridComponentOption,
-  TooltipComponentOption,
-} from "echarts/components";
+import type { GridComponentOption, TooltipComponentOption } from "echarts/components";
 import type { ComposeOption } from "echarts/core";
 import { useMemo } from "react";
 import {
   chartColors,
   chartFonts,
-  seriesTones,
   type SeriesTone,
+  seriesTones,
 } from "@/lib/charts/theme.ts";
 import { formatClockMs, formatInterval, formatNumber } from "@/lib/format.ts";
+import { rgba } from "@/lib/palette.ts";
 import { EChart } from "./echart.tsx";
 
 const DEFAULT_HEIGHT = 180;
@@ -36,6 +34,7 @@ export interface TimeSeriesChartProps {
   readonly includeZero?: boolean;
   readonly tone?: SeriesTone;
   readonly animate?: boolean;
+  readonly compact?: boolean;
   readonly className?: string;
 }
 
@@ -56,6 +55,7 @@ interface BuildInput {
   readonly includeZero: boolean;
   readonly tone: SeriesTone;
   readonly animate: boolean;
+  readonly compact: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -147,13 +147,38 @@ function buildSeries(input: BuildInput, band: BandData | null): LineSeriesOption
     name: input.label,
     type: "line",
     data: valuePairs(input.points),
-    showSymbol: input.points.length <= SYMBOL_THRESHOLD,
-    symbolSize: 5,
-    lineStyle: { width: 2, color: toneColors.line },
+    showSymbol: !input.compact && input.points.length <= SYMBOL_THRESHOLD,
+    symbolSize: 4,
+    lineStyle: { width: input.compact ? 2.5 : 2, color: toneColors.line },
     itemStyle: { color: toneColors.line },
+    areaStyle: {
+      color: {
+        type: "linear",
+        x: 0,
+        y: 0,
+        x2: 0,
+        y2: 1,
+        colorStops: [
+          { offset: 0, color: rgba(toneColors.line, input.compact ? 0.22 : 0.16) },
+          { offset: 1, color: rgba(toneColors.line, 0) },
+        ],
+      },
+    },
+    endLabel: {
+      show: !input.compact && input.points.length > 0,
+      distance: 4,
+      color: chartColors.ink2,
+      fontFamily: chartFonts.mono,
+      fontSize: 12,
+      formatter: () => endLabelText(input.points.at(-1), input.digits),
+    },
     ...(input.points.length > SAMPLING_THRESHOLD ? { sampling: "lttb" } : {}),
   });
   return series;
+}
+
+function endLabelText(point: TimeSeriesPoint | undefined, digits: number): string {
+  return point === undefined ? "" : formatNumber(point.value, digits);
 }
 
 function buildOption(input: BuildInput): TimeSeriesOption {
@@ -161,7 +186,9 @@ function buildOption(input: BuildInput): TimeSeriesOption {
     animation: input.animate,
     animationDuration: 240,
     animationDurationUpdate: 200,
-    grid: { left: 4, right: 10, top: 18, bottom: 2, containLabel: true },
+    grid: input.compact
+      ? { left: 0, right: 4, top: 12, bottom: 0, containLabel: true }
+      : { left: 8, right: 52, top: 26, bottom: 2, containLabel: true },
     tooltip: {
       trigger: "axis",
       confine: true,
@@ -175,17 +202,30 @@ function buildOption(input: BuildInput): TimeSeriesOption {
     },
     xAxis: {
       type: "time",
-      axisLabel: { formatter: (value: number) => formatClockMs(value) },
-    },
-    yAxis: {
-      type: "value",
-      scale: !input.includeZero,
-      splitNumber: 4,
-      name: input.unit,
       axisLabel: {
-        formatter: (value: number) => formatNumber(value, input.digits),
+        formatter: (value: number) => formatClockMs(value),
+        fontSize: input.compact ? 10 : 12,
       },
     },
+    yAxis: input.compact
+      ? {
+          type: "value",
+          scale: !input.includeZero,
+          splitNumber: 2,
+          axisLabel: { show: false },
+          splitLine: { show: false },
+          axisLine: { show: false },
+          axisTick: { show: false },
+        }
+      : {
+          type: "value",
+          scale: !input.includeZero,
+          splitNumber: 4,
+          name: input.unit,
+          axisLabel: {
+            formatter: (value: number) => formatNumber(value, input.digits),
+          },
+        },
     series: buildSeries(input, bandData(input.points)),
   };
 }
@@ -199,11 +239,22 @@ export function TimeSeriesChart({
   includeZero = true,
   tone = "water",
   animate = true,
+  compact = false,
   className,
 }: TimeSeriesChartProps) {
   const option = useMemo(
-    () => buildOption({ points, label, unit, digits, includeZero, tone, animate }),
-    [points, label, unit, digits, includeZero, tone, animate],
+    () =>
+      buildOption({
+        points,
+        label,
+        unit,
+        digits,
+        includeZero,
+        tone,
+        animate,
+        compact,
+      }),
+    [points, label, unit, digits, includeZero, tone, animate, compact],
   );
   return (
     <EChart

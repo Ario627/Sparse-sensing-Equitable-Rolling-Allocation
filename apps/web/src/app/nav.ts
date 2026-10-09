@@ -1,3 +1,4 @@
+import type { UserRole } from "@sera/contracts";
 import type { ComponentType } from "react";
 import {
   IconArchive,
@@ -7,12 +8,13 @@ import {
   IconFlask,
   IconGauge,
   IconNetwork,
+  type IconProps,
   IconRun,
   IconSchedule,
   IconSliders,
   IconTarget,
-  type IconProps,
 } from "@/components/icons.tsx";
+import { hasAnyRole, labRoles, ledgerRoles } from "@/lib/auth/roles.ts";
 
 export type NavItemPath =
   | "/operations"
@@ -32,6 +34,8 @@ export interface NavItem {
   readonly label: string;
   readonly hint: string;
   readonly icon: ComponentType<IconProps>;
+  readonly badge?: "pending_plans";
+  readonly roles?: readonly UserRole[];
 }
 
 export interface NavGroup {
@@ -48,32 +52,35 @@ export const navGroups: readonly NavGroup[] = [
       {
         to: "/operations",
         label: "Ringkasan",
-        hint: "Kondisi jaringan saat ini",
+        hint: "Kondisi jaringan",
         icon: IconGauge,
       },
       {
         to: "/operations/network",
         label: "Jaringan",
-        hint: "Keadaan node dan blok",
+        hint: "Blok & pintu air",
         icon: IconNetwork,
       },
       {
         to: "/operations/schedule",
         label: "Jadwal",
-        hint: "Rencana alokasi dan persetujuan",
+        hint: "Rencana & persetujuan",
         icon: IconSchedule,
+        badge: "pending_plans",
       },
       {
         to: "/operations/alerts",
         label: "Peringatan",
-        hint: "Kejadian yang butuh perhatian",
+        hint: "Kejadian penting",
         icon: IconBell,
+        roles: ledgerRoles,
       },
       {
         to: "/operations/history",
         label: "Riwayat",
-        hint: "Jejak plan, persetujuan, dan override",
+        hint: "Jejak keputusan",
         icon: IconArchive,
+        roles: ledgerRoles,
       },
     ],
   },
@@ -84,26 +91,30 @@ export const navGroups: readonly NavGroup[] = [
       {
         to: "/lab/simulation",
         label: "Simulasi",
-        hint: "Susun skenario dan jalankan",
+        hint: "Susun skenario",
         icon: IconFlask,
+        roles: labRoles,
       },
       {
         to: "/lab/experiments",
         label: "Eksperimen",
-        hint: "Jalankan dan pantau batch",
+        hint: "Pantau batch",
         icon: IconRun,
+        roles: labRoles,
       },
       {
         to: "/lab/sensor-budget",
         label: "Anggaran Sensor",
-        hint: "Berapa sensor yang cukup",
+        hint: "Uji jumlah sensor",
         icon: IconTarget,
+        roles: labRoles,
       },
       {
         to: "/lab/results",
         label: "Hasil",
-        hint: "Metrik, baseline, Pareto",
+        hint: "Metrik & baseline",
         icon: IconChart,
+        roles: labRoles,
       },
     ],
   },
@@ -114,18 +125,29 @@ export const navGroups: readonly NavGroup[] = [
       {
         to: "/system/hardware",
         label: "Perangkat",
-        hint: "Status node dan HIL",
+        hint: "Status HIL",
         icon: IconChip,
       },
       {
         to: "/system/settings",
         label: "Pengaturan",
-        hint: "Profil kebijakan dan operasi",
+        hint: "Profil & operasi",
         icon: IconSliders,
       },
     ],
   },
 ];
+
+export function navGroupsFor(role: UserRole | null): readonly NavGroup[] {
+  return navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => item.roles === undefined || hasAnyRole(role, item.roles),
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+}
 
 export function isNavItemActive(to: NavItemPath, pathname: string): boolean {
   if (to === "/operations") {

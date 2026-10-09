@@ -1,5 +1,5 @@
 import { registerTheme } from "echarts/core";
-import { rgba, palette } from "@/lib/palette.ts";
+import { palette, rgba } from "@/lib/palette.ts";
 
 export const SERA_CHART_THEME = "sera";
 
@@ -34,9 +34,9 @@ export const seriesTones = {
 export type SeriesTone = keyof typeof seriesTones;
 
 const axisLabel = {
-  color: chartColors.ink3,
+  color: chartColors.ink2,
   fontFamily: chartFonts.mono,
-  fontSize: 11,
+  fontSize: 12,
 };
 
 const seraTheme = {
@@ -50,7 +50,7 @@ const seraTheme = {
   ],
   backgroundColor: "transparent",
   textStyle: { fontFamily: chartFonts.sans, color: chartColors.ink2 },
-  grid: { left: 4, right: 10, top: 18, bottom: 2, containLabel: true },
+  grid: { left: 8, right: 16, top: 28, bottom: 2, containLabel: true },
   axisPointer: { lineStyle: { color: chartColors.line2, width: 1 } },
   categoryAxis: {
     axisLine: { lineStyle: { color: chartColors.line } },
@@ -64,9 +64,9 @@ const seraTheme = {
     splitLine: { lineStyle: { color: chartColors.line, type: "dashed" } },
     axisLabel,
     nameTextStyle: {
-      color: chartColors.ink3,
+      color: chartColors.ink2,
       fontFamily: chartFonts.mono,
-      fontSize: 11,
+      fontSize: 12,
     },
   },
   timeAxis: {
@@ -79,7 +79,7 @@ const seraTheme = {
     backgroundColor: chartColors.surface,
     borderColor: chartColors.line,
     borderWidth: 1,
-    padding: [8, 10],
+    padding: [10, 12],
     confine: true,
     textStyle: {
       color: chartColors.ink,
@@ -87,7 +87,7 @@ const seraTheme = {
       fontSize: 12,
     },
     extraCssText:
-      "box-shadow: 0 12px 32px -16px rgba(22, 26, 23, 0.28); border-radius: 5px;",
+      "box-shadow: 0 12px 32px -16px rgba(22, 26, 23, 0.28); border-radius: 8px;",
   },
   line: {
     smooth: false,

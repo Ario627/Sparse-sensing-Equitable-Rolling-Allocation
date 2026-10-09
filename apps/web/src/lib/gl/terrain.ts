@@ -1,12 +1,6 @@
 import { hexToRgb01, mixRgb, palette } from "@/lib/palette.ts";
 
-export type TerrainTone =
-  | "ok"
-  | "warn"
-  | "crit"
-  | "fallback"
-  | "water"
-  | "neutral";
+export type TerrainTone = "ok" | "warn" | "crit" | "fallback" | "water" | "neutral";
 
 export interface TerrainBlock {
   readonly id: string;
@@ -82,11 +76,7 @@ function pushSegment(
   pushVertex(positions, colors, to, rgb);
 }
 
-function pushPad(
-  positions: number[],
-  colors: number[],
-  block: TerrainBlock,
-): void {
+function pushPad(positions: number[], colors: number[], block: TerrainBlock): void {
   const tone = toneRgb[block.tone];
   const edgeRgb = tone;
   const postRgb = mixRgb(tone, inkRgb, POST_MIX);
@@ -126,9 +116,7 @@ function pushPad(
 }
 
 function flowStrip(points: readonly TerrainFlowPoint[]): TerrainFlowPoint[] {
-  return points.filter(
-    (point) => Number.isFinite(point.x) && Number.isFinite(point.z),
-  );
+  return points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.z));
 }
 
 function segmentLength(a: TerrainFlowPoint, b: TerrainFlowPoint): number {

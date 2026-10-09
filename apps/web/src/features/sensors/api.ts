@@ -1,7 +1,7 @@
 import {
+  type TelemetryReadingsQuery,
   telemetryLatestResponseSchema,
   telemetryReadingsResponseSchema,
-  type TelemetryReadingsQuery,
 } from "@sera/contracts";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client.ts";
@@ -47,8 +47,7 @@ function readingsSearchParams(query: TelemetryReadingsQuery): string {
 export function useLatestTelemetry(networkId: string | null = null) {
   return useQuery({
     queryKey: queryKeys.telemetry.latest(networkId),
-    queryFn: () =>
-      apiFetch(telemetryLatestResponseSchema, latestPath(networkId)),
+    queryFn: () => apiFetch(telemetryLatestResponseSchema, latestPath(networkId)),
     staleTime: LATEST_STALE_MS,
     refetchInterval: LATEST_POLL_MS,
   });

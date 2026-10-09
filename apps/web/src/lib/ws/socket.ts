@@ -41,10 +41,7 @@ function handlePayload(payload: unknown): void {
   const parsed = serverEventSchema.safeParse(payload);
   if (!parsed.success) {
     if (import.meta.env.DEV) {
-      console.warn(
-        "realtime: dropping event outside contract",
-        parsed.error.issues,
-      );
+      console.warn("realtime: dropping event outside contract", parsed.error.issues);
     }
     return;
   }
@@ -96,18 +93,14 @@ export function readLastEventAt(): string | null {
   return lastEventAt;
 }
 
-export function subscribeSocketState(
-  listener: SocketStateListener,
-): () => void {
+export function subscribeSocketState(listener: SocketStateListener): () => void {
   stateListeners.add(listener);
   return () => {
     stateListeners.delete(listener);
   };
 }
 
-export function subscribeServerEvents(
-  listener: ServerEventListener,
-): () => void {
+export function subscribeServerEvents(listener: ServerEventListener): () => void {
   eventListeners.add(listener);
   return () => {
     eventListeners.delete(listener);

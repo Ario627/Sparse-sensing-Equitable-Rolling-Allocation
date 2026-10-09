@@ -4,10 +4,10 @@ import { Button } from "@/components/kit/button.tsx";
 import { CopyConfigButton } from "@/components/kit/copy-config-button.tsx";
 import { textareaClass } from "@/components/kit/field.tsx";
 import { PageHeader } from "@/components/kit/page-header.tsx";
+import { RoleGate } from "@/components/kit/role-gate.tsx";
 import { ReliefCanvas } from "@/components/viz/relief-canvas.tsx";
 import { useCreateExperiment } from "@/features/experiments/api.ts";
 import { buildTerrainPreview } from "@/features/simulation/preview.ts";
-import { ScenarioForm } from "@/features/simulation/scenario-form.tsx";
 import {
   buildExperimentYaml,
   defaultSensorSet,
@@ -15,11 +15,13 @@ import {
 } from "@/features/simulation/run.ts";
 import {
   parseSimulationSearch,
+  type SimulationScenario,
   scenarioPresets,
   toSimulationSearch,
-  type SimulationScenario,
 } from "@/features/simulation/scenario.ts";
+import { ScenarioForm } from "@/features/simulation/scenario-form.tsx";
 import { isApiError } from "@/lib/api/client.ts";
+import { labRoles } from "@/lib/auth/roles.ts";
 import { cn } from "@/lib/cn.ts";
 import { asSearchRecord, buildSearch } from "@/lib/search.ts";
 
@@ -41,6 +43,18 @@ function sensorSetLabel(scenario: SimulationScenario): string {
 }
 
 export function SimulationPage() {
+  return (
+    <RoleGate
+      allow={labRoles}
+      title="Halaman riset khusus peneliti"
+      description="Penyusunan skenario dan penjalanan eksperimen hanya terbuka untuk peran peneliti atau admin."
+    >
+      <SimulationContent />
+    </RoleGate>
+  );
+}
+
+function SimulationContent() {
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
   const scenario = parseSimulationSearch(asSearchRecord(search));
@@ -89,7 +103,7 @@ export function SimulationPage() {
         <section className="flex flex-col gap-4 rounded-md border border-line bg-surface p-4">
           <ScenarioForm value={scenario} onChange={applyScenario} />
           <p className="font-mono text-2xs text-ink-3 tabular">
-            Titik ukur: {sensorSetLabel(scenario)} 
+            Titik ukur: {sensorSetLabel(scenario)}
           </p>
           <div className="flex flex-col gap-2.5">
             <Button
@@ -121,15 +135,12 @@ export function SimulationPage() {
             label={`Pratinjau struktur jaringan ${scenario.topology.toLowerCase()} dengan ${scenario.blocks} blok`}
           />
           <p className="text-xs text-ink-3">
-            Pratinjau struktur deterministik dari skenario — bukan hasil
-            simulasi. Blok ditampilkan seragam tanpa warna karena belum ada
-            data; hasil nyata muncul di halaman Eksperimen setelah solver
-            berjalan.
+            Pratinjau struktur deterministik dari skenario — bukan hasil simulasi. Blok
+            ditampilkan seragam tanpa warna karena belum ada data; hasil nyata muncul di
+            halaman Eksperimen setelah solver berjalan.
           </p>
           <div className="flex flex-col gap-1.5 rounded-md border border-line bg-surface p-3.5">
-            <p className="label-caps text-ink-3">
-              Konfigurasi eksperimen (YAML)
-            </p>
+            <p className="label-caps text-ink-3">Konfigurasi eksperimen (YAML)</p>
             <textarea
               readOnly
               value={yaml}

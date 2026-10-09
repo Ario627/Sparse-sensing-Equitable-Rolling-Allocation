@@ -1,10 +1,12 @@
-import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { navGroups, type NavItem } from "@/app/nav.ts";
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { isNavItemActive, type NavItem, navGroups, navGroupsFor } from "@/app/nav.ts";
 import { IconClose, IconLogout, IconMenu } from "@/components/icons.tsx";
 import { Button } from "@/components/kit/button.tsx";
 import { ConnectionBanner } from "@/components/kit/connection-banner.tsx";
 import { BrandMark } from "@/components/shell/brand.tsx";
+import { SidebarNav, SidebarStatusStrip } from "@/components/shell/sidebar-nav.tsx";
+import { useSidebarSignals } from "@/components/shell/sidebar-signals.ts";
 import { logout } from "@/lib/auth/auth-api.ts";
 import { roleLabel } from "@/lib/auth/roles.ts";
 import { useSessionStore } from "@/lib/auth/session-store.ts";
@@ -18,32 +20,16 @@ const CLOCK_TICK_MS = 15_000;
 const QUICK_ITEM_COUNT = 4;
 const TIME_ZONE_LABEL = "WIB";
 
-const navLinkBase =
-  "flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-sm text-ink-2 transition-colors hover:bg-sunk hover:text-ink";
-const navLinkActive = cn(
-  navLinkBase,
-  "bg-water-soft/70 text-water-deep hover:bg-water-soft/70 hover:text-water-deep",
+const menuNavLinkBase =
+  "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-ink-2 transition-colors hover:bg-sunk hover:text-ink";
+const menuNavLinkActive = cn(
+  menuNavLinkBase,
+  "bg-water-soft text-water-deep hover:bg-water-soft hover:text-water-deep",
 );
 const quickLinkBase =
-  "flex flex-col items-center gap-1 border-t-2 border-transparent px-1 pt-1.5 pb-1.5 text-2xs text-ink-3 transition-colors";
-const quickLinkActive = cn(quickLinkBase, "border-water text-water");
+  "flex min-h-14 flex-col items-center justify-center gap-1 border-t-2 border-transparent px-1 pt-1.5 pb-1.5 text-2xs text-ink-3 transition-colors";
+const quickLinkActive = cn(quickLinkBase, "border-water text-water-deep");
 const menuItemBase = "flex flex-1 flex-col gap-1.5";
-
-function SidebarLink({ item }: { readonly item: NavItem }) {
-  const Icon = item.icon;
-  return (
-    <Link
-      to={item.to}
-      title={item.hint}
-      className={navLinkBase}
-      activeProps={{ className: navLinkActive }}
-      activeOptions={{ exact: item.to === "/operations" }}
-    >
-      <Icon size={16} className="shrink-0" />
-      <span className="truncate">{item.label}</span>
-    </Link>
-  );
-}
 
 function QuickLink({ item }: { readonly item: NavItem }) {
   const Icon = item.icon;
@@ -72,13 +58,18 @@ function MenuLink({
     <Link
       to={item.to}
       title={item.hint}
-      className={navLinkBase}
-      activeProps={{ className: navLinkActive }}
+      className={menuNavLinkBase}
+      activeProps={{ className: menuNavLinkActive }}
       activeOptions={{ exact: item.to === "/operations" }}
       onClick={onNavigate}
     >
-      <Icon size={16} className="shrink-0" />
-      <span>{item.label}</span>
+      <Icon size={16} className="mt-0.5 shrink-0" />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-[13px] leading-tight font-medium">{item.label}</span>
+        <span className="mt-0.5 truncate text-2xs leading-tight text-ink-3">
+          {item.hint}
+        </span>
+      </span>
     </Link>
   );
 }
@@ -86,9 +77,11 @@ function MenuLink({
 function UserBox({
   onLogout,
   className,
+  inverse = false,
 }: {
   readonly onLogout: () => void;
   readonly className?: string;
+  readonly inverse?: boolean;
 }) {
   const user = useSessionStore((snapshot) => snapshot.user);
   if (user === null) {
@@ -97,43 +90,36 @@ function UserBox({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-2 border-t border-line px-3 py-3",
+        "flex items-center justify-between gap-2 border-t px-4 py-4",
+        inverse ? "border-white/12" : "border-line",
         className,
       )}
     >
       <span className="flex min-w-0 flex-col">
-        <span className="truncate text-xs font-medium text-ink">
+        <span
+          className={cn(
+            "truncate text-xs font-medium",
+            inverse ? "text-surface" : "text-ink",
+          )}
+        >
           {user.full_name}
         </span>
-        <span className="text-2xs text-ink-3">{roleLabel(user.role)}</span>
+        <span className={cn("text-2xs", inverse ? "text-surface/58" : "text-ink-3")}>
+          {roleLabel(user.role)}
+        </span>
       </span>
       <Button
         size="sm"
         variant="ghost"
         aria-label="Keluar dari sesi"
         onClick={onLogout}
+        {...(inverse
+          ? { className: "text-surface/72 hover:bg-white/10 hover:text-surface" }
+          : {})}
       >
         <IconLogout size={15} />
       </Button>
     </div>
-  );
-}
-
-function SidebarNav() {
-  return (
-    <nav
-      aria-label="Navigasi utama"
-      className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-4"
-    >
-      {navGroups.map((group) => (
-        <div key={group.id} className="flex flex-col gap-1">
-          <p className="px-2.5 label-caps text-ink-3">{group.label}</p>
-          {group.items.map((item) => (
-            <SidebarLink key={item.to} item={item} />
-          ))}
-        </div>
-      ))}
-    </nav>
   );
 }
 
@@ -144,11 +130,12 @@ function MobileBottomNav({
   readonly menuOpen: boolean;
   readonly onMenuToggle: () => void;
 }) {
-  const quickItems = navGroups[0]?.items.slice(0, QUICK_ITEM_COUNT) ?? [];
+  const role = useSessionStore((snapshot) => snapshot.user?.role ?? null);
+  const quickItems = navGroupsFor(role)[0]?.items.slice(0, QUICK_ITEM_COUNT) ?? [];
   return (
     <nav
       aria-label="Navigasi cepat"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/95 pb-safe backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-safe backdrop-blur-xl md:hidden"
     >
       <div className="grid grid-cols-5">
         {quickItems.map((item) => (
@@ -159,10 +146,7 @@ function MobileBottomNav({
           aria-expanded={menuOpen}
           aria-label="Buka semua menu"
           onClick={onMenuToggle}
-          className={cn(
-            quickLinkBase,
-            menuOpen && "border-water text-water",
-          )}
+          className={cn(quickLinkBase, menuOpen && "border-water text-water")}
         >
           <IconMenu size={18} />
           <span>Menu</span>
@@ -182,6 +166,7 @@ function MobileMenu({
   readonly onLogout: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const role = useSessionStore((snapshot) => snapshot.user?.role ?? null);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -209,7 +194,7 @@ function MobileMenu({
         }
       }}
       className={cn(
-        "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto overscroll-contain rounded-t-xl border border-line bg-surface p-0",
+        "fixed inset-x-0 bottom-0 top-auto m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto overscroll-contain rounded-t-2xl border border-line bg-surface p-0",
         "pb-safe md:hidden",
         "motion-safe:translate-y-4 motion-safe:opacity-0 motion-safe:transition-discrete motion-safe:transition-all motion-safe:duration-200",
         "motion-safe:open:translate-y-0 motion-safe:open:opacity-100",
@@ -223,7 +208,7 @@ function MobileMenu({
         </Button>
       </div>
       <nav aria-label="Semua bagian" className="flex flex-col gap-5 px-4 py-4">
-        {navGroups.map((group) => (
+        {navGroupsFor(role).map((group) => (
           <div key={group.id} className={menuItemBase}>
             <p className="label-caps text-ink-3">{group.label}</p>
             {group.items.map((item) => (
@@ -249,10 +234,33 @@ function ConnectionStrip({ now }: { readonly now: number }) {
   );
 }
 
+function HeaderContext() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  for (const group of navGroups) {
+    for (const item of group.items) {
+      if (isNavItemActive(item.to, pathname)) {
+        return (
+          <span className="hidden items-center gap-1.5 text-xs sm:flex">
+            <span className="text-ink-3">{group.label}</span>
+            <span aria-hidden="true" className="text-line-2">
+              /
+            </span>
+            <span className="font-medium text-ink-2">{item.label}</span>
+          </span>
+        );
+      }
+    }
+  }
+  return null;
+}
+
 function AppShell({ children }: { readonly children: ReactNode }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const now = useNow(CLOCK_TICK_MS);
+  const signals = useSidebarSignals();
 
   async function handleLogout(): Promise<void> {
     setMenuOpen(false);
@@ -265,29 +273,32 @@ function AppShell({ children }: { readonly children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[15rem_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line md:flex">
-        <div className="px-4 pt-safe pb-3">
-          <BrandMark />
+    <div className="min-h-dvh md:grid md:grid-cols-[16rem_minmax(0,1fr)]">
+      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-white/10 bg-ink md:flex">
+        <div className="border-b border-white/10 px-5 pt-safe pb-5">
+          <BrandMark inverse />
         </div>
-        <SidebarNav />
-        <UserBox onLogout={handleLogoutClick} />
+        <SidebarStatusStrip signals={signals} />
+        <SidebarNav pendingPlans={signals.pendingPlans} />
+        <UserBox onLogout={handleLogoutClick} inverse />
       </aside>
-      <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-20 border-b border-line bg-paper/95 pt-safe backdrop-blur">
-          <div className="flex min-h-11 items-center justify-between gap-3 px-3 py-1.5 sm:px-5">
+      <div className="flex min-w-0 flex-col bg-paper">
+        <header className="sticky top-0 z-20 border-b border-line bg-paper/92 pt-safe backdrop-blur-xl">
+          <div className="flex min-h-14 items-center justify-between gap-3 px-3 py-2 sm:px-6 lg:px-9">
             <div className="md:hidden">
               <BrandMark />
             </div>
-            <span className="hidden md:block" aria-hidden="true" />
-            <span className="flex items-baseline gap-1.5 font-mono text-xs text-ink-2 tabular">
-              {formatClockMs(now)}
-              <span className="text-2xs text-ink-3">{TIME_ZONE_LABEL}</span>
-            </span>
+            <div className="ml-auto flex items-center gap-4">
+              <HeaderContext />
+              <span className="flex items-baseline gap-1.5 font-mono text-xs text-ink-2 tabular">
+                {formatClockMs(now)}
+                <span className="text-2xs text-ink-3">{TIME_ZONE_LABEL}</span>
+              </span>
+            </div>
           </div>
           <ConnectionStrip now={now} />
         </header>
-        <main className="flex-1 px-3 pt-4 pb-24 sm:px-5 md:pb-10 lg:px-7">
+        <main className="mx-auto w-full max-w-[112rem] flex-1 px-3 pt-5 pb-24 sm:px-6 sm:pt-7 md:pb-12 lg:px-9 lg:pt-9">
           {children}
         </main>
       </div>

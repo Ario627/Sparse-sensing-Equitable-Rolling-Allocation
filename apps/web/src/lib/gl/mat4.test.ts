@@ -1,15 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { clampPitch, lookAt, orbitEye, perspective } from "./mat4.ts";
 
-function column(
-  matrix: Float32Array,
-  index: number,
-): readonly [number, number, number] {
-  return [
-    matrix[index * 4] ?? 0,
-    matrix[index * 4 + 1] ?? 0,
-    matrix[index * 4 + 2] ?? 0,
-  ];
+function column(matrix: Float32Array, index: number): readonly [number, number, number] {
+  return [matrix[index * 4] ?? 0, matrix[index * 4 + 1] ?? 0, matrix[index * 4 + 2] ?? 0];
 }
 
 function dot(

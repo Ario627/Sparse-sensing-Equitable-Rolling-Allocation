@@ -1,119 +1,159 @@
 import * as m from "motion/react-m";
-import { linkButtonClass } from "@/components/shell/link-button.tsx";
-import { LinkButton } from "@/components/shell/link-button.tsx";
-import { ReliefCanvas } from "@/components/viz/relief-canvas.tsx";
-import type {
-  TerrainBlock,
-  TerrainFlowPoint,
-  TerrainTone,
-} from "@/lib/gl/terrain.ts";
+import { Component, lazy, type ReactNode, Suspense, useState } from "react";
+import { LinkButton, linkButtonClass } from "@/components/shell/link-button.tsx";
+import { cn } from "@/lib/cn.ts";
+import { usePrefersReducedMotion } from "@/lib/hooks.ts";
+import { VIEWPOINT_ORDER, VIEWPOINTS, type ViewpointId } from "./paddy/paddy-layout.ts";
+import { PaddyMap } from "./paddy/paddy-map.tsx";
 
-const CANVAS_HEIGHT = 360;
-const ROW_COUNTS = [1, 3, 3, 3, 3] as const;
-const X_SPACING = 0.62;
-const Z_SPACING = 0.6;
-const HEIGHT_HEAD = 0.9;
-const HEIGHT_TAIL = 0.35;
+const PaddyScene = lazy(() =>
+  import("./paddy/paddy-scene.tsx").then((module) => ({
+    default: module.PaddyScene,
+  })),
+);
 
-const EASE_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
-
-const EYEBROW = "Pendukung keputusan · irigasi tersier";
-const TITLE = "Seberapa sedikit sensor yang masih cukup?";
+const EYEBROW = "Air bergerak. Keputusan tetap pada manusia.";
+const TITLE = "Baca aliran. Jaga giliran.";
 const DESCRIPTION =
-  "SERA mengestimasi kondisi jaringan yang tidak terukur, mengingat pelayanan tiap blok, lalu mengoptimalkan alokasi air secara bergulir — dengan keputusan akhir tetap di tangan operator.";
-const SCENE_CAPTION =
-  "Model jaringan contoh — bukan data lapangan. Tinggi blok mengikuti debit nominal; pulsa menandai aliran dari sumber menuju blok.";
+  "Kondisi blok yang tak tersensor dan usulan alokasi — ditinjau operator sebelum perintah ke pintu dikirim.";
 
-const zoneDots: Record<TerrainTone, string> = {
-  water: "bg-water",
-  ok: "bg-ok",
-  neutral: "bg-ink-3",
-  warn: "bg-warn",
-  crit: "bg-crit",
-  fallback: "bg-fallback",
-};
+const SCENE_CAPTION = "Model 3D contoh — bukan data lapangan.";
+const MAP_CAPTION = "Peta contoh — klik zona untuk menyorot. Bukan data lapangan.";
 
-const ZONE_LEGEND: readonly { readonly tone: TerrainTone; readonly label: string }[] = [
-  { tone: "water", label: "Hulu" },
-  { tone: "ok", label: "Tengah" },
-  { tone: "neutral", label: "Hilir" },
-];
+type ViewMode = "peta" | "3d";
 
 const HERO_STATS = [
-  { label: "Jaringan", value: "6–20 blok" },
-  { label: "Sensing", value: "1–5 titik" },
-  { label: "Kebijakan", value: "3 profil" },
-  { label: "Bentuk", value: "2 GUI · 1 mesin" },
+  { label: "Jangkauan studi", value: "6–20 blok" },
+  { label: "Sensor dalam skenario", value: "1–5 titik" },
+  { label: "Profil alokasi", value: "3 pilihan" },
+  { label: "Bukti saat ini", value: "Simulasi · HIL" },
 ] as const;
 
-interface HeroScene {
-  readonly blocks: readonly TerrainBlock[];
-  readonly flow: readonly TerrainFlowPoint[];
-}
-
-function rowTone(row: number): TerrainTone {
-  if (row <= 1) {
-    return "water";
-  }
-  if (row <= 3) {
-    return "ok";
-  }
-  return "neutral";
-}
-
-function buildHeroScene(): HeroScene {
-  const rows = ROW_COUNTS.length;
-  const total = ROW_COUNTS.reduce((sum, count) => sum + count, 0);
-  const totalZ = (rows - 1) * Z_SPACING;
-  const blocks: TerrainBlock[] = [];
-  const flow: TerrainFlowPoint[] = [];
-  let index = 0;
-  ROW_COUNTS.forEach((count, row) => {
-    const z = row * Z_SPACING - totalZ / 2;
-    const tone = rowTone(row);
-    const centerIndex = Math.floor((count - 1) / 2);
-    for (let column = 0; column < count; column += 1) {
-      const x = (column - (count - 1) / 2) * X_SPACING;
-      const fraction = total <= 1 ? 0 : index / (total - 1);
-      blocks.push({
-        id: `hero-${index}`,
-        x,
-        z,
-        height: HEIGHT_HEAD + (HEIGHT_TAIL - HEIGHT_HEAD) * fraction,
-        tone,
-      });
-      if (column === centerIndex) {
-        flow.push({ x, z });
-      }
-      index += 1;
-    }
-  });
-  return { blocks, flow };
-}
-
-const HERO_SCENE = buildHeroScene();
-
-function enterProps(delay: number) {
-  return {
-    initial: { opacity: 0, y: 10 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.45, delay, ease: EASE_QUART },
-  };
-}
-
-function ZoneLegend() {
+function SceneFallback() {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-      {ZONE_LEGEND.map((item) => (
-        <span key={item.tone} className="flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className={`size-2 rounded-[1px] ${zoneDots[item.tone]}`}
-          />
-          <span className="label-caps text-ink-3">{item.label}</span>
+    <div className="grid h-full w-full place-items-center bg-[#e9f2f4]">
+      <span className="label-caps text-ink-3">Menyiapkan diorama</span>
+    </div>
+  );
+}
+
+interface SceneBoundaryProps {
+  readonly children: ReactNode;
+}
+
+interface SceneBoundaryState {
+  readonly failed: boolean;
+}
+
+class SceneBoundary extends Component<SceneBoundaryProps, SceneBoundaryState> {
+  override state: SceneBoundaryState = { failed: false };
+
+  static getDerivedStateFromError(): SceneBoundaryState {
+    return { failed: true };
+  }
+
+  override render(): ReactNode {
+    if (this.state.failed) {
+      return <SceneFallback />;
+    }
+    return this.props.children;
+  }
+}
+
+const VIEWPOINT_SHORT: Record<ViewpointId, string> = {
+  overview: "Jaringan",
+  source: "Sumber",
+  head: "Hulu",
+  middle: "Tengah",
+  tail: "Hilir",
+};
+
+const chipBase =
+  "h-7 rounded-xs border px-2.5 font-mono text-2xs tracking-[0.06em] uppercase transition-colors";
+const chipActive = "border-water/50 bg-water-soft text-water-deep";
+const chipIdle =
+  "border-line-2 bg-surface text-ink-2 hover:border-ink-3/40 hover:text-ink";
+
+interface ViewpointChipsProps {
+  readonly value: ViewpointId;
+  readonly onChange: (id: ViewpointId) => void;
+}
+
+function ViewpointChips({ value, onChange }: ViewpointChipsProps) {
+  return (
+    <fieldset aria-label="Sudut kamera" className="flex flex-wrap items-center gap-1">
+      {VIEWPOINT_ORDER.map((id) => (
+        <m.button
+          key={id}
+          type="button"
+          aria-pressed={id === value}
+          whileTap={{ scale: 0.94 }}
+          onClick={() => {
+            onChange(id);
+          }}
+          className={cn(chipBase, id === value ? chipActive : chipIdle)}
+        >
+          {VIEWPOINT_SHORT[id]}
+        </m.button>
+      ))}
+    </fieldset>
+  );
+}
+
+const VIEW_MODES: readonly { readonly id: ViewMode; readonly label: string }[] = [
+  { id: "peta", label: "Peta" },
+  { id: "3d", label: "3D" },
+];
+
+const modeBase =
+  "h-6 rounded-xs px-2 font-mono text-2xs tracking-[0.06em] uppercase transition-colors";
+const modeActive = "bg-surface text-ink shadow-hair";
+const modeIdle = "text-ink-2 hover:text-ink";
+
+interface ModeToggleProps {
+  readonly value: ViewMode;
+  readonly onChange: (mode: ViewMode) => void;
+}
+
+function ModeToggle({ value, onChange }: ModeToggleProps) {
+  return (
+    <fieldset
+      aria-label="Mode tampilan"
+      className="inline-flex items-center gap-0.5 rounded-sm border border-line-2 bg-sunk p-0.5"
+    >
+      {VIEW_MODES.map((mode) => (
+        <button
+          key={mode.id}
+          type="button"
+          aria-pressed={mode.id === value}
+          onClick={() => {
+            onChange(mode.id);
+          }}
+          className={cn(modeBase, mode.id === value ? modeActive : modeIdle)}
+        >
+          {mode.label}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+function RegistrationMarks() {
+  const corners = [
+    "-top-1 -left-1",
+    "-top-1 -right-1",
+    "-bottom-1 -left-1",
+    "-bottom-1 -right-1",
+  ] as const;
+  return (
+    <span aria-hidden="true" className="pointer-events-none absolute inset-0">
+      {corners.map((position) => (
+        <span key={position} className={`absolute size-2 ${position}`}>
+          <span className="absolute top-1/2 left-0 h-px w-full bg-line-2" />
+          <span className="absolute top-0 left-1/2 h-full w-px bg-line-2" />
         </span>
       ))}
-    </div>
+    </span>
   );
 }
 
@@ -122,69 +162,89 @@ export interface LandingHeroProps {
 }
 
 export function LandingHero({ authed }: LandingHeroProps) {
+  const [viewpoint, setViewpoint] = useState<ViewpointId>("overview");
+  const [mode, setMode] = useState<ViewMode>("peta");
+  const reducedMotion = usePrefersReducedMotion();
   return (
-    <section className="border-b border-line">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,32rem)_minmax(0,1fr)] lg:items-center lg:gap-12 lg:py-16">
-        <div>
-          <m.p className="label-caps text-water" {...enterProps(0)}>
-            {EYEBROW}
-          </m.p>
-          <m.h1
-            className="mt-2 text-3xl leading-tight font-semibold tracking-tight text-balance text-ink sm:text-4xl"
-            {...enterProps(0.06)}
-          >
+    <section className="relative isolate overflow-hidden border-b border-line bg-[#e9f2f4]">
+      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-grid" />
+      <div className="mx-auto grid max-w-shell gap-7 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[minmax(18rem,0.76fr)_minmax(0,1.24fr)] lg:items-center lg:gap-10 lg:px-10 lg:py-12">
+        <div className="relative z-10">
+          <p className="label-caps animate-rise text-water-deep">{EYEBROW}</p>
+          <h1 className="mt-4 max-w-[16ch] animate-rise text-4xl leading-[1.05] font-semibold tracking-tight text-ink [animation-delay:60ms] sm:text-5xl lg:text-6xl">
             {TITLE}
-          </m.h1>
-          <m.p
-            className="mt-4 max-w-xl text-sm leading-relaxed text-ink-2 sm:text-base"
-            {...enterProps(0.12)}
-          >
+          </h1>
+          <p className="mt-5 max-w-136 animate-rise text-base leading-relaxed text-ink-2 [animation-delay:120ms] sm:text-lg">
             {DESCRIPTION}
-          </m.p>
-          <m.div
-            className="mt-6 flex flex-wrap items-center gap-2.5"
-            {...enterProps(0.18)}
-          >
-            <LinkButton
-              to={authed ? "/operations" : "/login"}
-              variant="primary"
-            >
-              {authed ? "Buka Operasi" : "Masuk ke aplikasi"}
+          </p>
+          <div className="mt-7 flex animate-rise flex-wrap items-center gap-3 [animation-delay:180ms]">
+            <LinkButton to={authed ? "/operations" : "/login"} variant="primary">
+              {authed ? "Lihat kondisi jaringan" : "Masuk ke SERA"}
             </LinkButton>
             <a href="#cara-kerja" className={linkButtonClass("outline", "md")}>
-              Lihat cara kerjanya
+              Cara keputusan disusun
             </a>
-          </m.div>
-          <m.dl
-            className="mt-8 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-line pt-5 sm:grid-cols-4"
-            {...enterProps(0.24)}
-          >
+          </div>
+          <dl className="mt-9 grid animate-rise grid-cols-2 gap-x-4 gap-y-4 border-t border-line-2/70 pt-5 [animation-delay:240ms] sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
             {HERO_STATS.map((stat) => (
-              <div key={stat.label} className="flex flex-col gap-0.5">
+              <div key={stat.label} className="flex min-w-0 flex-col gap-1">
                 <dt className="label-caps text-ink-3">{stat.label}</dt>
-                <dd className="font-mono text-sm font-medium text-ink tabular">
+                <dd className="font-mono text-xs font-medium text-ink tabular sm:text-sm">
                   {stat.value}
                 </dd>
               </div>
             ))}
-          </m.dl>
+          </dl>
         </div>
-        <m.div
-          initial={{ opacity: 0, scale: 0.985 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: EASE_QUART }}
-        >
-          <ReliefCanvas
-            blocks={HERO_SCENE.blocks}
-            flow={HERO_SCENE.flow}
-            height={CANVAS_HEIGHT}
-            autoRotate
-            interactive={false}
-            label={`Model jaringan contoh dengan ${HERO_SCENE.blocks.length} blok, satu sumber, zona hulu sampai hilir`}
-          />
-          <ZoneLegend />
-          <p className="mt-1.5 text-xs text-ink-3">{SCENE_CAPTION}</p>
-        </m.div>
+        <div className="relative min-w-0 animate-rise [animation-delay:140ms]">
+          <div className="relative border border-line-2 bg-surface">
+            <RegistrationMarks />
+            <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-2">
+              <span className="font-mono text-2xs tracking-[0.08em] text-ink-3 uppercase">
+                {mode === "peta" ? "Peta jaringan · contoh" : "Model 3D · contoh"}
+              </span>
+              <ModeToggle value={mode} onChange={setMode} />
+            </div>
+            <div aria-hidden="true" className="h-2.5 border-b border-line bg-ruler" />
+            <div
+              role="img"
+              aria-label={
+                mode === "peta"
+                  ? `Peta jaringan tersier, sorotan: ${VIEWPOINTS[viewpoint].label}`
+                  : `Model 3D jaringan tersier, sudut kamera: ${VIEWPOINTS[viewpoint].label}`
+              }
+              className="h-[300px] w-full sm:h-[380px] lg:h-[440px]"
+            >
+              {mode === "peta" ? (
+                <PaddyMap
+                  viewpoint={viewpoint}
+                  onViewpointChange={setViewpoint}
+                  className="p-1.5"
+                />
+              ) : (
+                <SceneBoundary>
+                  <Suspense fallback={<SceneFallback />}>
+                    <PaddyScene
+                      viewpoint={viewpoint}
+                      onViewpointChange={setViewpoint}
+                      reducedMotion={reducedMotion}
+                      className="h-full w-full"
+                    />
+                  </Suspense>
+                </SceneBoundary>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-line px-2.5 py-2">
+              <ViewpointChips value={viewpoint} onChange={setViewpoint} />
+              <span className="font-mono text-2xs text-ink-3">
+                {VIEWPOINTS[viewpoint].label}
+              </span>
+            </div>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-ink-3">
+            {mode === "peta" ? MAP_CAPTION : SCENE_CAPTION}
+          </p>
+        </div>
       </div>
     </section>
   );

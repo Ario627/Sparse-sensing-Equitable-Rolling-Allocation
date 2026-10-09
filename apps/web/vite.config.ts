@@ -7,11 +7,7 @@ import { defineConfig } from "vite";
 const apiTarget = process.env.SERA_API_URL ?? "http://localhost:3000";
 
 export default defineConfig({
-  plugins: [
-    react(),
-    babel({ presets: [reactCompilerPreset()] }),
-    tailwindcss(),
-  ],
+  plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

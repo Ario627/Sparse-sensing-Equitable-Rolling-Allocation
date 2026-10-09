@@ -1,25 +1,20 @@
 import {
+  type ExperimentProgressPayload,
   experimentDetailSchema,
   experimentsListResponseSchema,
-  type ExperimentProgressPayload,
   type ServerEvent,
 } from "@sera/contracts";
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
-import {
-  type ReactNode,
-  useEffect,
-  useEffectEvent,
-  useSyncExternalStore,
-} from "react";
+import { type ReactNode, useEffect, useEffectEvent, useSyncExternalStore } from "react";
 import { queryKeys, queryRoot } from "@/lib/api/query-keys.ts";
 import { useSessionStore } from "@/lib/auth/session-store.ts";
 import {
   closeSocket,
   openSocket,
+  type SocketState,
   socketState,
   subscribeServerEvents,
   subscribeSocketState,
-  type SocketState,
 } from "./socket.ts";
 
 function patchExperimentDetail(
@@ -109,11 +104,7 @@ export function useServerEvent(handler: (event: ServerEvent) => void): void {
   useEffect(() => subscribeServerEvents((event) => onEvent(event)), []);
 }
 
-export function RealtimeProvider({
-  children,
-}: {
-  readonly children: ReactNode;
-}) {
+export function RealtimeProvider({ children }: { readonly children: ReactNode }) {
   const client = useQueryClient();
   const authenticated = useSessionStore((snapshot) => snapshot.user !== null);
   const dispatch = useEffectEvent((event: ServerEvent) => {

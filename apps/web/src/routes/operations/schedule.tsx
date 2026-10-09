@@ -24,11 +24,7 @@ import {
   planStatusTone,
   policyProfileLabel,
 } from "@/features/network/status.ts";
-import {
-  usePlan,
-  usePlanCommands,
-  usePlans,
-} from "@/features/scheduling/api.ts";
+import { usePlan, usePlanCommands, usePlans } from "@/features/scheduling/api.ts";
 import { ApprovalActions } from "@/features/scheduling/approval-actions.tsx";
 import {
   isActionableStatus,
@@ -36,9 +32,17 @@ import {
 } from "@/features/scheduling/plan-selection.ts";
 import { PlanTimeline } from "@/features/scheduling/plan-timeline.tsx";
 import { ProposePlanButton } from "@/features/scheduling/propose-plan-button.tsx";
+import {
+  summarizePlanWindow,
+  type PlanWindowSummary,
+} from "@/features/scheduling/plan-summary.ts";
 import type { PlanActionName } from "@/features/scheduling/use-plan-actions.ts";
+import { useSessionStore } from "@/lib/auth/session-store.ts";
+import { decisionRoles, hasAnyRole } from "@/lib/auth/roles.ts";
 import { cn } from "@/lib/cn.ts";
 import {
+  formatClockRange,
+  formatDate,
   formatDateTime,
   formatNumber,
   formatPercent,
@@ -108,6 +112,16 @@ function Fact({
   );
 }
 
+function windowText(summary: PlanWindowSummary): string {
+  if (summary.windowStart === null || summary.windowEnd === null) {
+    return "—";
+  }
+  const sameDay = formatDate(summary.windowStart) === formatDate(summary.windowEnd);
+  return sameDay
+    ? formatClockRange(summary.windowStart, summary.windowEnd)
+    : `${formatDate(summary.windowStart)} → ${formatDate(summary.windowEnd)}`;
+}
+
 function ApprovalList({
   approvals,
 }: {
@@ -156,9 +170,7 @@ function OverrideList({
           className="flex flex-col gap-0.5 border-b border-line/60 pb-2 last:border-b-0 last:pb-0"
         >
           <span className="flex flex-wrap items-baseline justify-between gap-x-2">
-            <span className="text-xs font-medium text-ink">
-              {override.user_name}
-            </span>
+            <span className="text-xs font-medium text-ink">{override.user_name}</span>
             <span className="font-mono text-2xs text-ink-3 tabular">
               {formatDateTime(override.created_at)}
             </span>
@@ -170,11 +182,7 @@ function OverrideList({
   );
 }
 
-function CommandSummary({
-  summary,
-}: {
-  readonly summary: PlanCommandLogSummary;
-}) {
+function CommandSummary({ summary }: { readonly summary: PlanCommandLogSummary }) {
   const parts = [
     `diterima ${formatNumber(summary.accepted)}`,
     `menunggu ${formatNumber(summary.pending)}`,
@@ -184,9 +192,7 @@ function CommandSummary({
   ];
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      <p className="font-mono text-xs text-ink-2 tabular">
-        {parts.join(" · ")}
-      </p>
+      <p className="font-mono text-xs text-ink-2 tabular">{parts.join(" · ")}</p>
       {summary.mismatch_count > 0 && (
         <StatusPill
           tone="crit"
@@ -289,9 +295,7 @@ export function SchedulePage() {
   const networkId = requestedNetwork ?? networks[0]?.id ?? null;
   const network = networks.find((item) => item.id === networkId) ?? null;
   const plansQuery = usePlans(
-    networkId === null
-      ? {}
-      : { network_id: networkId, limit: PLAN_OPTION_LIMIT },
+    networkId === null ? {} : { network_id: networkId, limit: PLAN_OPTION_LIMIT },
   );
   const plans = plansQuery.data?.items ?? [];
   const requestedPlan = readSearchString(search, "plan");
@@ -300,9 +304,13 @@ export function SchedulePage() {
   const planQuery = usePlan(activePlanId);
   const plan = planQuery.data ?? null;
   const commandsEnabled =
-    plan !== null &&
-    (plan.status === "APPROVED" || plan.status === "EXECUTED");
+    plan !== null && (plan.status === "APPROVED" || plan.status === "EXECUTED");
   const commandsQuery = usePlanCommands(activePlanId ?? "", commandsEnabled);
+  const windowSummary = plan === null ? null : summarizePlanWindow(plan.items);
+  const role = useSessionStore((snapshot) => snapshot.user?.role ?? null);
+  const canDecide = hasAnyRole(role, decisionRoles);
+  const rawActions = plan === null ? [] : actionsForStatus(plan.status);
+  const planActions = canDecide ? rawActions : [];
 
   function selectNetwork(nextId: string): void {
     navigate({
@@ -425,9 +433,13 @@ export function SchedulePage() {
         ) : (
           <EmptyState
             title="Belum ada plan"
-            description="Ajukan plan agar solver menyusun alokasi untuk jaringan ini."
+            description={
+              canDecide
+                ? "Ajukan plan agar solver menyusun alokasi untuk jaringan ini."
+                : "Belum ada plan untuk jaringan ini. Pengajuan plan dilakukan oleh operator P3A."
+            }
             action={
-              networkId === null ? undefined : (
+              !canDecide || networkId === null ? undefined : (
                 <ProposePlanButton networkId={networkId} />
               )
             }
@@ -451,9 +463,7 @@ export function SchedulePage() {
         <Skeleton className="h-64" />
       ) : (
         <>
-          {plan.status === "FALLBACK" && (
-            <FallbackBanner reason={FALLBACK_REASON} />
-          )}
+          {plan.status === "FALLBACK" && <FallbackBanner reason={FALLBACK_REASON} />}
           <section className="flex flex-col gap-4 rounded-md border border-line bg-surface p-3.5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -466,20 +476,42 @@ export function SchedulePage() {
                   {policyProfileLabel(plan.profile)}
                 </span>
               </div>
-              <ApprovalActions plan={plan} show={actionsForStatus(plan.status)} />
+              <ApprovalActions plan={plan} show={planActions} />
             </div>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
-              <Fact label="Solver">{plan.solver_name ?? "—"}</Fact>
-              <Fact label="Waktu solve">
-                {plan.solver_time_ms === null
+            {planActions.length > 0 && (
+              <p className="text-2xs leading-relaxed text-ink-3">
+                Jadwal dihitung solver. Gunakan Ubah manual untuk menyesuaikan
+                pintu per slot — semua perubahan tercatat di jejak audit.
+              </p>
+            )}
+            {!canDecide && rawActions.length > 0 && (
+              <p className="text-2xs leading-relaxed text-ink-3">
+                Persetujuan, eksekusi, dan ubah manual hanya tersedia untuk operator
+                P3A. Plan tetap dapat ditinjau dari halaman ini.
+              </p>
+            )}
+            <dl className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-6 gap-y-3 rounded-md border border-line bg-paper/70 p-3 sm:grid-cols-[repeat(4,minmax(0,1fr))]">
+              <Fact label="Slot">{formatNumber(windowSummary?.slotCount ?? 0)}</Fact>
+              <Fact label="Blok terlayani">
+                {formatNumber(windowSummary?.blockCount ?? 0)}
+              </Fact>
+              <Fact label="Volume dialokasikan">
+                {windowSummary?.volumeGrossM3 == null
                   ? "—"
-                  : formatUnit(plan.solver_time_ms, "ms", 0)}
+                  : formatUnit(windowSummary.volumeGrossM3, "m³", 1)}
               </Fact>
-              <Fact label="MIP gap">
-                {plan.mip_gap === null ? "—" : formatPercent(plan.mip_gap, 1)}
+              <Fact label="Jendela">
+                {windowSummary === null ? "—" : windowText(windowSummary)}
               </Fact>
-              <Fact label="Dibuat">{formatDateTime(plan.created_at)}</Fact>
             </dl>
+            <p className="font-mono text-2xs text-ink-3 tabular">
+              Solver {plan.solver_name ?? "—"} ·{" "}
+              {plan.solver_time_ms === null
+                ? "—"
+                : formatUnit(plan.solver_time_ms, "ms", 0)}{" "}
+              · MIP gap {plan.mip_gap === null ? "—" : formatPercent(plan.mip_gap, 1)}{" "}
+              · dibuat {formatDateTime(plan.created_at)}
+            </p>
           </section>
           <PlanTimeline items={plan.items} now={now} />
           <div className="grid gap-4 sm:grid-cols-2">

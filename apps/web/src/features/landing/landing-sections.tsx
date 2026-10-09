@@ -1,68 +1,31 @@
-import * as m from "motion/react-m";
 import { BrandMark } from "@/components/shell/brand.tsx";
 import { LinkButton } from "@/components/shell/link-button.tsx";
 
-const EASE_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
-const VIEWPORT = { once: true, margin: "-80px" } as const;
-
-const GROUP_VARIANTS = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
-};
-
-const ITEM_VARIANTS = {
-  hidden: { opacity: 0, y: 12 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.42, ease: EASE_QUART },
-  },
-};
-
-const RULE_VARIANTS = {
-  hidden: { scaleX: 0 },
-  show: { scaleX: 1, transition: { duration: 0.5, ease: EASE_QUART } },
-};
-
 interface ProblemEntry {
   readonly title: string;
-  readonly problem: string;
-  readonly response: string;
+  readonly note: string;
 }
 
 const PROBLEMS: readonly ProblemEntry[] = [
   {
     title: "Sensing terbatas",
-    problem: "Satu sampai dua sensor harus mewakili belasan blok.",
-    response:
-      "Kondisi jaringan dan kehilangan air diestimasi dari bacaan yang ada — selalu dengan interval keyakinan.",
+    note: "Satu–dua sensor harus mewakili belasan blok.",
   },
   {
-    title: "Kehilangan air tidak terukur",
-    problem:
-      "Efisiensi tiap ruas tidak diketahui, sehingga air yang dialokasikan tidak sama dengan yang tiba di blok.",
-    response:
-      "Estimasi loss berdimensi rendah dengan gerbang identifiabilitas: parameter yang tidak bisa dikenali tidak dipaksa diestimasi.",
+    title: "Kehilangan tak terukur",
+    note: "Loss tiap ruas diestimasi dengan interval keyakinan.",
   },
   {
-    title: "Kekurangan menumpuk di hilir",
-    problem:
-      "Blok yang sama menerima kurang secara berulang dan memicu konflik antar-petani.",
-    response:
-      "Service ledger mencatat target dan realisasi tiap blok, dengan forgetting factor dan batas utang yang eksplisit.",
+    title: "Kekurangan menumpuk",
+    note: "Ledger menjaga kekurangan tidak menumpuk di blok yang sama.",
   },
   {
-    title: "Suplai dan cuaca berubah",
-    problem:
-      "Rencana yang disusun hari ini bisa salah begitu debit atau hujan tidak sesuai perkiraan.",
-    response:
-      "Optimasi bergulir nonantisipatif dengan skenario ketidakpastian dan ukuran risiko CVaR — keputusan tidak mengintip masa depan.",
+    title: "Suplai berubah",
+    note: "Optimasi bergulir dengan skenario ketidakpastian.",
   },
   {
-    title: "Investasi sensor belum tentu sepadan",
-    problem: "Menambah sensor tidak otomatis memperbaiki keputusan alokasi.",
-    response:
-      "Anggaran sensor dievaluasi dari regret keputusan — bukan hanya dari galat estimasi.",
+    title: "Investasi sensor",
+    note: "Dinilai dari regret keputusan, bukan galat estimasi.",
   },
 ];
 
@@ -76,37 +39,37 @@ const PIPELINE: readonly PipelineStep[] = [
   {
     index: "01",
     title: "Estimasi",
-    body: "Keadaan jaringan dan kehilangan air direkonstruksi dari sedikit bacaan — selalu dengan interval keyakinan.",
+    body: "Keadaan jaringan dan loss direkonstruksi dari sedikit bacaan.",
   },
   {
     index: "02",
-    title: "Memori pelayanan",
-    body: "Ledger mencatat target dan realisasi tiap blok. Kekurangan tidak menumpuk di blok yang sama.",
+    title: "Memori layanan",
+    body: "Ledger menjaga kekurangan tidak menumpuk di blok yang sama.",
   },
   {
     index: "03",
     title: "Optimasi bergulir",
-    body: "Rencana beberapa hari dihitung ulang saat kondisi berubah; fallback berjenjang bila solver gagal.",
+    body: "Rencana dihitung ulang saat kondisi berubah; ada fallback.",
   },
   {
     index: "04",
     title: "Keputusan manusia",
-    body: "Operator P3A menyetujui, menolak, atau mengubah. Semua keputusan tercatat untuk audit.",
+    body: "Operator menyetujui, menolak, atau mengubah — semua tercatat.",
   },
 ];
 
 const EVIDENCE: readonly string[] = [
-  "Eksperimen berjenjang (E1–E8) dijalankan di simulator dengan ground truth yang dikontrol.",
-  "Pembanding tetap: proporsional, rotasi tetap, greedy ledger, dan oracle penginderaan penuh.",
-  "Penilaian dari empat keluarga metrik — kecukupan, efisiensi, keandalan, pemerataan — bukan satu angka gabungan.",
-  "Hasil dapat direproduksi dari konfigurasi dan seed yang sama.",
+  "Eksperimen E1–E8 di simulator dengan ground truth terkontrol.",
+  "Pembanding tetap: proporsional, rotasi, greedy, oracle.",
+  "Empat keluarga metrik — bukan satu angka gabungan.",
+  "Reproducible dari konfigurasi dan seed yang sama.",
 ];
 
 const LIMITS: readonly string[] = [
-  "Belum ada validasi lapangan; bukti saat ini berasal dari simulator dan demonstrator HIL.",
-  "Lingkup saat ini: padi, satu sumber, jaringan tersier 6–20 blok.",
-  "Definisi keadilan adalah pilihan kebijakan — ditampilkan sebagai profil dan kurva trade-off, bukan bobot tersembunyi.",
-  "Angka performa baru bermakna setelah eksperimen dijalankan; tidak ada klaim tanpa bukti di halaman ini.",
+  "Belum ada validasi lapangan — bukti dari simulator dan HIL.",
+  "Lingkup: padi, satu sumber, 6–20 blok.",
+  "Keadilan adalah pilihan kebijakan, bukan bobot tersembunyi.",
+  "Angka performa menyusul setelah eksperimen dijalankan.",
 ];
 
 function SectionHead({
@@ -119,21 +82,15 @@ function SectionHead({
   readonly description?: string;
 }) {
   return (
-    <m.div
-      initial={{ opacity: 0, y: 10 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={VIEWPORT}
-      transition={{ duration: 0.45, ease: EASE_QUART }}
-      className="max-w-2xl"
-    >
+    <div className="max-w-2xl">
       <p className="label-caps text-water">{eyebrow}</p>
-      <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-ink">
+      <h2 className="mt-1.5 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
         {title}
       </h2>
       {description !== undefined && (
         <p className="mt-2 text-sm text-ink-2">{description}</p>
       )}
-    </m.div>
+    </div>
   );
 }
 
@@ -141,10 +98,11 @@ function BulletList({ items }: { readonly items: readonly string[] }) {
   return (
     <ul className="flex flex-col gap-2.5">
       {items.map((item) => (
-        <li
-          key={item}
-          className="border-l border-line pl-3 text-sm leading-relaxed text-ink-2"
-        >
+        <li key={item} className="flex gap-2.5 text-sm leading-relaxed text-ink-2">
+          <span
+            aria-hidden="true"
+            className="mt-[0.55rem] size-1 shrink-0 rounded-full bg-water/50"
+          />
           {item}
         </li>
       ))}
@@ -154,37 +112,27 @@ function BulletList({ items }: { readonly items: readonly string[] }) {
 
 function ProblemSection() {
   return (
-    <section id="masalah" className="border-b border-line">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-12 sm:px-6 lg:py-16">
+    <section id="masalah" className="border-b border-line bg-surface">
+      <div className="mx-auto flex max-w-shell flex-col gap-8 px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
         <SectionHead
-          eyebrow="Masalah"
-          title="Lima masalah nyata di lapangan"
-          description="Setiap masalah punya penanganan eksplisit di SERA — bukan solusi satu ukuran untuk semua."
+          eyebrow="Kenapa ini penting"
+          title="Satu pintu masuk. Banyak blok yang tak terlihat."
+          description="Yang terukur hanya sebagian kecil jaringan — SERA menjaga sisanya tetap terbaca."
         />
-        <m.ul
-          initial="hidden"
-          whileInView="show"
-          viewport={VIEWPORT}
-          variants={GROUP_VARIANTS}
-        >
-          {PROBLEMS.map((entry) => (
-            <m.li
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {PROBLEMS.map((entry, index) => (
+            <li
               key={entry.title}
-              variants={ITEM_VARIANTS}
-              className="grid gap-2 border-t border-line py-4 first:border-t-0 first:pt-0 lg:grid-cols-2 lg:gap-10"
+              className="flex flex-col gap-2 rounded-xl border border-line bg-paper p-5"
             >
-              <div>
-                <h3 className="text-sm font-semibold text-ink">
-                  {entry.title}
-                </h3>
-                <p className="mt-1 text-sm text-ink-2">{entry.problem}</p>
-              </div>
-              <p className="border-l-2 border-water/25 pl-3 text-sm text-water-deep">
-                {entry.response}
-              </p>
-            </m.li>
+              <span className="font-mono text-2xs text-ink-3 tabular">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <h3 className="text-base font-semibold text-ink">{entry.title}</h3>
+              <p className="text-sm leading-relaxed text-ink-2">{entry.note}</p>
+            </li>
           ))}
-        </m.ul>
+        </ul>
       </div>
     </section>
   );
@@ -192,43 +140,25 @@ function ProblemSection() {
 
 function PipelineSection() {
   return (
-    <section id="cara-kerja" className="border-b border-line">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-12 sm:px-6 lg:py-16">
+    <section id="cara-kerja" className="border-b border-line bg-paper">
+      <div className="mx-auto flex max-w-shell flex-col gap-9 px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
         <SectionHead
-          eyebrow="Cara kerja"
-          title="Dari estimasi ke keputusan yang tercatat"
-          description="Empat tahap yang berulang setiap kali kondisi jaringan berubah."
+          eyebrow="Alur keputusan"
+          title="Dari bacaan ke jadwal yang bisa ditinjau."
+          description="Satu siklus penuh — dari data sampai jejak audit."
         />
-        <m.ol
-          initial="hidden"
-          whileInView="show"
-          viewport={VIEWPORT}
-          variants={GROUP_VARIANTS}
-          className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
-        >
+        <ol className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           {PIPELINE.map((step) => (
-            <m.li
-              key={step.index}
-              variants={ITEM_VARIANTS}
-              className="flex flex-col"
-            >
-              <m.div
-                variants={RULE_VARIANTS}
-                style={{ originX: 0 }}
-                className="h-0.5 w-full bg-line-2"
-              />
-              <span className="mt-3 font-mono text-2xs text-ink-3 tabular">
+            <li key={step.index} className="flex flex-col">
+              <div aria-hidden="true" className="h-0.5 w-full rounded-full bg-water/60" />
+              <span className="mt-4 font-mono text-xs font-medium text-water tabular">
                 {step.index}
               </span>
-              <h3 className="mt-1 text-sm font-semibold text-ink">
-                {step.title}
-              </h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
-                {step.body}
-              </p>
-            </m.li>
+              <h3 className="mt-1.5 text-base font-semibold text-ink">{step.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-ink-2">{step.body}</p>
+            </li>
           ))}
-        </m.ol>
+        </ol>
       </div>
     </section>
   );
@@ -236,34 +166,22 @@ function PipelineSection() {
 
 function ResearchSection() {
   return (
-    <section id="riset" className="border-b border-line">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-12 sm:px-6 lg:py-16">
+    <section id="riset" className="border-b border-line bg-surface">
+      <div className="mx-auto flex max-w-shell flex-col gap-8 px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
         <SectionHead
           eyebrow="Riset dan bukti"
-          title="Simulation-first, hasil terbuka"
-          description="Kami memisahkan tegas antara apa yang sudah dibuktikan dan apa yang belum."
+          title="Buka hasilnya. Periksa batasnya."
+          description="Setiap perbandingan berasal dari run tercatat — lingkup bukti tampil bersama metrik."
         />
         <div className="grid gap-4 lg:grid-cols-2">
-          <m.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={VIEWPORT}
-            transition={{ duration: 0.45, ease: EASE_QUART }}
-            className="flex flex-col gap-3 rounded-md border border-line bg-surface p-4"
-          >
-            <p className="label-caps text-ink-3">Bagaimana kami membuktikan</p>
+          <div className="flex flex-col gap-4 rounded-xl border border-line bg-paper p-5 sm:p-6">
+            <p className="text-xs font-medium text-water-deep">Yang dapat diuji</p>
             <BulletList items={EVIDENCE} />
-          </m.div>
-          <m.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={VIEWPORT}
-            transition={{ duration: 0.45, delay: 0.08, ease: EASE_QUART }}
-            className="flex flex-col gap-3 rounded-md border border-line-2 bg-sunk/50 p-4"
-          >
-            <p className="label-caps text-ink-3">Yang tidak kami klaim</p>
+          </div>
+          <div className="flex flex-col gap-4 rounded-xl border border-line bg-sunk/50 p-5 sm:p-6">
+            <p className="text-xs font-medium text-warn">Batas yang perlu diketahui</p>
             <BulletList items={LIMITS} />
-          </m.div>
+          </div>
         </div>
       </div>
     </section>
@@ -286,13 +204,13 @@ export interface LandingFooterProps {
 
 export function LandingFooter({ authed }: LandingFooterProps) {
   return (
-    <footer className="bg-surface">
-      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-8 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+    <footer className="bg-ink text-surface">
+      <div className="mx-auto flex max-w-shell flex-col gap-5 px-4 py-9 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-10">
         <div className="flex flex-col gap-2">
           <BrandMark />
-          <p className="max-w-md text-xs text-ink-3">
-            SERA tidak menetapkan hak air. Keputusan akhir tetap di tangan
-            operator, dengan persetujuan yang tercatat.
+          <p className="max-w-md text-sm leading-relaxed text-surface/70">
+            SERA tidak menetapkan hak air. Keputusan akhir tetap di tangan operator,
+            dengan persetujuan yang tercatat.
           </p>
         </div>
         <div className="flex flex-col items-start gap-3 lg:items-end">
@@ -300,10 +218,11 @@ export function LandingFooter({ authed }: LandingFooterProps) {
             to={authed ? "/operations" : "/login"}
             size="sm"
             variant="outline"
+            className="border border-white/35 bg-transparent text-surface hover:bg-white/10 hover:text-surface"
           >
             {authed ? "Buka Operasi" : "Masuk ke aplikasi"}
           </LinkButton>
-          <p className="font-mono text-2xs text-ink-3">Tim SERA · 2026</p>
+          <p className="font-mono text-2xs text-surface/55">Tim SERA · 2026</p>
         </div>
       </div>
     </footer>

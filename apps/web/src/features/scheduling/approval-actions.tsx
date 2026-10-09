@@ -1,14 +1,11 @@
 import type { PlanDetailResponse } from "@sera/contracts";
 import { useId, useState } from "react";
 import { Button, type ButtonVariant } from "@/components/kit/button.tsx";
-import {
-  ConfirmDialog,
-  type ConfirmTone,
-} from "@/components/kit/confirm-dialog.tsx";
+import { ConfirmDialog, type ConfirmTone } from "@/components/kit/confirm-dialog.tsx";
 import { Field, textareaClass } from "@/components/kit/field.tsx";
 import { cn } from "@/lib/cn.ts";
 import { OverrideDialog } from "./override-dialog.tsx";
-import { usePlanActions, type PlanActionName } from "./use-plan-actions.ts";
+import { type PlanActionName, usePlanActions } from "./use-plan-actions.ts";
 
 const REASON_MAX = 160;
 const REASON_HINT = `Alasan tercatat di jejak audit, maksimum ${REASON_MAX} karakter`;
@@ -52,8 +49,7 @@ const dialogCopy: Record<DecisionDialog, DialogCopy> = {
   },
   request_changes: {
     title: "Minta perubahan plan?",
-    description:
-      "Solver akan menyusun ulang plan. Jelaskan bagian yang perlu diubah.",
+    description: "Solver akan menyusun ulang plan. Jelaskan bagian yang perlu diubah.",
     confirmLabel: "Kirim permintaan",
     pendingLabel: "Mengirim…",
     tone: "default",
@@ -72,7 +68,7 @@ const actionLabels: Record<PlanActionName, string> = {
   approve: "Setujui",
   reject: "Tolak",
   request_changes: "Minta ubah",
-  override: "Ubah pintu",
+  override: "Ubah manual",
   execute: "Eksekusi",
 };
 
@@ -88,11 +84,7 @@ function isDecisionDialog(action: PlanActionName): action is DecisionDialog {
   return action !== "override";
 }
 
-export function ApprovalActions({
-  plan,
-  show,
-  className,
-}: ApprovalActionsProps) {
+export function ApprovalActions({ plan, show, className }: ApprovalActionsProps) {
   const actions = usePlanActions(plan.id);
   const [dialog, setDialog] = useState<DecisionDialog | null>(null);
   const [shownDialog, setShownDialog] = useState<DecisionDialog>("approve");
@@ -101,8 +93,7 @@ export function ApprovalActions({
   const [localError, setLocalError] = useState<string | null>(null);
   const reasonId = useId();
   const copy = dialogCopy[shownDialog];
-  const reasonRequired =
-    shownDialog === "reject" || shownDialog === "request_changes";
+  const reasonRequired = shownDialog === "reject" || shownDialog === "request_changes";
   const errorText = localError ?? actions.error;
   const busy = actions.pendingAction !== null;
 
@@ -123,10 +114,7 @@ export function ApprovalActions({
     actions.clearError();
   }
 
-  function runDecision(
-    action: DecisionDialog,
-    trimmed: string,
-  ): Promise<boolean> {
+  function runDecision(action: DecisionDialog, trimmed: string): Promise<boolean> {
     switch (action) {
       case "approve":
         return actions.approve();
@@ -215,11 +203,7 @@ export function ApprovalActions({
           </div>
         )}
       </ConfirmDialog>
-      <OverrideDialog
-        open={overrideOpen}
-        onOpenChange={setOverrideOpen}
-        plan={plan}
-      />
+      <OverrideDialog open={overrideOpen} onOpenChange={setOverrideOpen} plan={plan} />
     </div>
   );
 }

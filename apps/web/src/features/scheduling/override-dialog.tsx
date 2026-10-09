@@ -39,12 +39,7 @@ function OverrideRow({ item, gateOpen, onToggle }: OverrideRowProps) {
         </span>
       </span>
       <span className="flex shrink-0 items-center gap-2">
-        <span
-          className={cn(
-            "label-caps",
-            gateOpen ? "text-water" : "text-ink-3",
-          )}
-        >
+        <span className={cn("label-caps", gateOpen ? "text-water" : "text-ink-3")}>
           {gateOpen ? "Dibuka" : "Ditutup"}
         </span>
         <input
@@ -111,9 +106,9 @@ export function OverrideDialog({ open, onOpenChange, plan }: OverrideDialogProps
     <ConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Ubah perintah pintu"
-      description="Perubahan dicatat sebagai override operator pada jejak audit."
-      confirmLabel="Simpan override"
+      title="Ubah manual pintu"
+      description="Aktifkan atau matikan pintu per slot. Perubahan tercatat sebagai override operator — jadwal asal dari solver tetap tersimpan."
+      confirmLabel="Simpan perubahan"
       pendingLabel="Menyimpan…"
       tone="danger"
       pending={pending}

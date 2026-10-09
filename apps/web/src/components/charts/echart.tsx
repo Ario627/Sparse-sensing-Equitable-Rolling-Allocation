@@ -1,17 +1,27 @@
-import { LineChart } from "echarts/charts";
-import { GridComponent, TooltipComponent } from "echarts/components";
+import { BarChart, LineChart } from "echarts/charts";
 import {
-  init,
-  use,
-  type EChartsCoreOption,
-  type EChartsType,
-} from "echarts/core";
+  DataZoomInsideComponent,
+  GridComponent,
+  LegendComponent,
+  ToolboxComponent,
+  TooltipComponent,
+} from "echarts/components";
+import { type EChartsCoreOption, type EChartsType, init, use } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { useEffect, useRef } from "react";
-import { SERA_CHART_THEME, registerSeraChartTheme } from "@/lib/charts/theme.ts";
+import { registerSeraChartTheme, SERA_CHART_THEME } from "@/lib/charts/theme.ts";
 import { cn } from "@/lib/cn.ts";
 
-use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
+use([
+  BarChart,
+  LineChart,
+  DataZoomInsideComponent,
+  GridComponent,
+  LegendComponent,
+  ToolboxComponent,
+  TooltipComponent,
+  CanvasRenderer,
+]);
 registerSeraChartTheme();
 
 export interface EChartProps {
@@ -32,24 +42,39 @@ export function EChart({ option, height, ariaLabel, className }: EChartProps) {
     }
     const chart = init(container, SERA_CHART_THEME, { renderer: "canvas" });
     chartRef.current = chart;
-    let frame = 0;
-    const observer = new ResizeObserver(() => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
+    const applySize = (): void => {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      if (
+        width > 0 &&
+        height > 0 &&
+        (chart.getWidth() !== width || chart.getHeight() !== height)
+      ) {
         chart.resize();
-      });
-    });
+      }
+      chart.getZr().flush();
+    };
+    const observer = new ResizeObserver(applySize);
     observer.observe(container);
+    window.addEventListener("resize", applySize);
+    const poll = window.setInterval(applySize, 400);
+    applySize();
     return () => {
-      cancelAnimationFrame(frame);
+      window.clearInterval(poll);
       observer.disconnect();
+      window.removeEventListener("resize", applySize);
       chart.dispose();
       chartRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    chartRef.current?.setOption(option, { notMerge: true });
+    const chart = chartRef.current;
+    if (chart === null) {
+      return;
+    }
+    chart.setOption(option, { notMerge: true });
+    chart.getZr().flush();
   }, [option]);
 
   return (
@@ -58,7 +83,7 @@ export function EChart({ option, height, ariaLabel, className }: EChartProps) {
       role="img"
       aria-label={ariaLabel}
       style={{ height }}
-      className={cn("w-full", className)}
+      className={cn("w-full overflow-hidden", className)}
     />
   );
 }

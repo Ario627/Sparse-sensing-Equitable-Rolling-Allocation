@@ -1,15 +1,12 @@
-import {
-  DataTable,
-  type SeraColumnDef,
-} from "@/components/kit/data-table.tsx";
+import { DataTable, type SeraColumnDef } from "@/components/kit/data-table.tsx";
 import { StatusPill } from "@/components/kit/status-pill.tsx";
 import { cn } from "@/lib/cn.ts";
 import { formatAgeFrom, formatNumber } from "@/lib/format.ts";
 import {
+  type DeviceSummary,
   sensorQualityLabel,
   sensorQualityTone,
   sensorTypeLabel,
-  type DeviceSummary,
 } from "./status.ts";
 
 const LAST_SEEN_TITLE = "Waktu telemetri terakhir diterima dari perangkat ini";
@@ -30,10 +27,7 @@ function NodesCell({ nodes }: { readonly nodes: DeviceSummary["nodeNames"] }) {
     return <span className="text-xs text-ink-3">—</span>;
   }
   return (
-    <span
-      className="block max-w-44 truncate text-xs text-ink-2"
-      title={nodes.join(", ")}
-    >
+    <span className="block max-w-44 truncate text-xs text-ink-2" title={nodes.join(", ")}>
       {nodes.join(" · ")}
     </span>
   );
@@ -109,10 +103,7 @@ function buildColumns(now: number): SeraColumnDef<DeviceSummary>[] {
       cell: (info) => {
         const iso = info.row.original.lastSeenIso;
         return (
-          <span
-            title={LAST_SEEN_TITLE}
-            className="font-mono text-xs text-ink-2 tabular"
-          >
+          <span title={LAST_SEEN_TITLE} className="font-mono text-xs text-ink-2 tabular">
             {iso === null ? "—" : `${formatAgeFrom(iso, now)} lalu`}
           </span>
         );

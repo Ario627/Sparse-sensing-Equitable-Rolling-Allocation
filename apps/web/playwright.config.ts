@@ -14,9 +14,7 @@ export default defineConfig({
   retries: process.env.CI !== undefined ? 2 : 0,
   workers: process.env.CI !== undefined ? 2 : undefined,
   reporter:
-    process.env.CI !== undefined
-      ? [["list"], ["html", { open: "never" }]]
-      : [["list"]],
+    process.env.CI !== undefined ? [["list"], ["html", { open: "never" }]] : [["list"]],
   use: {
     baseURL: BASE_URL,
     trace: "on-first-retry",

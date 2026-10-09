@@ -243,6 +243,17 @@ export function IconArrowLeft(props: IconProps) {
   );
 }
 
+export function IconExpand(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M14 4h6v6" />
+      <path d="m20 4-5.5 5.5" />
+      <path d="M10 20H4v-6" />
+      <path d="m4 20 5.5-5.5" />
+    </IconBase>
+  );
+}
+
 export function IconPlay(props: IconProps) {
   return (
     <IconBase {...props}>
@@ -330,6 +341,27 @@ export function IconTrendFlat(props: IconProps) {
     <IconBase {...props}>
       <path d="M4.5 12H20" />
       <path d="M16.8 8.8 20 12l-3.2 3.2" />
+    </IconBase>
+  );
+}
+
+export function IconLock(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <rect x="4.5" y="10.5" width="15" height="9.5" rx="1.6" />
+      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+    </IconBase>
+  );
+}
+
+export function IconSpan(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M4 6v12" />
+      <path d="M20 6v12" />
+      <path d="M4 12h6" />
+      <path d="M14 12h6" />
+      <circle cx="12" cy="12" r="2" />
     </IconBase>
   );
 }

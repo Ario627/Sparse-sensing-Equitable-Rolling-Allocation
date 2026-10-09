@@ -10,9 +10,7 @@ export function NotFoundView() {
       <div className="flex flex-col items-center gap-3 text-center">
         <span aria-hidden="true" className="rule-staff w-16" />
         <p className="label-caps text-ink-3">404</p>
-        <h1 className="text-lg font-semibold text-ink">
-          Halaman tidak ditemukan
-        </h1>
+        <h1 className="text-lg font-semibold text-ink">Halaman tidak ditemukan</h1>
         <p className="max-w-sm text-sm text-ink-2">
           Alamat yang dituju tidak ada atau sudah dipindahkan.
         </p>
@@ -40,12 +38,10 @@ export function RootError({
       <div className="flex w-full max-w-md flex-col items-center gap-3 text-center">
         <span aria-hidden="true" className="rule-staff w-16" />
         <p className="label-caps text-crit">Gangguan</p>
-        <h1 className="text-lg font-semibold text-ink">
-          Aplikasi gagal ditampilkan
-        </h1>
+        <h1 className="text-lg font-semibold text-ink">Aplikasi gagal ditampilkan</h1>
         <p className="text-sm text-ink-2">
-          Terjadi kesalahan yang tidak terduga. Coba muat ulang tampilan; bila
-          berulang, catat langkah yang dilakukan dan laporkan ke tim SERA.
+          Terjadi kesalahan yang tidak terduga. Coba muat ulang tampilan; bila berulang,
+          catat langkah yang dilakukan dan laporkan ke tim SERA.
         </p>
         <p className="max-w-full wrap-break-word font-mono text-2xs text-ink-3">
           {detail}

@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/kit/empty-state.tsx";
 import { ErrorState } from "@/components/kit/error-state.tsx";
 import { inputClass } from "@/components/kit/field.tsx";
 import { PageHeader } from "@/components/kit/page-header.tsx";
+import { RoleGate } from "@/components/kit/role-gate.tsx";
 import { Skeleton } from "@/components/kit/skeleton.tsx";
 import { StatusPill } from "@/components/kit/status-pill.tsx";
 import {
@@ -16,21 +17,22 @@ import {
 import {
   describeMetric,
   formatMetricValue,
-  readRunMetrics,
   type MetricDescriptor,
+  readRunMetrics,
 } from "@/features/experiments/kpi.ts";
 import {
-  summarizeRuns,
   type MethodMetricSummary,
   type QuantileSummary,
+  summarizeRuns,
 } from "@/features/experiments/metric-summary.ts";
 import {
   experimentStatusLabel,
   experimentStatusTone,
 } from "@/features/experiments/status.ts";
+import { labRoles } from "@/lib/auth/roles.ts";
+import { cn } from "@/lib/cn.ts";
 import { formatDateTime, formatNumber } from "@/lib/format.ts";
 import { buildSearch, readSearchString } from "@/lib/search.ts";
-import { cn } from "@/lib/cn.ts";
 
 const LIST_LIMIT = 50;
 const RUN_LIMIT = 100;
@@ -42,17 +44,7 @@ const SUMMARY_KEYS = [
   "shortage_total_m3",
 ] as const;
 
-const methodLabels: Record<string, string> = {
-  sera: "SERA",
-  proportional: "Proporsional",
-  rotation: "Rotasi tetap",
-  greedy: "Greedy ledger",
-  oracle: "Oracle (penginderaan penuh)",
-};
-
-function methodLabel(method: string): string {
-  return methodLabels[method] ?? method;
-}
+import { methodLabel } from "@/features/experiments/run-series.ts";
 
 function rangeText(summary: QuantileSummary, descriptor: MetricDescriptor): string {
   return `p25–p75 ${formatNumber(summary.q1, descriptor.digits)}–${formatNumber(summary.q3, descriptor.digits)}`;
@@ -93,14 +85,12 @@ function MethodRow({ summary }: { readonly summary: MethodMetricSummary }) {
   return (
     <section className="flex flex-col gap-3 border-b border-line/70 py-4 first:pt-0 last:border-b-0 last:pb-0">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold text-ink">
-          {methodLabel(summary.method)}
-        </h3>
+        <h3 className="text-sm font-semibold text-ink">{methodLabel(summary.method)}</h3>
         <span className="font-mono text-xs text-ink-3 tabular">
           {formatNumber(summary.runCount)} run
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+      <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-4 gap-y-3 sm:grid-cols-[repeat(4,minmax(0,1fr))]">
         {descriptors.map((descriptor) => (
           <MetricCell
             key={descriptor.key}
@@ -129,6 +119,18 @@ function Fact({
 }
 
 export function ResultsPage() {
+  return (
+    <RoleGate
+      allow={labRoles}
+      title="Halaman riset khusus peneliti"
+      description="Daftar eksperimen dan metrik hanya terbuka untuk peran peneliti atau admin."
+    >
+      <ResultsContent />
+    </RoleGate>
+  );
+}
+
+function ResultsContent() {
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
   const listQuery = useExperiments({ limit: LIST_LIMIT });
@@ -231,29 +233,18 @@ export function ResultsPage() {
               <section className="flex flex-col gap-4 rounded-md border border-line bg-surface p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="text-base font-semibold text-ink">
-                      {detail.name}
-                    </h2>
-                    <p className="mt-0.5 text-xs text-ink-2">
-                      Interval di bawah adalah kuartil antar-run (p25–p75),
-                      bukan interval kepercayaan; uji statistik formal dihitung
-                      di pipeline eksperimen dari Parquet.
-                    </p>
+                    <h2 className="text-base font-semibold text-ink">{detail.name}</h2>
                   </div>
                   <CopyConfigButton text={detail.config_yaml} />
                 </div>
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+                <dl className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-6 gap-y-2 sm:grid-cols-[repeat(4,minmax(0,1fr))]">
                   <Fact label="Config hash">
                     {detail.config_hash.slice(0, HASH_CHARS)}
                   </Fact>
                   <Fact label="Seed dasar">
-                    {detail.seed_base === null
-                      ? "—"
-                      : formatNumber(detail.seed_base)}
+                    {detail.seed_base === null ? "—" : formatNumber(detail.seed_base)}
                   </Fact>
-                  <Fact label="Run selesai">
-                    {formatNumber(detail.runs_done)}
-                  </Fact>
+                  <Fact label="Run selesai">{formatNumber(detail.runs_done)}</Fact>
                   <Fact label="Selesai pada">
                     {detail.finished_at === null
                       ? "—"

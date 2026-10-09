@@ -1,23 +1,20 @@
 import type { ExperimentSummaryResponse } from "@sera/contracts";
-import { useMemo, type ReactNode } from "react";
-import {
-  DataTable,
-  type SeraColumnDef,
-} from "@/components/kit/data-table.tsx";
+import { type ReactNode, useMemo } from "react";
+import { DataTable, type SeraColumnDef } from "@/components/kit/data-table.tsx";
 import { MeterBar } from "@/components/kit/meter-bar.tsx";
 import { StatusPill } from "@/components/kit/status-pill.tsx";
 import { cn } from "@/lib/cn.ts";
 import { formatDateTime, formatNumber, formatPercent } from "@/lib/format.ts";
-import {
-  experimentStatusLabel,
-  experimentStatusTone,
-  progressRatio,
-} from "./status.ts";
+import { experimentStatusLabel, experimentStatusTone, progressRatio } from "./status.ts";
 
 const EMPTY_VALUE = "—";
 const HASH_CHARS = 8;
 
-function ProgressCell({ experiment }: { readonly experiment: ExperimentSummaryResponse }) {
+function ProgressCell({
+  experiment,
+}: {
+  readonly experiment: ExperimentSummaryResponse;
+}) {
   const ratio = progressRatio(experiment.runs_done, experiment.runs_total);
   if (ratio === null) {
     return <span className="font-mono text-xs text-ink-3 tabular">{EMPTY_VALUE}</span>;
@@ -78,9 +75,7 @@ function buildColumns(
       id: "name",
       accessorKey: "name",
       header: "Eksperimen",
-      cell: (info) => (
-        <NameCell experiment={info.row.original} onOpen={onOpen} />
-      ),
+      cell: (info) => <NameCell experiment={info.row.original} onOpen={onOpen} />,
     },
     {
       id: "status",

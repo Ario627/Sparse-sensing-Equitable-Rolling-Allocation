@@ -39,12 +39,7 @@ export function clampPitch(pitch: number): number {
   return Math.min(MAX_PITCH, Math.max(MIN_PITCH, pitch));
 }
 
-export function orbitEye(
-  center: Vec3,
-  radius: number,
-  yaw: number,
-  pitch: number,
-): Vec3 {
+export function orbitEye(center: Vec3, radius: number, yaw: number, pitch: number): Vec3 {
   assertPositive(radius, "radius");
   const safePitch = clampPitch(pitch);
   const horizontal = radius * Math.cos(safePitch);

@@ -47,10 +47,7 @@ export function runStatusLabel(status: ExperimentRunStatus): string {
   return runLabels[status];
 }
 
-export function progressRatio(
-  runsDone: number,
-  runsTotal: number | null,
-): number | null {
+export function progressRatio(runsDone: number, runsTotal: number | null): number | null {
   if (runsTotal === null || !Number.isFinite(runsTotal) || runsTotal <= 0) {
     return null;
   }

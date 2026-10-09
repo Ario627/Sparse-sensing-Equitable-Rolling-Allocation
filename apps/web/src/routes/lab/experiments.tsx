@@ -1,11 +1,12 @@
 import type { ExperimentRunResponse } from "@sera/contracts";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Button } from "@/components/kit/button.tsx";
 import { CopyConfigButton } from "@/components/kit/copy-config-button.tsx";
 import { DataTable, type SeraColumnDef } from "@/components/kit/data-table.tsx";
 import { ErrorState } from "@/components/kit/error-state.tsx";
 import { PageHeader } from "@/components/kit/page-header.tsx";
+import { RoleGate } from "@/components/kit/role-gate.tsx";
 import { Skeleton } from "@/components/kit/skeleton.tsx";
 import { StatusPill } from "@/components/kit/status-pill.tsx";
 import {
@@ -16,15 +17,20 @@ import {
 } from "@/features/experiments/api.ts";
 import { ExperimentTable } from "@/features/experiments/experiment-table.tsx";
 import {
+  describeMetric,
   formatMetricValue,
   readRunMetrics,
 } from "@/features/experiments/kpi.ts";
-import { RunProgress } from "@/features/experiments/run-progress.tsx";
+import { summarizeRuns } from "@/features/experiments/metric-summary.ts";
 import {
-  runStatusLabel,
-  runStatusTone,
-} from "@/features/experiments/status.ts";
+  MethodComparisonChart,
+  RunMetricChart,
+} from "@/features/experiments/run-charts.tsx";
+import { hasMetric } from "@/features/experiments/run-series.ts";
+import { RunProgress } from "@/features/experiments/run-progress.tsx";
+import { runStatusLabel, runStatusTone } from "@/features/experiments/status.ts";
 import { isApiError } from "@/lib/api/client.ts";
+import { labRoles } from "@/lib/auth/roles.ts";
 import { formatDateTime, formatNumber } from "@/lib/format.ts";
 import { buildSearch, readSearchString } from "@/lib/search.ts";
 
@@ -68,9 +74,7 @@ function buildRunColumns(): SeraColumnDef<ExperimentRunResponse>[] {
       accessorKey: "scenario_id",
       header: "Skenario",
       cell: (info) => (
-        <span className="text-xs text-ink-2">
-          {info.row.original.scenario_id}
-        </span>
+        <span className="text-xs text-ink-2">{info.row.original.scenario_id}</span>
       ),
     },
     {
@@ -137,6 +141,26 @@ function buildRunColumns(): SeraColumnDef<ExperimentRunResponse>[] {
 
 const runColumns = buildRunColumns();
 
+interface ChartCardProps {
+  readonly title: string;
+  readonly subtitle?: string;
+  readonly children: ReactNode;
+}
+
+function ChartCard({ title, subtitle, children }: ChartCardProps) {
+  return (
+    <section className="flex flex-col gap-2 rounded-md border border-line bg-surface p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="text-sm font-semibold text-ink">{title}</h3>
+        {subtitle !== undefined && (
+          <span className="text-2xs text-ink-3">{subtitle}</span>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 function Fact({
   label,
   children,
@@ -153,6 +177,18 @@ function Fact({
 }
 
 export function ExperimentsPage() {
+  return (
+    <RoleGate
+      allow={labRoles}
+      title="Halaman riset khusus peneliti"
+      description="Pemantauan batch eksperimen hanya terbuka untuk peran peneliti atau admin."
+    >
+      <ExperimentsContent />
+    </RoleGate>
+  );
+}
+
+function ExperimentsContent() {
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
   const [runsPage, setRunsPage] = useState(1);
@@ -170,6 +206,24 @@ export function ExperimentsPage() {
   const cancel = useCancelExperiment(selectedId ?? "");
   const detail = detailQuery.data ?? null;
   const runs = runsQuery.data?.items ?? [];
+  const chartKeys = ["decision_regret", "worst_sr"] as const;
+  const availableCharts = chartKeys.filter((key) => hasMetric(runs, key));
+  const comparisonKey =
+    availableCharts.length === 0
+      ? null
+      : availableCharts.includes("decision_regret")
+        ? "decision_regret"
+        : availableCharts[0] ?? null;
+  const comparisonSummaries =
+    comparisonKey === null
+      ? []
+      : summarizeRuns(
+          runs.map((run) => ({
+            method: run.method,
+            values: readRunMetrics(run.metrics),
+          })),
+          [comparisonKey],
+        );
 
   function selectExperiment(experimentId: string): void {
     setRunsPage(1);
@@ -184,15 +238,12 @@ export function ExperimentsPage() {
   async function cancelSelected(): Promise<void> {
     setCancelError(null);
     await cancel.mutateAsync().catch((cause: unknown) => {
-      setCancelError(
-        isApiError(cause) ? cause.message : "Pembatalan gagal. Coba lagi.",
-      );
+      setCancelError(isApiError(cause) ? cause.message : "Pembatalan gagal. Coba lagi.");
     });
   }
 
   const live =
-    detail !== null &&
-    (detail.status === "QUEUED" || detail.status === "RUNNING");
+    detail !== null && (detail.status === "QUEUED" || detail.status === "RUNNING");
 
   return (
     <div className="flex flex-col gap-5">
@@ -255,13 +306,9 @@ export function ExperimentsPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="label-caps text-ink-3">Eksperimen terpilih</p>
-                <h2 className="mt-0.5 text-base font-semibold text-ink">
-                  {detail.name}
-                </h2>
+                <h2 className="mt-0.5 text-base font-semibold text-ink">{detail.name}</h2>
                 {detail.description !== null && (
-                  <p className="mt-0.5 text-xs text-ink-2">
-                    {detail.description}
-                  </p>
+                  <p className="mt-0.5 text-xs text-ink-2">{detail.description}</p>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -293,24 +340,57 @@ export function ExperimentsPage() {
               medianRegret={detail.median_regret}
               worstSr={detail.worst_sr}
             />
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
-              <Fact label="Config hash">
-                {detail.config_hash.slice(0, HASH_CHARS)}
-              </Fact>
+            <dl className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-6 gap-y-2 sm:grid-cols-[repeat(4,minmax(0,1fr))]">
+              <Fact label="Config hash">{detail.config_hash.slice(0, HASH_CHARS)}</Fact>
               <Fact label="Seed dasar">
-                {detail.seed_base === null
-                  ? "—"
-                  : formatNumber(detail.seed_base)}
+                {detail.seed_base === null ? "—" : formatNumber(detail.seed_base)}
               </Fact>
               <Fact label="Dibuat">{formatDateTime(detail.created_at)}</Fact>
               <Fact label="Selesai">
-                {detail.finished_at === null
-                  ? "—"
-                  : formatDateTime(detail.finished_at)}
+                {detail.finished_at === null ? "—" : formatDateTime(detail.finished_at)}
               </Fact>
             </dl>
           </section>
         ))}
+      {selectedId !== null && detail !== null && runs.length >= 2 && availableCharts.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="label-caps text-ink-3">Hasil per run</p>
+            <span className="font-mono text-2xs text-ink-3 tabular">
+              {formatNumber(runs.length)} run · gulir atau seret untuk zoom
+            </span>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-2">
+            {availableCharts.includes("decision_regret") && (
+              <ChartCard
+                title="Regret keputusan"
+                subtitle="per run — lebih rendah lebih baik"
+              >
+                <RunMetricChart runs={runs} metricKey="decision_regret" />
+              </ChartCard>
+            )}
+            {availableCharts.includes("worst_sr") && (
+              <ChartCard
+                title="SR terburuk"
+                subtitle="per run — lebih tinggi lebih baik"
+              >
+                <RunMetricChart runs={runs} metricKey="worst_sr" />
+              </ChartCard>
+            )}
+          </div>
+          {comparisonKey !== null && comparisonSummaries.length > 0 && (
+            <ChartCard
+              title={`Median ${describeMetric(comparisonKey)?.label ?? "metrik"} per metode`}
+              subtitle="dari run yang terekam pada eksperimen ini"
+            >
+              <MethodComparisonChart
+                summaries={comparisonSummaries}
+                metricKey={comparisonKey}
+              />
+            </ChartCard>
+          )}
+        </section>
+      )}
       {selectedId !== null && (
         <section className="flex flex-col gap-2">
           <p className="label-caps text-ink-3">Runs</p>

@@ -26,13 +26,10 @@ const presetLabels: Record<TimeRangePreset, string> = {
   custom: "Kustom",
 };
 
-const PRESET_ORDER: readonly TimeRangePreset[] = [
-  "all",
-  "24h",
-  "7d",
-  "30d",
-  "custom",
-];
+const PRESET_ORDER: readonly TimeRangePreset[] = ["all", "24h", "7d", "30d", "custom"];
+
+const PRESET_BUTTON_CLASSES =
+  "min-h-10 rounded-xs px-3.5 text-xs font-medium transition-colors sm:min-h-9";
 
 const jakartaFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Jakarta",
@@ -121,10 +118,9 @@ export function TimeRangePicker({
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <div
-        role="group"
+      <fieldset
         aria-label="Rentang waktu"
-        className="inline-flex w-fit max-w-full flex-wrap items-center gap-0.5 rounded-sm border border-line-2 bg-sunk p-0.5"
+        className="inline-flex w-fit max-w-full min-w-0 flex-wrap items-center gap-0.5 rounded-sm border border-line-2 bg-sunk p-0.5"
       >
         {PRESET_ORDER.map((option) => (
           <button
@@ -135,7 +131,7 @@ export function TimeRangePicker({
               applyPreset(option);
             }}
             className={cn(
-              "h-7 rounded-xs px-2.5 text-xs font-medium transition-colors",
+              PRESET_BUTTON_CLASSES,
               option === preset
                 ? "bg-surface text-ink shadow-hair"
                 : "text-ink-2 hover:text-ink",
@@ -144,7 +140,7 @@ export function TimeRangePicker({
             {presetLabels[option]}
           </button>
         ))}
-      </div>
+      </fieldset>
       {preset === "custom" && (
         <div className="flex flex-col gap-2">
           <div className="grid gap-3 xs:grid-cols-2">

@@ -1,8 +1,8 @@
 import type {
   ListAuditQuery,
   ListEventsQuery,
-  ListExperimentsQuery,
   ListExperimentRunsQuery,
+  ListExperimentsQuery,
   ListNetworksQuery,
   ListPlansQuery,
   ListUsersQuery,
@@ -17,10 +17,8 @@ export const queryKeys = {
     me: () => [...root, "auth", "me"] as const,
   },
   networks: {
-    list: (query: ListNetworksQuery) =>
-      [...root, "networks", "list", query] as const,
-    detail: (networkId: string) =>
-      [...root, "networks", "detail", networkId] as const,
+    list: (query: ListNetworksQuery) => [...root, "networks", "list", query] as const,
+    detail: (networkId: string) => [...root, "networks", "detail", networkId] as const,
   },
   telemetry: {
     latest: (networkId: string | null) =>
@@ -31,12 +29,10 @@ export const queryKeys = {
   plans: {
     list: (query: ListPlansQuery) => [...root, "plans", "list", query] as const,
     detail: (planId: string) => [...root, "plans", "detail", planId] as const,
-    commands: (planId: string) =>
-      [...root, "plans", "commands", planId] as const,
+    commands: (planId: string) => [...root, "plans", "commands", planId] as const,
   },
   events: {
-    list: (query: ListEventsQuery) =>
-      [...root, "events", "list", query] as const,
+    list: (query: ListEventsQuery) => [...root, "events", "list", query] as const,
     stats: () => [...root, "events", "stats"] as const,
   },
   experiments: {

@@ -4,19 +4,19 @@ import {
   createRouter,
   lazyRouteComponent,
 } from "@tanstack/react-router";
+import { NotFoundView, RootError, RootLayout } from "@/app/root-route.tsx";
 import { Skeleton } from "@/components/kit/skeleton.tsx";
 import { AppShellLayout } from "@/components/shell/app-shell.tsx";
-import { NotFoundView, RootError, RootLayout } from "@/app/root-route.tsx";
 import { requireSession } from "@/lib/auth/guard.ts";
+import { LandingPage } from "@/routes/landing";
+import { LoginPage } from "@/routes/login.tsx";
 import { AlertsPage } from "@/routes/operations/alerts.tsx";
 import { HistoryPage } from "@/routes/operations/history.tsx";
 import { NetworkPage } from "@/routes/operations/network.tsx";
 import { OverviewPage } from "@/routes/operations/overview.tsx";
 import { SchedulePage } from "@/routes/operations/schedule.tsx";
-import { LoginPage } from "@/routes/login.tsx";
 import { HardwarePage } from "@/routes/system/hardware.tsx";
 import { SettingsPage } from "@/routes/system/settings.tsx";
-import { LandingPage } from "@/routes/landing";
 
 const PENDING_DELAY_MS = 150;
 const PENDING_MIN_MS = 300;

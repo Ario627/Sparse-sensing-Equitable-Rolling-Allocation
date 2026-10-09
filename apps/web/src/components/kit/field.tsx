@@ -12,9 +12,9 @@ export interface FieldProps {
 }
 
 const fieldBase =
-  "w-full rounded-sm border border-input bg-surface text-sm text-ink transition-colors placeholder:text-ink-3/80 disabled:cursor-not-allowed disabled:bg-sunk disabled:text-ink-3";
+  "w-full rounded-md border border-line-2 bg-surface text-sm text-ink transition-[border-color,box-shadow] duration-180 placeholder:text-ink-3/80 disabled:cursor-not-allowed disabled:bg-sunk disabled:text-ink-3 focus:border-water focus:outline-none focus:ring-2 focus:ring-water/15";
 
-export const inputClass = cn(fieldBase, "h-9 px-2.5");
+export const inputClass = cn(fieldBase, "h-11 px-3");
 
 export const textareaClass = cn(fieldBase, "min-h-24 resize-y px-2.5 py-2");
 
@@ -43,11 +43,7 @@ export function Field({
       </label>
       {children}
       {error !== undefined ? (
-        <p
-          id={fieldErrorId(htmlFor)}
-          role="alert"
-          className="text-xs text-crit"
-        >
+        <p id={fieldErrorId(htmlFor)} role="alert" className="text-xs text-crit">
           {error}
         </p>
       ) : (

@@ -1,11 +1,8 @@
-import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
+import { domAnimation, LazyMotion, MotionConfig } from "motion/react";
 import { BrandMark } from "@/components/shell/brand.tsx";
 import { LinkButton } from "@/components/shell/link-button.tsx";
 import { LandingHero } from "@/features/landing/landing-hero.tsx";
-import {
-  LandingFooter,
-  LandingSections,
-} from "@/features/landing/landing-sections.tsx";
+import { LandingFooter, LandingSections } from "@/features/landing/landing-sections.tsx";
 import { useSessionStore } from "@/lib/auth/session-store.ts";
 
 export function LandingPage() {
@@ -14,8 +11,8 @@ export function LandingPage() {
     <LazyMotion features={domAnimation} strict>
       <MotionConfig reducedMotion="user">
         <div className="flex min-h-dvh flex-col bg-paper">
-          <header className="sticky top-0 z-20 border-b border-line bg-paper/95 pt-safe backdrop-blur">
-            <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
+          <header className="sticky top-0 z-20 border-b border-line bg-paper pt-safe">
+            <div className="mx-auto flex max-w-shell items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-10">
               <BrandMark />
               <LinkButton
                 to={authed ? "/operations" : "/login"}

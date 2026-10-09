@@ -1,27 +1,22 @@
 import type { Topology } from "@sera/contracts";
-import {
-  useEffect,
-  useId,
-  useState,
-  type ChangeEvent,
-  type ReactNode,
-} from "react";
+import { type ChangeEvent, type ReactNode, useEffect, useId, useState } from "react";
 import { Button } from "@/components/kit/button.tsx";
 import { Field, inputClass } from "@/components/kit/field.tsx";
 import { cn } from "@/lib/cn.ts";
 import {
   randomSeed,
-  scenarioBounds,
-  scenarioPresets,
   type ScenarioPresetKey,
   type SimulationScenario,
+  scenarioBounds,
+  scenarioPresets,
 } from "./scenario.ts";
 
-const TOPOLOGY_OPTIONS: readonly { readonly value: Topology; readonly label: string }[] = [
-  { value: "CHAIN", label: "Rantai" },
-  { value: "BRANCHED", label: "Bercabang" },
-  { value: "MIXED", label: "Campuran" },
-];
+const TOPOLOGY_OPTIONS: readonly { readonly value: Topology; readonly label: string }[] =
+  [
+    { value: "CHAIN", label: "Rantai" },
+    { value: "BRANCHED", label: "Bercabang" },
+    { value: "MIXED", label: "Campuran" },
+  ];
 
 const PRESET_HINT =
   "Preset menentukan profil gangguan; kontrol di bawah menimpa parameter dasar jaringan.";
@@ -265,8 +260,8 @@ export function ScenarioForm({ value, onChange, className }: ScenarioFormProps) 
       <div className="rule-staff" aria-hidden="true" />
       <p className="font-mono text-2xs text-ink-3 tabular">
         {value.preset} · {value.topology.toLowerCase()} · {value.blocks} blok ·{" "}
-        {value.horizonDays} hari · {value.sensors} sensor · {value.supplyLps} L/s ·{" "}
-        seed {value.seed}
+        {value.horizonDays} hari · {value.sensors} sensor · {value.supplyLps} L/s · seed{" "}
+        {value.seed}
       </p>
     </div>
   );

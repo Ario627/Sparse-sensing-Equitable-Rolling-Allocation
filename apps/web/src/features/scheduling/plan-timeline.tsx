@@ -1,7 +1,7 @@
 import type { PlanItemResponse } from "@sera/contracts";
 import { EmptyState } from "@/components/kit/empty-state.tsx";
 import { cn } from "@/lib/cn.ts";
-import { formatClockMs, formatClockRange, formatPercent } from "@/lib/format.ts";
+import { formatCappedPercent, formatClockMs, formatClockRange, formatUnit } from "@/lib/format.ts";
 import { buildTimelineDomain, hourTicks, percentOf } from "./timeline-scale.ts";
 
 const DEFAULT_HEIGHT = 288;
@@ -44,7 +44,7 @@ function rowLabel(item: PlanItemResponse, phase: SlotPhase): string {
     formatClockRange(item.slot_start, item.slot_end),
   ];
   if (item.service_ratio_est !== null) {
-    parts.push(`rasio layanan ${formatPercent(item.service_ratio_est)}`);
+    parts.push(`rasio layanan ${formatCappedPercent(item.service_ratio_est)}`);
   }
   return parts.join(", ");
 }
@@ -87,10 +87,14 @@ function SlotRow({ item, phase, domain, nowMs }: SlotRowProps) {
   const nowPercent = percentOf(nowMs, domain);
   const ratioLabel =
     item.service_ratio_est !== null && width >= SR_LABEL_MIN_PERCENT
-      ? formatPercent(item.service_ratio_est)
+      ? formatCappedPercent(item.service_ratio_est)
       : null;
+  const volumeNote =
+    item.volume_del_m3 === null
+      ? ""
+      : ` · ${formatUnit(item.volume_del_m3, "m³", 1)} sampai`;
   return (
-    <div
+    <li
       className="grid h-9 grid-cols-[6.5rem_1fr] items-center gap-2 border-b border-line/60 last:border-b-0 sm:grid-cols-[8rem_1fr]"
       aria-label={rowLabel(item, phase)}
     >
@@ -102,24 +106,28 @@ function SlotRow({ item, phase, domain, nowMs }: SlotRowProps) {
           style={{ left: `${nowPercent}%` }}
         />
         <div
-          title={`${formatClockRange(item.slot_start, item.slot_end)} · ${phaseLabels[phase]}`}
+          title={`${formatClockRange(item.slot_start, item.slot_end)} · ${phaseLabels[phase]}${volumeNote}`}
           className={cn(
             "absolute flex items-center justify-between gap-2 overflow-hidden rounded-xs px-2",
             phaseClasses[phase],
           )}
-          style={{ left: `${left}%`, width: `${width}%`, height: BAR_HEIGHT_PX, top: "50%", transform: "translateY(-50%)" }}
+          style={{
+            left: `${left}%`,
+            width: `${width}%`,
+            height: BAR_HEIGHT_PX,
+            top: "50%",
+            transform: "translateY(-50%)",
+          }}
         >
           <span className="truncate font-mono text-2xs tabular">
             {formatClockMs(start)}
           </span>
           {ratioLabel !== null && (
-            <span className="truncate font-mono text-2xs tabular">
-              {ratioLabel}
-            </span>
+            <span className="truncate font-mono text-2xs tabular">{ratioLabel}</span>
           )}
         </div>
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -138,12 +146,7 @@ export function PlanTimeline({
 }: PlanTimelineProps) {
   if (items.length === 0) {
     return (
-      <div
-        className={cn(
-          "rounded-md border border-line bg-surface",
-          className,
-        )}
-      >
+      <div className={cn("rounded-md border border-line bg-surface", className)}>
         <EmptyState
           compact
           title="Belum ada slot"
@@ -156,34 +159,30 @@ export function PlanTimeline({
     (a, b) => Date.parse(a.slot_start) - Date.parse(b.slot_start),
   );
   const domain = buildTimelineDomain(
-    ordered.map((item) => [
-      Date.parse(item.slot_start),
-      Date.parse(item.slot_end),
-    ]),
+    ordered.map((item) => [Date.parse(item.slot_start), Date.parse(item.slot_end)]),
     now,
   );
   return (
     <div
       style={{ height }}
-      className={cn(
-        "overflow-auto rounded-md border border-line bg-surface",
-        className,
-      )}
+      className={cn("overflow-auto rounded-md border border-line bg-surface", className)}
     >
       <div className={cn("px-3 py-2", MIN_INNER_WIDTH)}>
         <div className="grid grid-cols-[6.5rem_1fr] gap-2 sm:grid-cols-[8rem_1fr]">
           <span aria-hidden="true" />
           <TickRuler domain={domain} />
         </div>
-        {ordered.map((item) => (
-          <SlotRow
-            key={item.id}
-            item={item}
-            phase={phaseOf(item, now)}
-            domain={domain}
-            nowMs={now}
-          />
-        ))}
+        <ul className="flex flex-col">
+          {ordered.map((item) => (
+            <SlotRow
+              key={item.id}
+              item={item}
+              phase={phaseOf(item, now)}
+              domain={domain}
+              nowMs={now}
+            />
+          ))}
+        </ul>
       </div>
     </div>
   );

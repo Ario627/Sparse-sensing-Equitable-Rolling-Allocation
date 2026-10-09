@@ -36,9 +36,7 @@ export function quantile(sorted: readonly number[], q: number): number | null {
 }
 
 export function summarize(values: readonly number[]): QuantileSummary | null {
-  const sorted = values
-    .filter((value) => Number.isFinite(value))
-    .sort((a, b) => a - b);
+  const sorted = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
   const first = sorted.at(0);
   const last = sorted.at(-1);
   if (first === undefined || last === undefined) {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatAge,
   formatAgeFrom,
+  formatCappedPercent,
   formatClock,
   formatClockRange,
   formatDate,
@@ -38,6 +39,25 @@ describe("formatPercent", () => {
   });
 });
 
+describe("formatCappedPercent", () => {
+  it("menampilkan rasio normal seperti persen biasa", () => {
+    expect(formatCappedPercent(0.71)).toBe("71%");
+    expect(formatCappedPercent(1)).toBe("100%");
+    expect(formatCappedPercent(0.485, 1)).toBe("48,5%");
+  });
+
+  it("membatasi rasio di atas satu dengan penanda plus", () => {
+    expect(formatCappedPercent(4.85)).toBe("100%+");
+    expect(formatCappedPercent(3.12, 1)).toBe("100,0%+");
+  });
+
+  it("menjepit nilai negatif dan tidak finit", () => {
+    expect(formatCappedPercent(-2)).toBe("0%");
+    expect(formatCappedPercent(Number.NaN)).toBe("—");
+    expect(formatCappedPercent(null)).toBe("—");
+  });
+});
+
 describe("formatUnit", () => {
   it("menggabungkan angka dengan satuan", () => {
     expect(formatUnit(6.4, "L/s", 1)).toBe("6,4 L/s");
@@ -53,9 +73,7 @@ describe("formatInterval", () => {
 
 describe("formatEstimate", () => {
   it("menampilkan titik estimasi dengan interval opsional", () => {
-    expect(formatEstimate(0.78, { low: 0.71, high: 0.84 }, 2)).toBe(
-      "0,78 [0,71–0,84]",
-    );
+    expect(formatEstimate(0.78, { low: 0.71, high: 0.84 }, 2)).toBe("0,78 [0,71–0,84]");
     expect(formatEstimate(0.78, null, 2)).toBe("0,78");
   });
 });
@@ -84,9 +102,9 @@ describe("formatDateTime", () => {
 
 describe("formatClockRange", () => {
   it("menulis rentang slot operasi", () => {
-    expect(
-      formatClockRange("2026-10-07T02:00:00.000Z", "2026-10-07T03:30:00.000Z"),
-    ).toBe("09:00–10:30");
+    expect(formatClockRange("2026-10-07T02:00:00.000Z", "2026-10-07T03:30:00.000Z")).toBe(
+      "09:00–10:30",
+    );
   });
 });
 
@@ -106,10 +124,7 @@ describe("formatAge", () => {
 describe("formatAgeFrom", () => {
   it("menghitung umur dari timestamp dan waktu acuan", () => {
     expect(
-      formatAgeFrom(
-        "2026-10-07T02:00:00.000Z",
-        Date.parse("2026-10-07T02:15:00.000Z"),
-      ),
+      formatAgeFrom("2026-10-07T02:00:00.000Z", Date.parse("2026-10-07T02:15:00.000Z")),
     ).toBe("15 mnt");
   });
 });

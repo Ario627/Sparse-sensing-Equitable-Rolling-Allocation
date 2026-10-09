@@ -4,7 +4,12 @@ import type {
   TelemetryLatestItemResponse,
 } from "@sera/contracts";
 import { describe, expect, it } from "vitest";
-import { buildNetworkView } from "./selectors";
+import {
+  buildNetworkView,
+  freshestFlowReading,
+  sourceFlowReading,
+  zoneServiceSummary,
+} from "./selectors";
 
 const NOW = Date.parse("2026-10-08T09:00:00.000Z");
 const ISO_PAST = "2026-10-08T08:00:00.000Z";
@@ -270,16 +275,8 @@ describe("buildNetworkView", () => {
     const second = buildNetworkView({ detail, telemetry, planItems, now: NOW });
     expect(first.flow.nodes.length).toBe(5);
     expect(first.flow.edges.length).toBe(3);
-    const positionsFirst = first.flow.nodes.map((node) => [
-      node.id,
-      node.x,
-      node.y,
-    ]);
-    const positionsSecond = second.flow.nodes.map((node) => [
-      node.id,
-      node.x,
-      node.y,
-    ]);
+    const positionsFirst = first.flow.nodes.map((node) => [node.id, node.x, node.y]);
+    const positionsSecond = second.flow.nodes.map((node) => [node.id, node.x, node.y]);
     expect(positionsFirst).toEqual(positionsSecond);
     for (const node of first.flow.nodes) {
       expect(Number.isFinite(node.x)).toBe(true);
@@ -303,5 +300,143 @@ describe("buildNetworkView", () => {
     const orphan = view.flow.nodes.find((node) => node.id === "n-orphan");
     const junction = view.flow.nodes.find((node) => node.id === "n-mid");
     expect(orphan?.y ?? 0).toBeGreaterThan(junction?.y ?? 0);
+  });
+});
+
+describe("sourceFlowReading", () => {
+  function reading(
+    overrides: Partial<TelemetryLatestItemResponse>,
+  ): TelemetryLatestItemResponse {
+    return {
+      sensor_id: "s-x",
+      device_id: "d-x",
+      type: "FLOW",
+      unit: "L/s",
+      node_id: "n-src",
+      node_name: "Sumber",
+      block_id: null,
+      value: 6.4,
+      quality: "GOOD",
+      ts: ISO_PAST,
+      age_s: 30,
+      stale: false,
+      ...overrides,
+    };
+  }
+
+  it("memilih bacaan debit terbaru di node sumber", () => {
+    const result = sourceFlowReading(
+      [
+        reading({ sensor_id: "s-lama", age_s: 300 }),
+        reading({ sensor_id: "s-baru", value: 7.1, age_s: 12 }),
+      ],
+      "n-src",
+    );
+    expect(result?.sensorId).toBe("s-baru");
+    expect(result?.valueLps).toBe(7.1);
+    expect(result?.stale).toBe(false);
+    expect(result?.nodeId).toBe("n-src");
+    expect(result?.nodeName).toBe("Sumber");
+  });
+
+  it("mengabaikan jenis lain, node lain, dan nilai kosong", () => {
+    const result = sourceFlowReading(
+      [
+        reading({ type: "WATER_LEVEL" }),
+        reading({ node_id: "n-mid" }),
+        reading({ value: null }),
+      ],
+      "n-src",
+    );
+    expect(result).toBeNull();
+  });
+
+  it("mengembalikan null tanpa node sumber atau tanpa kandidat", () => {
+    expect(sourceFlowReading([reading({})], null)).toBeNull();
+    expect(sourceFlowReading([], "n-src")).toBeNull();
+  });
+
+  it("menandai bacaan basi dan memperlakukan age kosong sebagai tak terbatas", () => {
+    const result = sourceFlowReading(
+      [
+        reading({ sensor_id: "s-tanpa-age", age_s: null }),
+        reading({ sensor_id: "s-basi", stale: true, quality: "STALE" }),
+      ],
+      "n-src",
+    );
+    expect(result?.sensorId).toBe("s-basi");
+    expect(result?.stale).toBe(true);
+  });
+});
+
+describe("freshestFlowReading", () => {
+  function flow(
+    overrides: Partial<TelemetryLatestItemResponse>,
+  ): TelemetryLatestItemResponse {
+    return {
+      sensor_id: "s-flow",
+      device_id: "d-1",
+      type: "FLOW",
+      unit: "L/s",
+      node_id: "n-mid",
+      node_name: "Head Box",
+      block_id: null,
+      value: 5.2,
+      quality: "GOOD",
+      ts: ISO_PAST,
+      age_s: 60,
+      stale: false,
+      ...overrides,
+    };
+  }
+
+  it("memilih sensor debit paling segar di seluruh jaringan", () => {
+    const result = freshestFlowReading([
+      flow({ sensor_id: "s-a", age_s: 400 }),
+      flow({ sensor_id: "s-b", age_s: 30, node_name: "Head Box" }),
+      flow({ sensor_id: "s-c", type: "WATER_LEVEL" }),
+    ]);
+    expect(result?.sensorId).toBe("s-b");
+    expect(result?.nodeName).toBe("Head Box");
+  });
+
+  it("mengembalikan null bila tidak ada sensor debit", () => {
+    expect(freshestFlowReading([flow({ type: "WATER_LEVEL" })])).toBeNull();
+    expect(freshestFlowReading([])).toBeNull();
+  });
+});
+
+describe("zoneServiceSummary", () => {
+  it("meringkas rasio per zona dari blok yang punya rencana", () => {
+    const view = buildNetworkView({ detail, telemetry, planItems, now: NOW });
+    const zones = zoneServiceSummary(view.blocks);
+    expect(zones.map((summary) => summary.zone)).toEqual(["HEAD", "MIDDLE", "TAIL"]);
+    expect(zones[0]?.blockCount).toBe(0);
+    expect(zones[0]?.averageRatio).toBeNull();
+    expect(zones[1]?.averageRatio).toBeCloseTo(0.72, 10);
+    expect(zones[1]?.weakestBlockName).toBe("Blok Utara");
+    expect(zones[2]?.averageRatio).toBeCloseTo(0.9, 10);
+    expect(zones[2]?.weakestBlockName).toBe("Blok Selatan");
+  });
+
+  it("menghitung blok tanpa rasio ke jumlah blok tapi tidak ke rata-rata", () => {
+    const zones = zoneServiceSummary([
+      {
+        blockId: "b-x",
+        nodeId: "n-x",
+        name: "Blok X",
+        areaM2: 1000,
+        nominalFlowLps: 1,
+        zone: "HEAD",
+        serviceRatio: null,
+        band: { tone: "neutral", label: "Belum ada rencana" },
+        sensors: { sensorCount: 0, staleCount: 0, worstQuality: null },
+        slot: null,
+      },
+    ]);
+    const head = zones.find((summary) => summary.zone === "HEAD");
+    expect(head?.blockCount).toBe(1);
+    expect(head?.sampledCount).toBe(0);
+    expect(head?.averageRatio).toBeNull();
   });
 });

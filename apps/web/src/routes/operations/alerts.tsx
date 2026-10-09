@@ -8,10 +8,7 @@ import { inputClass } from "@/components/kit/field.tsx";
 import { PageHeader } from "@/components/kit/page-header.tsx";
 import { Skeleton } from "@/components/kit/skeleton.tsx";
 import { StatusPill } from "@/components/kit/status-pill.tsx";
-import {
-  TimeRangePicker,
-  type TimeRange,
-} from "@/components/kit/time-range-picker.tsx";
+import { type TimeRange, TimeRangePicker } from "@/components/kit/time-range-picker.tsx";
 import {
   useAcknowledgeEvent,
   useEventsFeed,
@@ -50,6 +47,9 @@ const ackOptions: readonly { readonly value: AckFilter; readonly label: string }
   { value: "acked", label: "Sudah ditandai" },
 ];
 
+const ACK_OPTION_CLASSES =
+  "min-h-10 rounded-sm px-3.5 text-xs font-medium transition-colors sm:min-h-9";
+
 const severityOptions: readonly {
   readonly value: AlertSeverity | "";
   readonly label: string;
@@ -77,12 +77,7 @@ interface AlertRowProps {
   readonly onOpenNetwork: (event: EventResponse) => void;
 }
 
-function AlertRow({
-  event,
-  acknowledging,
-  onAcknowledge,
-  onOpenNetwork,
-}: AlertRowProps) {
+function AlertRow({ event, acknowledging, onAcknowledge, onOpenNetwork }: AlertRowProps) {
   const acked = event.acknowledged_at !== null;
   const canAcknowledge = event.type === "alert" && !acked;
   return (
@@ -149,12 +144,7 @@ interface StatsStripProps {
   readonly info: number;
 }
 
-function StatsStrip({
-  unacknowledged,
-  critical,
-  warning,
-  info,
-}: StatsStripProps) {
+function StatsStrip({ unacknowledged, critical, warning, info }: StatsStripProps) {
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-md border border-line bg-surface px-3.5 py-3">
       <span className="flex items-baseline gap-2">
@@ -172,10 +162,7 @@ function StatsStrip({
           tone="warn"
           label={`${severityLabels.warning} ${formatNumber(warning)}`}
         />
-        <StatusPill
-          tone="info"
-          label={`${severityLabels.info} ${formatNumber(info)}`}
-        />
+        <StatusPill tone="info" label={`${severityLabels.info} ${formatNumber(info)}`} />
       </span>
     </div>
   );
@@ -189,9 +176,7 @@ export function AlertsPage() {
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
   const acknowledgedValue = ackFilterValue(ackFilter);
   const eventsQuery = useEventsFeed({
-    ...(acknowledgedValue === undefined
-      ? {}
-      : { acknowledged: acknowledgedValue }),
+    ...(acknowledgedValue === undefined ? {} : { acknowledged: acknowledgedValue }),
     ...(severity === "" ? {} : { severity }),
     ...(range === null ? {} : { from: range.from, to: range.to }),
   });
@@ -231,10 +216,9 @@ export function AlertsPage() {
       )}
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <div
-            role="group"
+          <fieldset
             aria-label="Status tanda dibaca"
-            className="inline-flex w-fit max-w-full flex-wrap items-center gap-0.5 rounded-sm border border-line-2 bg-sunk p-0.5"
+            className="inline-flex w-fit max-w-full min-w-0 flex-wrap items-center gap-0.5 rounded-sm border border-line-2 bg-sunk p-0.5"
           >
             {ackOptions.map((option) => (
               <button
@@ -245,7 +229,7 @@ export function AlertsPage() {
                   setAckFilter(option.value);
                 }}
                 className={cn(
-                  "h-7 rounded-xs px-2.5 text-xs font-medium transition-colors",
+                  ACK_OPTION_CLASSES,
                   option.value === ackFilter
                     ? "bg-surface text-ink shadow-hair"
                     : "text-ink-2 hover:text-ink",
@@ -254,7 +238,7 @@ export function AlertsPage() {
                 {option.label}
               </button>
             ))}
-          </div>
+          </fieldset>
           <select
             aria-label="Tingkat keparahan"
             value={severity}
@@ -277,9 +261,7 @@ export function AlertsPage() {
       </div>
       {ack.isError && (
         <p role="alert" className="text-xs text-crit">
-          {isApiError(ack.error)
-            ? ack.error.message
-            : "Penandaan gagal. Coba lagi."}
+          {isApiError(ack.error) ? ack.error.message : "Penandaan gagal. Coba lagi."}
         </p>
       )}
       {eventsQuery.isError ? (
@@ -328,8 +310,7 @@ export function AlertsPage() {
           </ul>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-mono text-xs text-ink-3 tabular">
-              Menampilkan {formatNumber(items.length)} dari{" "}
-              {formatNumber(total)}
+              Menampilkan {formatNumber(items.length)} dari {formatNumber(total)}
             </p>
             {eventsQuery.hasNextPage && (
               <Button

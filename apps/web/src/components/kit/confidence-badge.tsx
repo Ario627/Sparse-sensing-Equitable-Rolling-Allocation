@@ -51,16 +51,16 @@ function ConfidenceGauge({ value, tone }: ConfidenceGaugeProps) {
   const filled = filledTickCount(value);
   return (
     <span className="flex items-end gap-px" aria-hidden="true">
-        {GAUGE_TICKS.map((tick) => (
-            <span
-            key={tick}
-            className={cn(
-                "w-0.5 rounded-[1px]",
-                tick % MAJOR_TICK_EVERY === 0 ? "h-3" : "h-2",
-                tick <= filled ? tickFillClasses[tone] : "bg-line-2",
-            )}
-            />
-        ))}
+      {GAUGE_TICKS.map((tick) => (
+        <span
+          key={tick}
+          className={cn(
+            "w-0.5 rounded-[1px]",
+            tick % MAJOR_TICK_EVERY === 0 ? "h-3" : "h-2",
+            tick <= filled ? tickFillClasses[tone] : "bg-line-2",
+          )}
+        />
+      ))}
     </span>
   );
 }
@@ -82,10 +82,7 @@ export function ConfidenceBadge({
       <span className="label-caps text-ink-3">{label}</span>
       <ConfidenceGauge value={normalized} tone={tone} />
       <span
-        className={cn(
-          "font-mono text-xs font-medium tabular",
-          valueTextClasses[tone],
-        )}
+        className={cn("font-mono text-xs font-medium tabular", valueTextClasses[tone])}
       >
         {formatPercent(normalized)}
       </span>

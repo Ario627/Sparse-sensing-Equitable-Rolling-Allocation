@@ -81,10 +81,7 @@ describe("devicesFromLatest", () => {
       item({ device_id: "d-1", sensor_id: "s-1" }),
       item({ device_id: "d-1", sensor_id: "s-2" }),
     ]);
-    expect(summaries.map((summary) => summary.deviceId)).toEqual([
-      "d-1",
-      "d-2",
-    ]);
+    expect(summaries.map((summary) => summary.deviceId)).toEqual(["d-1", "d-2"]);
     expect(summaries[0]?.sensorCount).toBe(2);
     expect(summaries[1]?.sensorCount).toBe(1);
   });

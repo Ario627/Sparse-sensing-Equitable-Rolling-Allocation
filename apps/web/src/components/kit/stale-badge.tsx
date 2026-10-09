@@ -9,11 +9,7 @@ export interface StaleBadgeProps {
   readonly className?: string;
 }
 
-export function StaleBadge({
-  age,
-  label = DEFAULT_LABEL,
-  className,
-}: StaleBadgeProps) {
+export function StaleBadge({ age, label = DEFAULT_LABEL, className }: StaleBadgeProps) {
   return (
     <span
       className={cn(

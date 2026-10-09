@@ -5,10 +5,10 @@ import { Button } from "@/components/kit/button.tsx";
 import { Field, inputClass } from "@/components/kit/field.tsx";
 import { PageHeader } from "@/components/kit/page-header.tsx";
 import { StatusPill } from "@/components/kit/status-pill.tsx";
+import { isApiError } from "@/lib/api/client.ts";
 import { changePassword } from "@/lib/auth/auth-api.ts";
 import { roleLabel } from "@/lib/auth/roles.ts";
 import { useSessionStore } from "@/lib/auth/session-store.ts";
-import { isApiError } from "@/lib/api/client.ts";
 import { cn } from "@/lib/cn.ts";
 
 const PASSWORD_MIN_LENGTH = 12;
@@ -21,8 +21,8 @@ interface PasswordCheck {
 }
 
 function passwordChecks(password: string): readonly PasswordCheck[] {
-  const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter(
-    (pattern) => pattern.test(password),
+  const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((pattern) =>
+    pattern.test(password),
   ).length;
   return [
     {
@@ -102,10 +102,6 @@ function ProfileCard() {
           <span className="font-mono text-xs">{user.email}</span>
         </Fact>
       </dl>
-      <p className="text-xs text-ink-3">
-        Perubahan peran dan akses dikelola admin pada modul pengguna; halaman ini
-        hanya menampilkan sesi yang sedang aktif.
-      </p>
     </section>
   );
 }
@@ -116,20 +112,18 @@ function PolicyCard() {
       <p className="label-caps text-ink-3">Profil kebijakan alokasi</p>
       <dl className="flex flex-col gap-3">
         <Fact label="Pemerataan dulu">
-          Prioritas pemerataan pelayanan antar-blok; dipakai saat konflik atau
-          kelangkaan sosial.
+          Prioritas pemerataan pelayanan antar-blok; dipakai saat konflik atau kelangkaan
+          sosial.
         </Fact>
         <Fact label="Kekurangan dulu">
           Prioritas menekan kekurangan total; dipakai saat produksi kritis.
         </Fact>
-        <Fact label="Seimbang">
-          Trade-off terukur untuk operasi normal.
-        </Fact>
+        <Fact label="Seimbang">Trade-off terukur untuk operasi normal.</Fact>
       </dl>
       <p className="text-xs text-ink-3">
-        Pemilihan profil per plan diatur saat pengajuan plan dan tercatat di
-        jejak audit. Tidak ada bobot tersembunyi: perbandingan profil disajikan
-        sebagai kurva Pareto di halaman Hasil.
+        Pemilihan profil per plan diatur saat pengajuan plan dan tercatat di jejak audit.
+        Tidak ada bobot tersembunyi: perbandingan profil disajikan sebagai kurva Pareto di
+        halaman Hasil.
       </p>
     </section>
   );
@@ -147,8 +141,7 @@ export function SettingsPage() {
   const checks = passwordChecks(next);
   const policyOk = allPassed(checks);
   const different = next.length > 0 && next !== current;
-  const canSubmit =
-    current.length > 0 && policyOk && different && !pending;
+  const canSubmit = current.length > 0 && policyOk && different && !pending;
 
   async function submit(): Promise<void> {
     if (!canSubmit) {
@@ -166,9 +159,7 @@ export function SettingsPage() {
       setCurrent("");
       setNext("");
     } catch (cause) {
-      setError(
-        isApiError(cause) ? cause.message : "Penggantian gagal. Coba lagi.",
-      );
+      setError(isApiError(cause) ? cause.message : "Penggantian gagal. Coba lagi.");
     } finally {
       setPending(false);
     }
@@ -190,8 +181,8 @@ export function SettingsPage() {
         {changed ? (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-ink">
-              Kata sandi diperbarui. Semua sesi berakhir sebagai tindakan
-              keamanan — masuk kembali dengan kata sandi baru.
+              Kata sandi diperbarui. Semua sesi berakhir sebagai tindakan keamanan — masuk
+              kembali dengan kata sandi baru.
             </p>
             <div>
               <Button

@@ -114,10 +114,7 @@ export function devicesFromLatest(
     const accumulator = byDevice.get(item.device_id) ?? newAccumulator();
     accumulator.sensorCount += 1;
     accumulator.staleCount += item.stale ? 1 : 0;
-    accumulator.worstQuality = worseQuality(
-      accumulator.worstQuality,
-      item.quality,
-    );
+    accumulator.worstQuality = worseQuality(accumulator.worstQuality, item.quality);
     if (item.ts !== null && isFresher(item.ts, accumulator.lastSeenIso)) {
       accumulator.lastSeenIso = item.ts;
     }
@@ -136,9 +133,7 @@ export function devicesFromLatest(
       staleRatio: accumulator.staleCount / accumulator.sensorCount,
       worstQuality: accumulator.worstQuality,
       lastSeenIso: accumulator.lastSeenIso,
-      types: [...accumulator.types].sort(
-        (a, b) => TYPE_ORDER[a] - TYPE_ORDER[b],
-      ),
+      types: [...accumulator.types].sort((a, b) => TYPE_ORDER[a] - TYPE_ORDER[b]),
       nodeNames: [...accumulator.nodeNames].sort(compareText),
     }));
 }

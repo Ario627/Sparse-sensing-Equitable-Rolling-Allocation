@@ -1,5 +1,5 @@
+import type { AuthSessionResponse, SessionUserResponse, UserRole } from "@sera/contracts";
 import { create } from "zustand";
-import type { AuthSessionResponse, SessionUserResponse } from "@sera/contracts";
 
 export interface SessionSnapshot {
   readonly user: SessionUserResponse | null;
@@ -29,6 +29,10 @@ export function clearSession(): void {
 
 export function readAccessToken(): string | null {
   return useSessionStore.getState().accessToken;
+}
+
+export function useRole(): UserRole | null {
+  return useSessionStore((snapshot) => snapshot.user?.role ?? null);
 }
 
 export function readExpiresAt(): number | null {

@@ -79,6 +79,15 @@ export function formatPercent(ratio: number, digits = 0): string {
   return percentFormatter(digits).format(ratio);
 }
 
+export function formatCappedPercent(ratio: number | null, digits = 0): string {
+  if (ratio === null || !Number.isFinite(ratio)) {
+    return "—";
+  }
+  const capped = Math.min(1, Math.max(0, ratio));
+  const base = formatPercent(capped, digits);
+  return ratio > 1 ? `${base}+` : base;
+}
+
 export function formatUnit(value: number, unit: string, digits = 1): string {
   return `${formatNumber(value, digits)} ${unit}`;
 }
@@ -93,9 +102,7 @@ export function formatEstimate(
   digits = 2,
 ): string {
   const point = formatNumber(value, digits);
-  return interval === null
-    ? point
-    : `${point} [${formatInterval(interval, digits)}]`;
+  return interval === null ? point : `${point} [${formatInterval(interval, digits)}]`;
 }
 
 export function formatClockMs(ms: number): string {
