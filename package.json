@@ -18,6 +18,7 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "e2e:smoke": "bash scripts/e2e-smoke.sh",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write ."

@@ -84,6 +84,10 @@ export class MqttService implements OnModuleDestroy {
   register(subscription: MqttSubscription): void {
     this.subscriptions.push(subscription);
     this.ensureClient();
+    const client = this.client;
+    if (client !== undefined && client.connected) {
+      void this.subscribeSubscription(subscription);
+    }
   }
 
   async publish(
@@ -161,21 +165,27 @@ export class MqttService implements OnModuleDestroy {
   }
 
   private async subscribeAll(): Promise<void> {
+    for (const subscription of this.subscriptions) {
+      await this.subscribeSubscription(subscription);
+    }
+  }
+
+  private async subscribeSubscription(
+    subscription: MqttSubscription,
+  ): Promise<void> {
     const client = this.client;
     if (client === undefined) {
       return;
     }
-    for (const subscription of this.subscriptions) {
-      try {
-        const granted = await client.subscribeAsync([...subscription.topics], {
-          qos: SUBSCRIPTION_QOS,
-        });
-        this.logger.debug(
-          `mqtt subscribed: ${granted.map((grant) => grant.topic).join(', ')}`,
-        );
-      } catch (error) {
-        this.logger.warn(`mqtt subscribe failed: ${String(error)}`);
-      }
+    try {
+      const granted = await client.subscribeAsync([...subscription.topics], {
+        qos: SUBSCRIPTION_QOS,
+      });
+      this.logger.debug(
+        `mqtt subscribed: ${granted.map((grant) => grant.topic).join(', ')}`,
+      );
+    } catch (error) {
+      this.logger.warn(`mqtt subscribe failed: ${String(error)}`);
     }
   }
 

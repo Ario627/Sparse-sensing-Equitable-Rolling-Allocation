@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
   createExperimentRequestSchema,
@@ -165,6 +175,7 @@ export class ExperimentsController {
   }
 
   @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
   @Throttle(CANCEL_RATE_LIMIT)
   async cancel(
     @Param('id', { schema: experimentIdSchema }) id: string,

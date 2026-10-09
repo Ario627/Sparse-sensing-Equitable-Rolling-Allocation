@@ -3,6 +3,8 @@ import {
   Controller,
   Get,
   Header,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Query,
@@ -288,6 +290,7 @@ export class PlansController {
 
   @Roles(OPERATOR_ROLE)
   @Post(':id/decision')
+  @HttpCode(HttpStatus.OK)
   @Throttle(DECIDE_RATE_LIMIT)
   async decide(
     @Param('id', { schema: planIdSchema }) id: string,
@@ -309,6 +312,7 @@ export class PlansController {
 
   @Roles(OPERATOR_ROLE)
   @Post(':id/override')
+  @HttpCode(HttpStatus.OK)
   @Throttle(DECIDE_RATE_LIMIT)
   async override(
     @Param('id', { schema: planIdSchema }) id: string,
@@ -333,6 +337,7 @@ export class PlansController {
 
   @Roles(OPERATOR_ROLE)
   @Post(':id/execute')
+  @HttpCode(HttpStatus.OK)
   @Throttle(EXECUTE_RATE_LIMIT)
   async execute(
     @Param('id', { schema: planIdSchema }) id: string,
