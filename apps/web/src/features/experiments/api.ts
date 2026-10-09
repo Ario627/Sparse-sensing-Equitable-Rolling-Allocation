@@ -66,14 +66,15 @@ export function useExperiments(overrides: Partial<ListExperimentsQuery> = {}) {
   });
 }
 
-export function useExperiment(experimentId: string) {
+export function useExperiment(experimentId: string | null) {
   return useQuery({
-    queryKey: queryKeys.experiments.detail(experimentId),
+    queryKey: queryKeys.experiments.detail(experimentId ?? ""),
     queryFn: () =>
       apiFetch(
         experimentDetailSchema,
-        `/experiments/${encodeURIComponent(experimentId)}`,
+        `/experiments/${encodeURIComponent(experimentId ?? "")}`,
       ),
+    enabled: experimentId !== null,
     staleTime: LIST_STALE_MS,
     refetchInterval: (query) =>
       isLive(query.state.data?.status) ? PROGRESS_POLL_MS : false,

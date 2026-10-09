@@ -21,3 +21,9 @@ export function buildSearch(
   }
   return search;
 }
+
+export function asSearchRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : {};
+}

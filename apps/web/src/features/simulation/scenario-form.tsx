@@ -51,7 +51,7 @@ function normalizeDraft(
   return Math.min(max, Math.max(min, parsed));
 }
 
-function NumberInput({
+export function NumberInput({
   id,
   label,
   value,

@@ -77,6 +77,17 @@ describe("buildExperimentConfig", () => {
     expect(config.methods).toEqual(["sera", "proportional", "oracle"]);
     expect(config.replicates).toBe(5);
   });
+
+  it("memakai daftar sensor_sets yang diberikan tanpa menurunkannya dari jumlah sensor", () => {
+    const config = buildExperimentConfig({
+      experimentId: "expdemo",
+      scenario: defaultScenario,
+      methods: ["sera", "oracle"],
+      sensorSets: [[], ["b1"], ["b1", "b2"]],
+    });
+    expect(config.sensor_sets).toEqual([[], ["b1"], ["b1", "b2"]]);
+    expect(config.methods).toEqual(["sera", "oracle"]);
+  });
 });
 
 describe("buildExperimentYaml", () => {

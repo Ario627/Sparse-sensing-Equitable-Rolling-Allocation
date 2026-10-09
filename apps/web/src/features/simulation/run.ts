@@ -20,6 +20,7 @@ export interface ExperimentConfigInput {
   readonly methods?: readonly ExperimentMethod[];
   readonly replicates?: number;
   readonly kFactors?: readonly number[];
+  readonly sensorSets?: readonly (readonly string[])[];
 }
 
 export function defaultSensorSet(
@@ -53,9 +54,10 @@ export function buildExperimentConfig(input: ExperimentConfigInput): {
     block_counts: [input.scenario.blocks],
     topologies: [input.scenario.topology],
     k_factors: [...(input.kFactors ?? DEFAULT_K_FACTORS)],
-    sensor_sets: [
-      defaultSensorSet(input.scenario.sensors, input.scenario.blocks),
-    ],
+    sensor_sets:
+      input.sensorSets === undefined
+        ? [defaultSensorSet(input.scenario.sensors, input.scenario.blocks)]
+        : input.sensorSets.map((set) => [...set]),
     replicates: input.replicates ?? DEFAULT_REPLICATES,
   };
 }
