@@ -11,8 +11,8 @@ import { worseQuality } from "@/features/sensors/status.ts";
 import { layoutNetworkNodes } from "@/lib/gl/relief-layout.ts";
 import { type StatusBand, serviceRatioBand } from "./status.ts";
 
-const CANVAS_X_SCALE = 260;
-const CANVAS_Y_SCALE = 190;
+const CANVAS_X_SCALE = 380;
+const CANVAS_Y_SCALE = 172;
 const NO_PLAN_BAND: StatusBand = {
   tone: "neutral",
   label: "Belum ada rencana",
@@ -256,7 +256,7 @@ function buildSummary(
   let worst: ReadingQuality | null = null;
   let staleCount = 0;
   for (const item of telemetry) {
-    worst = worseQuality(worst, item.quality);
+    worst = worseQuality(worst, item.stale ? "STALE" : item.quality);
     if (item.stale) {
       staleCount += 1;
     }

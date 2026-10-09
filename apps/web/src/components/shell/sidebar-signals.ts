@@ -5,6 +5,7 @@ export interface SidebarSignals {
   readonly sensorCount: number;
   readonly staleCount: number;
   readonly pendingPlans: number;
+  readonly freshness: number | null;
 }
 
 export function useSidebarSignals(): SidebarSignals {
@@ -21,5 +22,6 @@ export function useSidebarSignals(): SidebarSignals {
     sensorCount: items.length,
     staleCount: stale,
     pendingPlans: plans.data?.total ?? 0,
+    freshness: items.length === 0 ? null : (items.length - stale) / items.length,
   };
 }

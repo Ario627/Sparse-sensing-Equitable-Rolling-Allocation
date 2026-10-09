@@ -365,3 +365,13 @@ export function IconSpan(props: IconProps) {
     </IconBase>
   );
 }
+
+export function IconKey(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <circle cx="8" cy="8" r="3.5" />
+      <path d="m10.6 10.6 8 8" />
+      <path d="m15.5 15.5 2-2" />
+    </IconBase>
+  );
+}

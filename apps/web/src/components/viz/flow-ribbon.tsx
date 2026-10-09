@@ -12,10 +12,10 @@ const BED_Y = 124;
 const MAX_DEPTH = 76;
 const DISTRIBUTOR_Y = 138;
 const STEM_SPREAD = 52;
-const NAME_Y = 206;
-const VALUE_Y = 220;
-const MIN_LABEL_PERCENT = 7.5;
-const MIN_STEM_PERCENT = 5;
+const NAME_Y = 208;
+const VALUE_Y = 222;
+const LABEL_LIMIT = 12;
+const NAME_LIMIT = 11;
 
 const toneStroke: Record<Tone, string> = {
   ok: palette.ok,
@@ -32,7 +32,7 @@ const zoneLabels: Record<LossZone, string> = {
   TAIL: "Hilir",
 };
 
-const zoneOrder: Record<LossZone, number> = { HEAD: 0, MIDDLE: 1, TAIL: 2 };
+const zoneRank: Record<LossZone, number> = { HEAD: 0, MIDDLE: 1, TAIL: 2 };
 
 export interface FlowRibbonBlock {
   readonly id: string;
@@ -58,19 +58,21 @@ interface Reach {
   readonly x0: number;
   readonly x1: number;
   readonly center: number;
-  readonly designDepth: number;
-  readonly waterDepth: number;
+  readonly designTop: number;
+  readonly waterTop: number;
   readonly ratio: number | null;
+  readonly zone: LossZone | null;
 }
 
 interface RibbonGeometry {
   readonly reaches: readonly Reach[];
   readonly designEdge: string;
+  readonly waterEdge: string;
   readonly waterPath: string;
   readonly shortfallPath: string;
   readonly flowLine: string;
   readonly efficiency: number;
-  readonly fuzzDepth: number;
+  readonly surfaceWidth: number;
 }
 
 function clamp01(value: number): number {
@@ -80,10 +82,7 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-function averages(blocks: readonly FlowRibbonBlock[]): {
-  readonly efficiency: number;
-  readonly weighted: boolean;
-} {
+function deliveredRatio(blocks: readonly FlowRibbonBlock[]): number {
   let weight = 0;
   let total = 0;
   for (const block of blocks) {
@@ -94,15 +93,35 @@ function averages(blocks: readonly FlowRibbonBlock[]): {
     weight += share;
     total += share * clamp01(block.serviceRatio);
   }
-  if (weight === 0) {
-    return { efficiency: 1, weighted: false };
+  return weight === 0 ? 0.72 : total / weight;
+}
+
+interface ZoneBand {
+  readonly zone: LossZone;
+  readonly from: number;
+  readonly to: number;
+}
+
+function zoneBandsOf(reaches: readonly Reach[]): readonly ZoneBand[] {
+  const bands: ZoneBand[] = [];
+  for (const reach of reaches) {
+    if (reach.zone === null) {
+      continue;
+    }
+    const last = bands.at(-1);
+    if (last !== undefined && last.zone === reach.zone) {
+      bands[bands.length - 1] = { zone: reach.zone, from: last.from, to: reach.x1 };
+      continue;
+    }
+    bands.push({ zone: reach.zone, from: reach.x0, to: reach.x1 });
   }
-  return { efficiency: total / weight, weighted: true };
+  return bands;
 }
 
 function buildGeometry(
   blocks: readonly FlowRibbonBlock[],
   confidence: number | null,
+  delivered: number,
 ): RibbonGeometry {
   const count = blocks.length;
   const span = VIEW_WIDTH - PAD_X * 2;
@@ -111,136 +130,82 @@ function buildGeometry(
     (sum, block) => sum + Math.max(0, block.nominalFlowLps),
     0,
   );
-  const { efficiency, weighted } = averages(blocks);
-  const delivered = weighted ? efficiency : 0.72;
-  const fuzz = clamp01(1 - (confidence ?? 0.5)) * 0.18 + 0.02;
-
-  const shares = blocks.map((block) => {
-    if (nominalTotal > 0) {
-      return Math.max(0, block.nominalFlowLps) / nominalTotal;
-    }
-    return count === 0 ? 0 : 1 / count;
-  });
 
   const reaches: Reach[] = [];
   let remaining = 1;
   for (let index = 0; index < count; index += 1) {
-    const share = shares[index] ?? 0;
+    const block = blocks[index];
+    const share =
+      nominalTotal > 0
+        ? Math.max(0, block?.nominalFlowLps ?? 0) / nominalTotal
+        : 1 / count;
     const designDepth = clamp01(remaining);
     remaining = clamp01(remaining - share);
     reaches.push({
       x0: PAD_X + step * index,
       x1: PAD_X + step * (index + 1),
       center: PAD_X + step * (index + 0.5),
-      designDepth,
-      waterDepth: clamp01(designDepth * delivered),
-      ratio: blocks[index]?.serviceRatio ?? null,
+      designTop: BED_Y - designDepth * MAX_DEPTH,
+      waterTop: BED_Y - designDepth * delivered * MAX_DEPTH,
+      ratio: block?.serviceRatio ?? null,
+      zone: block?.zone ?? null,
     });
   }
 
-  const designTop = reaches.map((reach) => BED_Y - reach.designDepth * MAX_DEPTH);
-  const waterTop = reaches.map((reach) => BED_Y - reach.waterDepth * MAX_DEPTH);
-
-  const designSegments: string[] = [`M ${PAD_X} ${BED_Y}`];
-  const waterSegments: string[] = [`M ${PAD_X} ${BED_Y}`];
-  reaches.forEach((reach, index) => {
-    const design = designTop[index] ?? BED_Y;
-    const water = waterTop[index] ?? BED_Y;
-    designSegments.push(`L ${reach.x0} ${design}`, `L ${reach.x1} ${design}`);
-    waterSegments.push(
-      `L ${reach.x0} ${design}`,
-      `L ${reach.x0} ${water}`,
-      `L ${reach.x1} ${water}`,
-    );
-  });
-  designSegments.push(`L ${VIEW_WIDTH - PAD_X} ${BED_Y}`);
-  waterSegments.push(`L ${VIEW_WIDTH - PAD_X} ${BED_Y}`, "Z");
-
-  const shortfallSegments: string[] = [];
-  reaches.forEach((reach, index) => {
-    const design = designTop[index] ?? BED_Y;
-    const water = waterTop[index] ?? BED_Y;
-    const previousDesign = index === 0 ? design : (designTop[index - 1] ?? design);
-    shortfallSegments.push(
-      `M ${reach.x0} ${previousDesign}`,
-      `L ${reach.x0} ${water}`,
-      `L ${reach.x1} ${water}`,
-      `L ${reach.x1} ${design}`,
-      "Z",
-    );
-  });
-
-  const flowSegments: string[] = [];
-  reaches.forEach((reach, index) => {
-    const water = waterTop[index] ?? BED_Y;
-    const mid = water + (BED_Y - water) * 0.55;
-    if (index === 0) {
-      flowSegments.push(`M ${reach.x0} ${mid}`);
+  const topEdge = (key: "designTop" | "waterTop"): string => {
+    if (reaches.length === 0) {
+      return "";
     }
-    flowSegments.push(`L ${reach.x1} ${mid}`);
+    const parts = [`M ${PAD_X} ${BED_Y}`];
+    for (const reach of reaches) {
+      parts.push(`L ${reach.x0} ${reach[key]}`, `L ${reach.x1} ${reach[key]}`);
+    }
+    return parts.join(" ");
+  };
+
+  const designEdge = topEdge("designTop");
+  const waterEdge = topEdge("waterTop");
+  const lastX = PAD_X + span;
+
+  const shortfallParts: string[] = [];
+  if (reaches.length > 0) {
+    shortfallParts.push(designEdge);
+    for (let index = reaches.length - 1; index >= 0; index -= 1) {
+      const reach = reaches[index];
+      if (reach === undefined) {
+        continue;
+      }
+      shortfallParts.push(
+        `L ${reach.x1} ${reach.waterTop}`,
+        `L ${reach.x0} ${reach.waterTop}`,
+      );
+    }
+    shortfallParts.push("Z");
+  }
+
+  const flowParts: string[] = [];
+  reaches.forEach((reach, index) => {
+    const mid = reach.waterTop + (BED_Y - reach.waterTop) * 0.58;
+    if (index === 0) {
+      flowParts.push(`M ${reach.x0} ${mid}`);
+    }
+    flowParts.push(`L ${reach.x1} ${mid}`);
   });
 
   return {
     reaches,
-    designEdge: designSegments.join(" "),
-    waterPath: waterSegments.join(" "),
-    shortfallPath: shortfallSegments.join(" "),
-    flowLine: flowSegments.join(" "),
+    designEdge,
+    waterEdge,
+    waterPath: reaches.length === 0 ? "" : `${waterEdge} L ${lastX} ${BED_Y} Z`,
+    shortfallPath: shortfallParts.join(" "),
+    flowLine: flowParts.join(" "),
     efficiency: delivered,
-    fuzzDepth: Math.max(2.5, fuzz * MAX_DEPTH),
+    surfaceWidth: Math.max(3, clamp01(1 - (confidence ?? 0.55)) * MAX_DEPTH * 0.5),
   };
 }
 
-function ZoneBands({ reaches, blocks }: {
-  readonly reaches: readonly Reach[];
-  readonly blocks: readonly FlowRibbonBlock[];
-}) {
-  const bands: { readonly zone: LossZone; readonly from: number; readonly to: number }[] =
-    [];
-  reaches.forEach((reach, index) => {
-    const zone = blocks[index]?.zone ?? null;
-    if (zone === null) {
-      return;
-    }
-    const current = bands.at(-1);
-    if (current !== undefined && current.zone === zone) {
-      return;
-    }
-    bands.push({ zone, from: reach.x0, to: reach.x1 });
-  });
-  reaches.forEach((reach, index) => {
-    const zone = blocks[index]?.zone ?? null;
-    if (zone === null) {
-      return;
-    }
-    const last = bands.at(-1);
-    if (last !== undefined && last.zone === zone) {
-      bands[bands.length - 1] = { zone, from: last.from, to: reach.x1 };
-    }
-  });
-  return (
-    <g>
-      {bands.map((band) => (
-        <g key={`${band.zone}-${band.from}`}>
-          <rect
-            x={band.from}
-            y={BED_Y + 4}
-            width={Math.max(0, band.to - band.from)}
-            height={3}
-            fill={rgba(palette.water, 0.18)}
-          />
-          <text
-            x={(band.from + band.to) / 2}
-            y={BED_Y + 20}
-            textAnchor="middle"
-            className="fill-ink-3 font-mono text-2xs"
-          >
-            {zoneLabels[band.zone]}
-          </text>
-        </g>
-      ))}
-    </g>
-  );
+function trimName(name: string): string {
+  return name.length > NAME_LIMIT ? `${name.slice(0, NAME_LIMIT - 1)}…` : name;
 }
 
 export function FlowRibbon({
@@ -253,17 +218,19 @@ export function FlowRibbon({
   const ordered = useMemo(
     () =>
       [...blocks].sort((a, b) => {
-        const left = a.zone === null ? 3 : zoneOrder[a.zone];
-        const right = b.zone === null ? 3 : zoneOrder[b.zone];
+        const left = a.zone === null ? 3 : zoneRank[a.zone];
+        const right = b.zone === null ? 3 : zoneRank[b.zone];
         return left - right;
       }),
     [blocks],
   );
+  const delivered = useMemo(() => deliveredRatio(ordered), [ordered]);
   const geometry = useMemo(
-    () => buildGeometry(ordered, confidence),
-    [ordered, confidence],
+    () => buildGeometry(ordered, confidence, delivered),
+    [ordered, confidence, delivered],
   );
-  const labelEvery = Math.max(1, Math.ceil(MIN_LABEL_PERCENT / 6));
+  const bands = useMemo(() => zoneBandsOf(geometry.reaches), [geometry.reaches]);
+  const labelStep = ordered.length > LABEL_LIMIT ? 2 : 1;
   const stemWidth = Math.min(18, Math.max(7, 420 / Math.max(1, ordered.length)));
 
   return (
@@ -276,8 +243,8 @@ export function FlowRibbon({
       >
         <defs>
           <linearGradient id="sera-flume" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={rgba(palette.water, 0.72)} />
-            <stop offset="100%" stopColor={rgba(palette.water, 0.96)} />
+            <stop offset="0%" stopColor={rgba(palette.water, 0.7)} />
+            <stop offset="100%" stopColor={rgba(palette.water, 0.95)} />
           </linearGradient>
           <pattern
             id="sera-shortfall"
@@ -286,13 +253,13 @@ export function FlowRibbon({
             patternUnits="userSpaceOnUse"
             patternTransform="rotate(115)"
           >
-            <rect width="7" height="7" fill={rgba(palette.ink3, 0.06)} />
+            <rect width="7" height="7" fill={rgba(palette.warn, 0.07)} />
             <line
               x1="0"
               y1="0"
               x2="0"
               y2="7"
-              stroke={rgba(palette.ink3, 0.34)}
+              stroke={rgba(palette.warn, 0.38)}
               strokeWidth="1"
             />
           </pattern>
@@ -301,9 +268,15 @@ export function FlowRibbon({
         <path d={geometry.shortfallPath} fill="url(#sera-shortfall)" />
         <path d={geometry.waterPath} fill="url(#sera-flume)" />
         <path
+          d={geometry.waterEdge}
+          fill="none"
+          stroke={rgba(palette.surface, 0.4)}
+          strokeWidth={geometry.surfaceWidth}
+        />
+        <path
           d={geometry.flowLine}
           fill="none"
-          stroke={rgba(palette.surface, 0.55)}
+          stroke={rgba(palette.surface, 0.5)}
           strokeWidth={1.5}
           strokeDasharray="5 11"
           className="motion-safe:animate-flow"
@@ -311,35 +284,45 @@ export function FlowRibbon({
         <path
           d={geometry.designEdge}
           fill="none"
-          stroke={rgba(palette.ink, 0.34)}
+          stroke={rgba(palette.ink, 0.3)}
           strokeWidth={1}
           strokeDasharray="4 4"
         />
-        <rect
-          x={PAD_X}
-          y={BED_Y - geometry.fuzzDepth}
-          width={VIEW_WIDTH - PAD_X * 2}
-          height={geometry.fuzzDepth}
-          fill={rgba(palette.water, 0.16)}
-        />
-
         <line
           x1={PAD_X - 12}
           y1={BED_Y}
           x2={VIEW_WIDTH - PAD_X + 12}
           y2={BED_Y}
-          stroke={rgba(palette.ink, 0.5)}
+          stroke={rgba(palette.ink, 0.45)}
           strokeWidth={1.25}
         />
 
-        <ZoneBands reaches={geometry.reaches} blocks={ordered} />
+        {bands.map((band) => (
+          <g key={`${band.zone}-${band.from}`}>
+            <rect
+              x={band.from}
+              y={BED_Y + 5}
+              width={Math.max(0, band.to - band.from)}
+              height={3}
+              fill={rgba(palette.water, 0.2)}
+            />
+            <text
+              x={(band.from + band.to) / 2}
+              y={BED_Y + 21}
+              textAnchor="middle"
+              className="fill-ink-3 font-mono text-2xs"
+            >
+              {zoneLabels[band.zone]}
+            </text>
+          </g>
+        ))}
 
         <line
           x1={PAD_X}
           y1={DISTRIBUTOR_Y}
           x2={VIEW_WIDTH - PAD_X}
           y2={DISTRIBUTOR_Y}
-          stroke={rgba(palette.ink, 0.18)}
+          stroke={rgba(palette.ink, 0.16)}
           strokeWidth={1}
         />
 
@@ -350,12 +333,19 @@ export function FlowRibbon({
           }
           const ratio = reach.ratio ?? geometry.efficiency;
           const length = clamp01(ratio) * STEM_SPREAD;
-          const showLabel =
-            index % labelEvery === 0 || ordered.length <= 12;
-          const shortName =
-            block.name.length > 11 ? `${block.name.slice(0, 10)}…` : block.name;
           return (
             <g key={block.id}>
+              <title>
+                {`${block.name} · ${block.bandLabel} · rasio ${formatCappedPercent(reach.ratio)} · rencana ${formatNumber(block.nominalFlowLps, 1)} L/s`}
+              </title>
+              <line
+                x1={reach.center}
+                y1={DISTRIBUTOR_Y}
+                x2={reach.center}
+                y2={DISTRIBUTOR_Y + STEM_SPREAD}
+                stroke={rgba(palette.ink, 0.1)}
+                strokeWidth={1}
+              />
               <line
                 x1={reach.center}
                 y1={DISTRIBUTOR_Y}
@@ -363,16 +353,6 @@ export function FlowRibbon({
                 y2={DISTRIBUTOR_Y + length}
                 stroke={toneStroke[block.tone]}
                 strokeWidth={stemWidth}
-                strokeLinecap="butt"
-                opacity={0.9}
-              />
-              <line
-                x1={reach.center}
-                y1={DISTRIBUTOR_Y}
-                x2={reach.center}
-                y2={DISTRIBUTOR_Y + STEM_SPREAD}
-                stroke={rgba(palette.ink, 0.12)}
-                strokeWidth={1}
               />
               <circle
                 cx={reach.center}
@@ -385,9 +365,9 @@ export function FlowRibbon({
               {block.gateOpen && (
                 <line
                   x1={reach.center - 4}
-                  y1={DISTRIBUTOR_Y - 3}
+                  y1={DISTRIBUTOR_Y - 4}
                   x2={reach.center + 4}
-                  y2={DISTRIBUTOR_Y - 3}
+                  y2={DISTRIBUTOR_Y - 4}
                   stroke={palette.water}
                   strokeWidth={2}
                 />
@@ -395,12 +375,12 @@ export function FlowRibbon({
               {block.staleCount > 0 && (
                 <circle
                   cx={reach.center}
-                  cy={DISTRIBUTOR_Y + STEM_SPREAD + 5}
+                  cy={DISTRIBUTOR_Y + STEM_SPREAD + 6}
                   r={2.2}
                   fill={palette.crit}
                 />
               )}
-              {showLabel && (
+              {index % labelStep === 0 && (
                 <>
                   <text
                     x={reach.center}
@@ -408,7 +388,7 @@ export function FlowRibbon({
                     textAnchor="middle"
                     className="fill-ink-2 text-2xs"
                   >
-                    {shortName}
+                    {trimName(block.name)}
                   </text>
                   <text
                     x={reach.center}
@@ -420,11 +400,6 @@ export function FlowRibbon({
                   </text>
                 </>
               )}
-              <title>
-                {`${block.name} · ${block.bandLabel} · rasio ${formatCappedPercent(
-                  reach.ratio,
-                )} · debit rencana ${formatNumber(block.nominalFlowLps, 1)} L/s`}
-              </title>
             </g>
           );
         })}
@@ -432,11 +407,7 @@ export function FlowRibbon({
         <text x={PAD_X} y={20} className="fill-ink-2 text-2xs">
           {sourceName ?? "Intake"}
         </text>
-        <text
-          x={PAD_X}
-          y={36}
-          className="fill-ink font-mono text-xs tabular"
-        >
+        <text x={PAD_X} y={38} className="fill-ink font-mono text-xs tabular">
           {flowLps === null ? "— L/s" : `${formatNumber(flowLps, 1)} L/s`}
         </text>
         <text
@@ -445,17 +416,15 @@ export function FlowRibbon({
           textAnchor="end"
           className="fill-ink-2 text-2xs"
         >
-          Sisa ke hilir
+          Belum tersalur
         </text>
         <text
           x={VIEW_WIDTH - PAD_X}
-          y={36}
+          y={38}
           textAnchor="end"
           className="fill-ink font-mono text-xs tabular"
         >
-          {formatCappedPercent(
-            geometry.reaches.at(-1)?.ratio ?? geometry.efficiency,
-          )}
+          {formatCappedPercent(Math.max(0, 1 - geometry.efficiency))}
         </text>
       </svg>
     </div>

@@ -1,5 +1,7 @@
 import {
+  cloneElement,
   type MouseEvent,
+  type ReactElement,
   type ReactNode,
   useEffect,
   useId,
@@ -19,14 +21,20 @@ function lockPageScroll(): () => void {
   };
 }
 
+interface TriggerProps {
+  readonly onClick?: () => void;
+  readonly "aria-haspopup"?: string;
+}
+
 export interface InfoDialogProps {
-  readonly label: string;
+  readonly label?: string;
   readonly title: string;
   readonly children: ReactNode;
   readonly eyebrow?: string;
   readonly variant?: ButtonVariant;
   readonly size?: ButtonSize;
   readonly triggerClassName?: string;
+  readonly trigger?: ReactElement<TriggerProps>;
   readonly className?: string;
 }
 
@@ -38,6 +46,7 @@ export function InfoDialog({
   variant = "ghost",
   size = "sm",
   triggerClassName,
+  trigger,
   className,
 }: InfoDialogProps) {
   const [open, setOpen] = useState(false);
@@ -62,35 +71,38 @@ export function InfoDialog({
     setOpen(false);
   }
 
-  function handleBackdropClick(event: MouseEvent<HTMLDialogElement>): void {
-    if (event.target !== event.currentTarget) {
-      return;
-    }
+  function openDialog(): void {
+    setOpen(true);
+  }
+
+  function handleCancel(event: MouseEvent<HTMLDialogElement>): void {
+    event.preventDefault();
     close();
   }
 
-  return (
-    <>
+  const triggerNode =
+    trigger === undefined ? (
       <Button
         variant={variant}
         size={size}
-        className={triggerClassName}
         aria-haspopup="dialog"
-        onClick={() => {
-          setOpen(true);
-        }}
+        onClick={openDialog}
+        {...(triggerClassName === undefined ? {} : { className: triggerClassName })}
       >
         <IconInfo size={14} />
-        {label}
+        {label ?? "Selengkapnya"}
       </Button>
+    ) : (
+      cloneElement(trigger, { onClick: openDialog, "aria-haspopup": "dialog" })
+    );
+
+  return (
+    <>
+      {triggerNode}
       <dialog
         ref={dialogRef}
         aria-labelledby={titleId}
-        onCancel={(event) => {
-          event.preventDefault();
-          close();
-        }}
-        onClick={handleBackdropClick}
+        onCancel={handleCancel}
         onClose={close}
         className={cn(
           "w-[min(34rem,calc(100vw-2rem))] max-h-[min(85dvh,44rem)] overflow-y-auto",

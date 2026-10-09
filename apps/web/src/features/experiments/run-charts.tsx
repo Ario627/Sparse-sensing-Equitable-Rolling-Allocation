@@ -52,9 +52,7 @@ function markerHtml(color: string): string {
   return `<span style="display:inline-block;width:8px;height:8px;background:${color};border-radius:2px;margin-right:6px"></span>`;
 }
 
-function lineTooltip(
-  descriptor: MetricDescriptor,
-): (params: unknown) => string {
+function lineTooltip(descriptor: MetricDescriptor): (params: unknown) => string {
   return (params) => {
     const entry = Array.isArray(params) ? params.at(0) : params;
     if (typeof entry !== "object" || entry === null) {
@@ -225,9 +223,7 @@ function buildBarOption(
           position: "top",
           formatter: (params: unknown) => {
             const value = (params as { value?: unknown }).value;
-            return typeof value === "number"
-              ? formatMetricValue(descriptor, value)
-              : "";
+            return typeof value === "number" ? formatMetricValue(descriptor, value) : "";
           },
           color: chartColors.ink2,
           fontFamily: chartFonts.mono,

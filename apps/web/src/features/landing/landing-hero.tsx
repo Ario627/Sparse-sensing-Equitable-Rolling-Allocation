@@ -12,21 +12,20 @@ const PaddyScene = lazy(() =>
   })),
 );
 
-const EYEBROW = "Air bergerak. Keputusan tetap pada manusia.";
+const EYEBROW = "Sparse-sensing Equitable Rolling Allocation";
 const TITLE = "Baca aliran. Jaga giliran.";
 const DESCRIPTION =
-  "Kondisi blok yang tak tersensor dan usulan alokasi — ditinjau operator sebelum perintah ke pintu dikirim.";
+  "Estimasi jaringan, memori layanan blok, dan optimasi bergulir — ditinjau operator sebelum perintah pintu dikirim.";
 
-const SCENE_CAPTION = "Model 3D contoh — bukan data lapangan.";
-const MAP_CAPTION = "Peta contoh — klik zona untuk menyorot. Bukan data lapangan.";
+const SCENE_CAPTION = "Model contoh, bukan data lapangan.";
+const MAP_CAPTION = "Peta contoh. Klik zona untuk menyorot.";
 
 type ViewMode = "peta" | "3d";
 
 const HERO_STATS = [
-  { label: "Jangkauan studi", value: "6–20 blok" },
-  { label: "Sensor dalam skenario", value: "1–5 titik" },
-  { label: "Profil alokasi", value: "3 pilihan" },
-  { label: "Bukti saat ini", value: "Simulasi · HIL" },
+  { label: "Blok", value: "6–20" },
+  { label: "Sensor", value: "1–5 titik" },
+  { label: "Profil alokasi", value: "3" },
 ] as const;
 
 function SceneFallback() {
@@ -168,13 +167,13 @@ export function LandingHero({ authed }: LandingHeroProps) {
   return (
     <section className="relative isolate overflow-hidden border-b border-line bg-[#e9f2f4]">
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-grid" />
-      <div className="mx-auto grid max-w-shell gap-7 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[minmax(18rem,0.76fr)_minmax(0,1.24fr)] lg:items-center lg:gap-10 lg:px-10 lg:py-12">
+      <div className="mx-auto grid max-w-shell gap-7 px-4 py-9 sm:px-6 sm:py-11 lg:grid-cols-[minmax(17rem,0.7fr)_minmax(0,1.3fr)] lg:items-center lg:gap-12 lg:px-10 lg:py-14">
         <div className="relative z-10">
           <p className="label-caps animate-rise text-water-deep">{EYEBROW}</p>
-          <h1 className="mt-4 max-w-[16ch] animate-rise text-4xl leading-[1.05] font-semibold tracking-tight text-ink [animation-delay:60ms] sm:text-5xl lg:text-6xl">
+          <h1 className="mt-4 max-w-[14ch] animate-rise text-4xl leading-[1.02] font-semibold tracking-tight text-ink [animation-delay:60ms] sm:text-5xl lg:text-6xl">
             {TITLE}
           </h1>
-          <p className="mt-5 max-w-136 animate-rise text-base leading-relaxed text-ink-2 [animation-delay:120ms] sm:text-lg">
+          <p className="mt-5 max-w-120 animate-rise text-base leading-relaxed text-ink-2 [animation-delay:120ms]">
             {DESCRIPTION}
           </p>
           <div className="mt-7 flex animate-rise flex-wrap items-center gap-3 [animation-delay:180ms]">
@@ -182,10 +181,10 @@ export function LandingHero({ authed }: LandingHeroProps) {
               {authed ? "Lihat kondisi jaringan" : "Masuk ke SERA"}
             </LinkButton>
             <a href="#cara-kerja" className={linkButtonClass("outline", "md")}>
-              Cara keputusan disusun
+              Cara kerja
             </a>
           </div>
-          <dl className="mt-9 grid animate-rise grid-cols-2 gap-x-4 gap-y-4 border-t border-line-2/70 pt-5 [animation-delay:240ms] sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+          <dl className="mt-9 grid animate-rise grid-cols-3 gap-x-4 border-t border-line-2/70 pt-4 [animation-delay:240ms]">
             {HERO_STATS.map((stat) => (
               <div key={stat.label} className="flex min-w-0 flex-col gap-1">
                 <dt className="label-caps text-ink-3">{stat.label}</dt>
@@ -201,11 +200,10 @@ export function LandingHero({ authed }: LandingHeroProps) {
             <RegistrationMarks />
             <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-2">
               <span className="font-mono text-2xs tracking-[0.08em] text-ink-3 uppercase">
-                {mode === "peta" ? "Peta jaringan · contoh" : "Model 3D · contoh"}
+                {mode === "peta" ? "Peta jaringan" : "Model 3D"}
               </span>
               <ModeToggle value={mode} onChange={setMode} />
             </div>
-            <div aria-hidden="true" className="h-2.5 border-b border-line bg-ruler" />
             <div
               role="img"
               aria-label={
@@ -237,13 +235,10 @@ export function LandingHero({ authed }: LandingHeroProps) {
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-t border-line px-2.5 py-2">
               <ViewpointChips value={viewpoint} onChange={setViewpoint} />
               <span className="font-mono text-2xs text-ink-3">
-                {VIEWPOINTS[viewpoint].label}
+                {mode === "peta" ? MAP_CAPTION : SCENE_CAPTION}
               </span>
             </div>
           </div>
-          <p className="mt-2 text-xs leading-relaxed text-ink-3">
-            {mode === "peta" ? MAP_CAPTION : SCENE_CAPTION}
-          </p>
         </div>
       </div>
     </section>

@@ -10,11 +10,13 @@ import type {
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Button } from "@/components/kit/button.tsx";
+import { CapabilityNotice, useCapability } from "@/components/kit/capability-notice.tsx";
 import { DataTable, type SeraColumnDef } from "@/components/kit/data-table.tsx";
 import { EmptyState } from "@/components/kit/empty-state.tsx";
 import { ErrorState } from "@/components/kit/error-state.tsx";
 import { FallbackBanner } from "@/components/kit/fallback-banner.tsx";
 import { inputClass } from "@/components/kit/field.tsx";
+import { InfoDialog } from "@/components/kit/info-dialog.tsx";
 import { PageHeader } from "@/components/kit/page-header.tsx";
 import { Skeleton } from "@/components/kit/skeleton.tsx";
 import { StatusPill, type Tone } from "@/components/kit/status-pill.tsx";
@@ -30,15 +32,13 @@ import {
   isActionableStatus,
   pickActionablePlan,
 } from "@/features/scheduling/plan-selection.ts";
+import {
+  type PlanWindowSummary,
+  summarizePlanWindow,
+} from "@/features/scheduling/plan-summary.ts";
 import { PlanTimeline } from "@/features/scheduling/plan-timeline.tsx";
 import { ProposePlanButton } from "@/features/scheduling/propose-plan-button.tsx";
-import {
-  summarizePlanWindow,
-  type PlanWindowSummary,
-} from "@/features/scheduling/plan-summary.ts";
 import type { PlanActionName } from "@/features/scheduling/use-plan-actions.ts";
-import { useSessionStore } from "@/lib/auth/session-store.ts";
-import { decisionRoles, hasAnyRole } from "@/lib/auth/roles.ts";
 import { cn } from "@/lib/cn.ts";
 import {
   formatClockRange,
@@ -307,8 +307,7 @@ export function SchedulePage() {
     plan !== null && (plan.status === "APPROVED" || plan.status === "EXECUTED");
   const commandsQuery = usePlanCommands(activePlanId ?? "", commandsEnabled);
   const windowSummary = plan === null ? null : summarizePlanWindow(plan.items);
-  const role = useSessionStore((snapshot) => snapshot.user?.role ?? null);
-  const canDecide = hasAnyRole(role, decisionRoles);
+  const canDecide = useCapability("plan.decide");
   const rawActions = plan === null ? [] : actionsForStatus(plan.status);
   const planActions = canDecide ? rawActions : [];
 
@@ -479,16 +478,30 @@ export function SchedulePage() {
               <ApprovalActions plan={plan} show={planActions} />
             </div>
             {planActions.length > 0 && (
-              <p className="text-2xs leading-relaxed text-ink-3">
-                Jadwal dihitung solver. Gunakan Ubah manual untuk menyesuaikan
-                pintu per slot — semua perubahan tercatat di jejak audit.
-              </p>
+              <InfoDialog
+                label="Aturan perubahan"
+                eyebrow="Kewenangan operator"
+                title="Menyesuaikan jadwal"
+                triggerClassName="w-fit border border-line-2 bg-surface"
+              >
+                <div className="flex flex-col gap-3">
+                  <p>
+                    Jadwal dihitung solver dari kondisi jaringan, lalu operator yang
+                    memutuskan. Persetujuan, penolakan, eksekusi, dan ubah manual hanya
+                    dapat dilakukan sekali pada satu plan.
+                  </p>
+                  <p>
+                    Ubah manual menimpa pintu per slot secara langsung. Setiap perubahan
+                    tercatat di jejak audit beserta alasan yang diisi operator.
+                  </p>
+                  <p>
+                    Perintah pintu baru dikirim setelah plan disetujui dan dieksekusi.
+                  </p>
+                </div>
+              </InfoDialog>
             )}
             {!canDecide && rawActions.length > 0 && (
-              <p className="text-2xs leading-relaxed text-ink-3">
-                Persetujuan, eksekusi, dan ubah manual hanya tersedia untuk operator
-                P3A. Plan tetap dapat ditinjau dari halaman ini.
-              </p>
+              <CapabilityNotice capability="plan.decide" className="w-fit" />
             )}
             <dl className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-6 gap-y-3 rounded-md border border-line bg-paper/70 p-3 sm:grid-cols-[repeat(4,minmax(0,1fr))]">
               <Fact label="Slot">{formatNumber(windowSummary?.slotCount ?? 0)}</Fact>
@@ -509,8 +522,8 @@ export function SchedulePage() {
               {plan.solver_time_ms === null
                 ? "—"
                 : formatUnit(plan.solver_time_ms, "ms", 0)}{" "}
-              · MIP gap {plan.mip_gap === null ? "—" : formatPercent(plan.mip_gap, 1)}{" "}
-              · dibuat {formatDateTime(plan.created_at)}
+              · MIP gap {plan.mip_gap === null ? "—" : formatPercent(plan.mip_gap, 1)} ·
+              dibuat {formatDateTime(plan.created_at)}
             </p>
           </section>
           <PlanTimeline items={plan.items} now={now} />

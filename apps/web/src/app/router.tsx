@@ -15,6 +15,7 @@ import { HistoryPage } from "@/routes/operations/history.tsx";
 import { NetworkPage } from "@/routes/operations/network.tsx";
 import { OverviewPage } from "@/routes/operations/overview.tsx";
 import { SchedulePage } from "@/routes/operations/schedule.tsx";
+import { AccessPage } from "@/routes/system/access.tsx";
 import { HardwarePage } from "@/routes/system/hardware.tsx";
 import { SettingsPage } from "@/routes/system/settings.tsx";
 
@@ -137,6 +138,12 @@ const hardwareRoute = createRoute({
   component: HardwarePage,
 });
 
+const accessRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/system/access",
+  component: AccessPage,
+});
+
 const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/system/settings",
@@ -157,6 +164,7 @@ const routeTree = rootRoute.addChildren([
     sensorBudgetRoute,
     resultsRoute,
     hardwareRoute,
+    accessRoute,
     settingsRoute,
   ]),
 ]);

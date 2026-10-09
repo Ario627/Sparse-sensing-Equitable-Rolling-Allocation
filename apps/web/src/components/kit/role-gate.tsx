@@ -2,12 +2,7 @@ import type { UserRole } from "@sera/contracts";
 import type { ReactNode } from "react";
 import { IconLock } from "@/components/icons.tsx";
 import { InfoDialog } from "@/components/kit/info-dialog.tsx";
-import {
-  capabilityLines,
-  hasAnyRole,
-  roleLabel,
-  roleProfile,
-} from "@/lib/auth/roles.ts";
+import { capabilityLines, hasAnyRole, roleLabel, roleProfile } from "@/lib/auth/roles.ts";
 import { useRole } from "@/lib/auth/session-store.ts";
 
 export interface RoleGateProps {

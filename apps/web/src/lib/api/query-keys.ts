@@ -26,6 +26,10 @@ export const queryKeys = {
     readings: (query: TelemetryReadingsQuery) =>
       [...root, "telemetry", "readings", query] as const,
   },
+  estimates: {
+    latest: (networkId: string | null) =>
+      [...root, "estimates", "latest", networkId] as const,
+  },
   plans: {
     list: (query: ListPlansQuery) => [...root, "plans", "list", query] as const,
     detail: (planId: string) => [...root, "plans", "detail", planId] as const,

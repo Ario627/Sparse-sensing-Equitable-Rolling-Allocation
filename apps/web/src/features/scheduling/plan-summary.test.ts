@@ -39,9 +39,7 @@ describe("summarizePlanWindow", () => {
   });
 
   it("mengembalikan null volume bila semua item tanpa volume", () => {
-    const summary = summarizePlanWindow([
-      makeItem({ volume_gross_m3: null }),
-    ]);
+    const summary = summarizePlanWindow([makeItem({ volume_gross_m3: null })]);
     expect(summary.volumeGrossM3).toBeNull();
   });
 

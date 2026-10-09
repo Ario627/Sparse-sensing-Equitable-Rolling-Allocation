@@ -1,4 +1,7 @@
 import {
+  Background,
+  BackgroundVariant,
+  Controls,
   type Edge,
   Handle,
   MarkerType,
@@ -13,12 +16,13 @@ import { useMemo } from "react";
 import type { Tone } from "@/components/kit/status-pill.tsx";
 import { cn } from "@/lib/cn.ts";
 import { formatCappedPercent, formatNumber } from "@/lib/format.ts";
-import { palette } from "@/lib/palette.ts";
+import { palette, rgba } from "@/lib/palette.ts";
 import type { NetworkFlowModel, NetworkNodeData } from "./selectors.ts";
 
-const DEFAULT_HEIGHT = 420;
-const CARD_WIDTH = 152;
+const DEFAULT_HEIGHT = 640;
+const CARD_WIDTH = 204;
 const BAR_MAX_PERCENT = 100;
+const FIT_PADDING = 0.1;
 
 const toneBorderClasses: Record<Tone, string> = {
   ok: "border-ok/45",
@@ -38,10 +42,13 @@ const toneFillClasses: Record<Tone, string> = {
   neutral: "bg-ink-3",
 };
 
-const kindSurfaceClasses: Record<string, string> = {
-  source: "bg-water-soft",
-  junction: "bg-surface",
-  gate: "bg-surface",
+const toneRailClasses: Record<Tone, string> = {
+  ok: "bg-ok/70",
+  warn: "bg-warn/70",
+  crit: "bg-crit/70",
+  fallback: "bg-fallback/70",
+  info: "bg-info/70",
+  neutral: "bg-line-2",
 };
 
 function ratioBarWidth(ratio: number | null): string {
@@ -55,46 +62,67 @@ function selectionClasses(selected: boolean): string {
   return selected ? "outline outline-2 outline-water/45" : "";
 }
 
+function zoneTag(role: string): string {
+  const parts = role.split("·");
+  return parts.length > 1 ? (parts[1]?.trim() ?? "") : "";
+}
+
 function BlockNode({ data, selected }: NodeProps) {
   const node = data as NetworkNodeData;
   const block = node.block;
   if (block === null) {
     return null;
   }
+  const stale = block.sensors.staleCount;
   return (
     <div
       title={`${block.name} · ${block.band.label}`}
       className={cn(
-        "rounded-sm border bg-surface px-2.5 py-2 shadow-hair transition-colors",
+        "relative rounded-md border bg-surface shadow-hair transition-colors",
         toneBorderClasses[block.band.tone],
         selectionClasses(selected),
       )}
       style={{ width: CARD_WIDTH }}
     >
       <Handle type="target" position={Position.Top} className="!bg-line-2" />
-      <p className="truncate text-xs font-medium text-ink">{block.name}</p>
-      <p className="mt-1 flex items-baseline gap-1">
-        <span className="font-mono text-lg leading-none font-medium text-ink tabular">
-          {formatCappedPercent(block.serviceRatio)}
-        </span>
-        <span className="label-caps text-ink-3">{block.band.label}</span>
-      </p>
-      <div className="mt-1.5 h-1 overflow-hidden rounded-xs bg-sunk">
-        <div
-          className={cn("h-full", toneFillClasses[block.band.tone])}
-          style={{ width: ratioBarWidth(block.serviceRatio) }}
-        />
-      </div>
-      <p className="mt-1.5 flex items-center justify-between text-2xs text-ink-3">
-        <span className="tabular">{formatNumber(block.areaM2 / 10_000, 1)} ha</span>
-        {block.sensors.sensorCount > 0 && (
-          <span className={cn(block.sensors.staleCount > 0 && "text-crit")}>
-            {block.sensors.staleCount > 0
-              ? `${block.sensors.staleCount} basi`
-              : `${block.sensors.sensorCount} sensor`}
-          </span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute inset-y-0 left-0 w-1 rounded-l-md",
+          toneRailClasses[block.band.tone],
         )}
-      </p>
+      />
+      <div className="flex flex-col gap-2 py-3 pr-3 pl-4">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="truncate text-sm font-medium text-ink">{block.name}</p>
+          <span className="shrink-0 font-mono text-2xs text-ink-3">
+            {zoneTag(node.role)}
+          </span>
+        </div>
+        <p className="flex items-baseline gap-2">
+          <span className="font-display text-2xl leading-none font-semibold text-ink tabular">
+            {formatCappedPercent(block.serviceRatio)}
+          </span>
+          <span className="label-caps text-ink-3">{block.band.label}</span>
+        </p>
+        <div className="flume-bed h-1.5 overflow-hidden rounded-xs bg-sunk">
+          <div
+            className={cn("h-full", toneFillClasses[block.band.tone])}
+            style={{ width: ratioBarWidth(block.serviceRatio) }}
+          />
+        </div>
+        <p className="flex items-center justify-between font-mono text-2xs text-ink-3">
+          <span className="tabular">{formatNumber(block.areaM2 / 10_000, 1)} ha</span>
+          <span className="tabular">{formatNumber(block.nominalFlowLps, 1)} L/s</span>
+          <span className={cn("tabular", stale > 0 && "text-crit")}>
+            {block.sensors.sensorCount === 0
+              ? "tanpa sensor"
+              : stale > 0
+                ? `${formatNumber(stale)} basi`
+                : `${formatNumber(block.sensors.sensorCount)} sensor`}
+          </span>
+        </p>
+      </div>
     </div>
   );
 }
@@ -104,13 +132,13 @@ function SourceNode({ data, selected }: NodeProps) {
   return (
     <div
       className={cn(
-        "rounded-sm border border-water/45 bg-water-soft px-2.5 py-1.5 shadow-hair",
+        "w-44 rounded-md border border-water/45 bg-water-soft px-3.5 py-2.5 shadow-hair",
         selectionClasses(selected),
       )}
     >
-      <Handle type="source" position={Position.Bottom} className="!bg-line-2" />
-      <p className="label-caps text-water-deep">{node.role}</p>
-      <p className="max-w-32 truncate text-xs text-ink">{node.name}</p>
+      <Handle type="source" position={Position.Bottom} className="!bg-water/60" />
+      <p className="label-caps text-water-deep">Intake</p>
+      <p className="mt-1 truncate text-sm font-medium text-ink">{node.name}</p>
     </div>
   );
 }
@@ -120,15 +148,14 @@ function PassthroughNode({ data, selected }: NodeProps) {
   return (
     <div
       className={cn(
-        "rounded-xs border border-line-2 px-2 py-1 shadow-hair",
-        kindSurfaceClasses.junction,
+        "w-36 rounded-sm border border-line-2 bg-surface px-3 py-2 shadow-hair",
         selectionClasses(selected),
       )}
     >
       <Handle type="target" position={Position.Top} className="!bg-line-2" />
       <Handle type="source" position={Position.Bottom} className="!bg-line-2" />
       <p className="label-caps text-ink-3">{node.role}</p>
-      <p className="max-w-28 truncate text-xs text-ink">{node.name}</p>
+      <p className="mt-1 truncate text-xs text-ink">{node.name}</p>
     </div>
   );
 }
@@ -152,24 +179,37 @@ function toFlowNodes(flow: NetworkFlowModel): Node<NetworkNodeData>[] {
 }
 
 function toFlowEdges(flow: NetworkFlowModel): Edge[] {
-  return flow.edges.map((edge) => ({
-    id: edge.id,
-    source: edge.from,
-    target: edge.to,
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      width: 14,
-      height: 14,
-      color: palette.line2,
-    },
-    style: { stroke: palette.line2, strokeWidth: 1.5 },
-  }));
+  const gateByNodeId = new Map<string, boolean>();
+  for (const node of flow.nodes) {
+    gateByNodeId.set(node.id, node.data.block?.slot?.gateOpen ?? false);
+  }
+  return flow.edges.map((edge) => {
+    const open = gateByNodeId.get(edge.to) ?? false;
+    const stroke = open ? palette.water : palette.line2;
+    return {
+      id: edge.id,
+      source: edge.from,
+      target: edge.to,
+      type: "smoothstep",
+      pathOptions: { borderRadius: 14 },
+      animated: open,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 14,
+        height: 14,
+        color: stroke,
+      },
+      style: open
+        ? { stroke, strokeWidth: 2 }
+        : { stroke, strokeWidth: 1.5, opacity: 0.85 },
+    };
+  });
 }
 
 export interface NetworkCanvasProps {
   readonly flow: NetworkFlowModel;
   readonly onBlockSelect?: (blockId: string) => void;
-  readonly height?: number;
+  readonly height?: number | string;
   readonly className?: string;
 }
 
@@ -198,7 +238,7 @@ export function NetworkCanvas({
       aria-label="Kanvas jaringan"
       style={{ height }}
       className={cn(
-        "overflow-hidden rounded-md border border-line bg-surface",
+        "relative overflow-hidden rounded-xl border border-line bg-surface",
         className,
       )}
     >
@@ -207,14 +247,25 @@ export function NetworkCanvas({
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.22, minZoom: 0.35, maxZoom: 1 }}
-        minZoom={0.3}
-        maxZoom={1.5}
+        fitViewOptions={{ padding: FIT_PADDING, minZoom: 0.45, maxZoom: 1.1 }}
+        minZoom={0.25}
+        maxZoom={1.6}
         nodesDraggable={false}
         nodesConnectable={false}
         preventScrolling={false}
         onNodeClick={handleNodeClick}
-      />
+      >
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={26}
+          size={1}
+          color={rgba(palette.line2, 0.55)}
+        />
+        <Controls
+          showInteractive={false}
+          className="!bottom-4 !left-4 !rounded-md !border !border-line !shadow-hair"
+        />
+      </ReactFlow>
     </div>
   );
 }

@@ -53,3 +53,57 @@ export function downloadCsv(
   const payload = `${BOM}${toCsv(rows, delimiter)}`;
   downloadBlob(filename, new Blob([payload], { type: "text/csv;charset=utf-8" }));
 }
+
+const CR = "\r";
+
+export function parseCsv(
+  text: string,
+  delimiter: string = DEFAULT_DELIMITER,
+): readonly (readonly string[])[] {
+  const source = text.startsWith(BOM) ? text.slice(1) : text;
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (quoted) {
+      if (char === QUOTE) {
+        if (source[index + 1] === QUOTE) {
+          field += QUOTE;
+          index += 1;
+          continue;
+        }
+        quoted = false;
+        continue;
+      }
+      field += char;
+      continue;
+    }
+    if (char === QUOTE) {
+      quoted = true;
+      continue;
+    }
+    if (char === delimiter) {
+      row.push(field);
+      field = "";
+      continue;
+    }
+    if (char === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+      continue;
+    }
+    if (char === CR) {
+      continue;
+    }
+    field += char;
+  }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
+}

@@ -114,7 +114,10 @@ export function devicesFromLatest(
     const accumulator = byDevice.get(item.device_id) ?? newAccumulator();
     accumulator.sensorCount += 1;
     accumulator.staleCount += item.stale ? 1 : 0;
-    accumulator.worstQuality = worseQuality(accumulator.worstQuality, item.quality);
+    accumulator.worstQuality = worseQuality(
+      accumulator.worstQuality,
+      item.stale ? "STALE" : item.quality,
+    );
     if (item.ts !== null && isFresher(item.ts, accumulator.lastSeenIso)) {
       accumulator.lastSeenIso = item.ts;
     }

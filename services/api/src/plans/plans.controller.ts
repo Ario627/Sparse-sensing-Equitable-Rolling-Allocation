@@ -48,6 +48,7 @@ import type {
 } from './plans.command-log.types.ts';
 
 const OPERATOR_ROLE = 'OPERATOR' as const;
+const EXPORT_ROLES = ['OPERATOR', 'RESEARCHER'] as const;
 const PROPOSE_RATE_LIMIT = { default: { limit: 10, ttl: 60_000 } };
 const DECIDE_RATE_LIMIT = { default: { limit: 30, ttl: 60_000 } };
 const EXECUTE_RATE_LIMIT = { default: { limit: 20, ttl: 60_000 } };
@@ -230,7 +231,7 @@ export class PlansController {
     };
   }
 
-  @Roles(OPERATOR_ROLE)
+  @Roles(...EXPORT_ROLES)
   @Get('export')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header(

@@ -1,11 +1,6 @@
 import type { ExperimentRunResponse } from "@sera/contracts";
 import { describe, expect, it } from "vitest";
-import {
-  buildRunSeries,
-  hasMetric,
-  methodLabel,
-  methodsInOrder,
-} from "./run-series.ts";
+import { buildRunSeries, hasMetric, methodLabel, methodsInOrder } from "./run-series.ts";
 
 function makeRun(
   overrides: Partial<ExperimentRunResponse> & {
@@ -30,9 +25,21 @@ function makeRun(
 }
 
 const runs: readonly ExperimentRunResponse[] = [
-  makeRun({ run_index: 2, method: "sera", metrics: { decision_regret: 0.12, worst_sr: 0.7 } }),
-  makeRun({ run_index: 0, method: "sera", metrics: { decision_regret: 0.2, worst_sr: 0.6 } }),
-  makeRun({ run_index: 1, method: "oracle", metrics: { decision_regret: null, worst_sr: 0.9 } }),
+  makeRun({
+    run_index: 2,
+    method: "sera",
+    metrics: { decision_regret: 0.12, worst_sr: 0.7 },
+  }),
+  makeRun({
+    run_index: 0,
+    method: "sera",
+    metrics: { decision_regret: 0.2, worst_sr: 0.6 },
+  }),
+  makeRun({
+    run_index: 1,
+    method: "oracle",
+    metrics: { decision_regret: null, worst_sr: 0.9 },
+  }),
   makeRun({ run_index: 3, method: "proportional", metrics: { decision_regret: 0.5 } }),
   makeRun({ run_index: 4, method: "custom_x", metrics: { decision_regret: 0.4 } }),
 ];
@@ -47,12 +54,7 @@ describe("methodLabel", () => {
 
 describe("methodsInOrder", () => {
   it("menempatkan metode kanonik lebih dulu lalu sisanya alfabetis", () => {
-    expect(methodsInOrder(runs)).toEqual([
-      "sera",
-      "proportional",
-      "oracle",
-      "custom_x",
-    ]);
+    expect(methodsInOrder(runs)).toEqual(["sera", "proportional", "oracle", "custom_x"]);
   });
 });
 

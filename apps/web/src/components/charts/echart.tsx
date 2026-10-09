@@ -3,6 +3,8 @@ import {
   DataZoomInsideComponent,
   GridComponent,
   LegendComponent,
+  MarkAreaComponent,
+  MarkLineComponent,
   ToolboxComponent,
   TooltipComponent,
 } from "echarts/components";
@@ -18,6 +20,8 @@ use([
   DataZoomInsideComponent,
   GridComponent,
   LegendComponent,
+  MarkAreaComponent,
+  MarkLineComponent,
   ToolboxComponent,
   TooltipComponent,
   CanvasRenderer,

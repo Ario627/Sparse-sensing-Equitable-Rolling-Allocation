@@ -10,8 +10,8 @@ import {
   TIER_CENTER,
   TIER_ORDER,
   TIER_RANGE,
-  TREES,
   type TierId,
+  TREES,
   type ViewpointId,
 } from "./paddy-layout.ts";
 
@@ -57,11 +57,7 @@ export interface PaddyMapProps {
   readonly className?: string;
 }
 
-export function PaddyMap({
-  viewpoint,
-  onViewpointChange,
-  className,
-}: PaddyMapProps) {
+export function PaddyMap({ viewpoint, onViewpointChange, className }: PaddyMapProps) {
   const active = (tier: TierId): boolean => viewpoint === tier;
   return (
     <svg
@@ -77,12 +73,7 @@ export function PaddyMap({
           height="0.34"
           patternUnits="userSpaceOnUse"
         >
-          <path
-            d="M0 0.17 H0.34"
-            stroke="#6f8f60"
-            strokeWidth="0.035"
-            opacity="0.28"
-          />
+          <path d="M0 0.17 H0.34" stroke="#6f8f60" strokeWidth="0.035" opacity="0.28" />
         </pattern>
       </defs>
       <rect
@@ -230,8 +221,22 @@ export function PaddyMap({
             rx={0.04}
             fill={GATE_FILL}
           />
-          <rect x={-0.5} y={gate.z - 0.11} width={0.09} height={0.22} rx={0.02} fill={GATE_FILL} />
-          <rect x={0.41} y={gate.z - 0.11} width={0.09} height={0.22} rx={0.02} fill={GATE_FILL} />
+          <rect
+            x={-0.5}
+            y={gate.z - 0.11}
+            width={0.09}
+            height={0.22}
+            rx={0.02}
+            fill={GATE_FILL}
+          />
+          <rect
+            x={0.41}
+            y={gate.z - 0.11}
+            width={0.09}
+            height={0.22}
+            rx={0.02}
+            fill={GATE_FILL}
+          />
         </g>
       ))}
       <g
@@ -259,7 +264,14 @@ export function PaddyMap({
           strokeWidth="0.06"
         />
         <circle cx={SOURCE.x} cy={SOURCE.z} r={0.42} fill="#9fd0d4" />
-        <rect x={0.85} y={SOURCE.z - 0.16} width={0.32} height={0.32} rx={0.05} fill={GATE_FILL} />
+        <rect
+          x={0.85}
+          y={SOURCE.z - 0.16}
+          width={0.32}
+          height={0.32}
+          rx={0.05}
+          fill={GATE_FILL}
+        />
       </g>
       <text
         x={1.55}
@@ -273,14 +285,23 @@ export function PaddyMap({
         SUMBER
       </text>
       {TREES.map((tree) => (
-        <g key={tree.id} transform={`translate(${tree.x} ${tree.z}) scale(${tree.scale})`}>
+        <g
+          key={tree.id}
+          transform={`translate(${tree.x} ${tree.z}) scale(${tree.scale})`}
+        >
           <circle r={0.42} fill={CANOPY_FILL} stroke="#5d8a63" strokeWidth="0.05" />
           <circle r={0.18} fill={CANOPY_INNER} />
         </g>
       ))}
       {SENSOR_STAKES.map((stake) => (
         <g key={stake.id} transform={`translate(${stake.x} ${stake.z})`}>
-          <circle r={0.26} fill="none" stroke={STAKE_FILL} strokeWidth="0.04" opacity="0.45" />
+          <circle
+            r={0.26}
+            fill="none"
+            stroke={STAKE_FILL}
+            strokeWidth="0.04"
+            opacity="0.45"
+          />
           <circle r={0.14} fill={STAKE_FILL} stroke="#ffffff" strokeWidth="0.045" />
         </g>
       ))}

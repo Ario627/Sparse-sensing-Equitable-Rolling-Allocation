@@ -172,12 +172,23 @@ export function usePlanExecute(planId: string) {
   });
 }
 
+export async function fetchPlansCsv(query: ExportPlansQuery): Promise<string> {
+  const merged = { ...defaultExportQuery, ...query };
+  return apiText(`/plans/export?${exportSearchParams(merged)}`);
+}
+
+export function downloadCsvText(
+  text: string,
+  filename: string = DEFAULT_EXPORT_FILENAME,
+): void {
+  const payload = text.startsWith(BOM) ? text : `${BOM}${text}`;
+  downloadBlob(filename, new Blob([payload], { type: CSV_MIME }));
+}
+
 export async function downloadPlansCsv(
   query: ExportPlansQuery,
   filename: string = DEFAULT_EXPORT_FILENAME,
 ): Promise<void> {
-  const merged = { ...defaultExportQuery, ...query };
-  const csv = await apiText(`/plans/export?${exportSearchParams(merged)}`);
-  const payload = csv.startsWith(BOM) ? csv : `${BOM}${csv}`;
-  downloadBlob(filename, new Blob([payload], { type: CSV_MIME }));
+  const csv = await fetchPlansCsv(query);
+  downloadCsvText(csv, filename);
 }

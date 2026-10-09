@@ -30,10 +30,7 @@ export function summarizePlanWindow(
       windowStart = item.slot_start;
     }
     const end = Date.parse(item.slot_end);
-    if (
-      Number.isFinite(end) &&
-      (windowEnd === null || end > Date.parse(windowEnd))
-    ) {
+    if (Number.isFinite(end) && (windowEnd === null || end > Date.parse(windowEnd))) {
       windowEnd = item.slot_end;
     }
   }

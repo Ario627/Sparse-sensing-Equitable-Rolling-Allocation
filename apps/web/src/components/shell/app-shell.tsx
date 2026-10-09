@@ -5,6 +5,7 @@ import { IconClose, IconLogout, IconMenu } from "@/components/icons.tsx";
 import { Button } from "@/components/kit/button.tsx";
 import { ConnectionBanner } from "@/components/kit/connection-banner.tsx";
 import { BrandMark } from "@/components/shell/brand.tsx";
+import { RoleChip } from "@/components/shell/role-chip.tsx";
 import { SidebarNav, SidebarStatusStrip } from "@/components/shell/sidebar-nav.tsx";
 import { useSidebarSignals } from "@/components/shell/sidebar-signals.ts";
 import { logout } from "@/lib/auth/auth-api.ts";
@@ -21,7 +22,7 @@ const QUICK_ITEM_COUNT = 4;
 const TIME_ZONE_LABEL = "WIB";
 
 const menuNavLinkBase =
-  "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-ink-2 transition-colors hover:bg-sunk hover:text-ink";
+  "flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm text-ink-2 transition-colors hover:bg-sunk hover:text-ink";
 const menuNavLinkActive = cn(
   menuNavLinkBase,
   "bg-water-soft text-water-deep hover:bg-water-soft hover:text-water-deep",
@@ -63,13 +64,8 @@ function MenuLink({
       activeOptions={{ exact: item.to === "/operations" }}
       onClick={onNavigate}
     >
-      <Icon size={16} className="mt-0.5 shrink-0" />
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="text-[13px] leading-tight font-medium">{item.label}</span>
-        <span className="mt-0.5 truncate text-2xs leading-tight text-ink-3">
-          {item.hint}
-        </span>
-      </span>
+      <Icon size={16} className="shrink-0" />
+      <span className="flex-1 text-[13px] font-medium">{item.label}</span>
     </Link>
   );
 }
@@ -273,9 +269,12 @@ function AppShell({ children }: { readonly children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[16rem_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-white/10 bg-ink md:flex">
-        <div className="border-b border-white/10 px-5 pt-safe pb-5">
+    <div className="min-h-dvh md:grid md:grid-cols-[15rem_minmax(0,1fr)]">
+      <aside
+        data-surface="deep"
+        className="reservoir-face sticky top-0 hidden h-dvh flex-col overflow-hidden border-r border-white/10 md:flex"
+      >
+        <div className="border-b border-white/10 px-4 pt-safe pb-4">
           <BrandMark inverse />
         </div>
         <SidebarStatusStrip signals={signals} />
@@ -288,9 +287,10 @@ function AppShell({ children }: { readonly children: ReactNode }) {
             <div className="md:hidden">
               <BrandMark />
             </div>
-            <div className="ml-auto flex items-center gap-4">
+            <div className="ml-auto flex items-center gap-3">
               <HeaderContext />
-              <span className="flex items-baseline gap-1.5 font-mono text-xs text-ink-2 tabular">
+              <RoleChip />
+              <span className="hidden items-baseline gap-1.5 font-mono text-xs text-ink-2 tabular xs:flex">
                 {formatClockMs(now)}
                 <span className="text-2xs text-ink-3">{TIME_ZONE_LABEL}</span>
               </span>

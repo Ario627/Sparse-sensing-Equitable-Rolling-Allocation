@@ -26,8 +26,8 @@ import {
   MethodComparisonChart,
   RunMetricChart,
 } from "@/features/experiments/run-charts.tsx";
-import { hasMetric } from "@/features/experiments/run-series.ts";
 import { RunProgress } from "@/features/experiments/run-progress.tsx";
+import { hasMetric } from "@/features/experiments/run-series.ts";
 import { runStatusLabel, runStatusTone } from "@/features/experiments/status.ts";
 import { isApiError } from "@/lib/api/client.ts";
 import { labRoles } from "@/lib/auth/roles.ts";
@@ -213,7 +213,7 @@ function ExperimentsContent() {
       ? null
       : availableCharts.includes("decision_regret")
         ? "decision_regret"
-        : availableCharts[0] ?? null;
+        : (availableCharts[0] ?? null);
   const comparisonSummaries =
     comparisonKey === null
       ? []
@@ -352,45 +352,48 @@ function ExperimentsContent() {
             </dl>
           </section>
         ))}
-      {selectedId !== null && detail !== null && runs.length >= 2 && availableCharts.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="label-caps text-ink-3">Hasil per run</p>
-            <span className="font-mono text-2xs text-ink-3 tabular">
-              {formatNumber(runs.length)} run · gulir atau seret untuk zoom
-            </span>
-          </div>
-          <div className="grid gap-3 xl:grid-cols-2">
-            {availableCharts.includes("decision_regret") && (
+      {selectedId !== null &&
+        detail !== null &&
+        runs.length >= 2 &&
+        availableCharts.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="label-caps text-ink-3">Hasil per run</p>
+              <span className="font-mono text-2xs text-ink-3 tabular">
+                {formatNumber(runs.length)} run · gulir atau seret untuk zoom
+              </span>
+            </div>
+            <div className="grid gap-3 xl:grid-cols-2">
+              {availableCharts.includes("decision_regret") && (
+                <ChartCard
+                  title="Regret keputusan"
+                  subtitle="per run — lebih rendah lebih baik"
+                >
+                  <RunMetricChart runs={runs} metricKey="decision_regret" />
+                </ChartCard>
+              )}
+              {availableCharts.includes("worst_sr") && (
+                <ChartCard
+                  title="SR terburuk"
+                  subtitle="per run — lebih tinggi lebih baik"
+                >
+                  <RunMetricChart runs={runs} metricKey="worst_sr" />
+                </ChartCard>
+              )}
+            </div>
+            {comparisonKey !== null && comparisonSummaries.length > 0 && (
               <ChartCard
-                title="Regret keputusan"
-                subtitle="per run — lebih rendah lebih baik"
+                title={`Median ${describeMetric(comparisonKey)?.label ?? "metrik"} per metode`}
+                subtitle="dari run yang terekam pada eksperimen ini"
               >
-                <RunMetricChart runs={runs} metricKey="decision_regret" />
+                <MethodComparisonChart
+                  summaries={comparisonSummaries}
+                  metricKey={comparisonKey}
+                />
               </ChartCard>
             )}
-            {availableCharts.includes("worst_sr") && (
-              <ChartCard
-                title="SR terburuk"
-                subtitle="per run — lebih tinggi lebih baik"
-              >
-                <RunMetricChart runs={runs} metricKey="worst_sr" />
-              </ChartCard>
-            )}
-          </div>
-          {comparisonKey !== null && comparisonSummaries.length > 0 && (
-            <ChartCard
-              title={`Median ${describeMetric(comparisonKey)?.label ?? "metrik"} per metode`}
-              subtitle="dari run yang terekam pada eksperimen ini"
-            >
-              <MethodComparisonChart
-                summaries={comparisonSummaries}
-                metricKey={comparisonKey}
-              />
-            </ChartCard>
-          )}
-        </section>
-      )}
+          </section>
+        )}
       {selectedId !== null && (
         <section className="flex flex-col gap-2">
           <p className="label-caps text-ink-3">Runs</p>

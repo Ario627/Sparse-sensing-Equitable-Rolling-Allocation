@@ -1,11 +1,12 @@
 import type { Topology } from "@sera/contracts";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { Button } from "@/components/kit/button.tsx";
 import { DataTable, type SeraColumnDef } from "@/components/kit/data-table.tsx";
 import { EmptyState } from "@/components/kit/empty-state.tsx";
 import { ErrorState } from "@/components/kit/error-state.tsx";
 import { inputClass } from "@/components/kit/field.tsx";
-import { MetricCard } from "@/components/kit/metric-card.tsx";
+import { InfoDialog } from "@/components/kit/info-dialog.tsx";
 import { PageHeader } from "@/components/kit/page-header.tsx";
 import { Skeleton } from "@/components/kit/skeleton.tsx";
 import { StatusPill } from "@/components/kit/status-pill.tsx";
@@ -23,7 +24,7 @@ import { useNow } from "@/lib/hooks.ts";
 import { buildSearch, readSearchString } from "@/lib/search.ts";
 
 const TICK_MS = 30_000;
-const CANVAS_HEIGHT = 420;
+const CANVAS_HEIGHT = "clamp(30rem, 82vh, 60rem)";
 const SKELETON_KEYS = ["rasio", "sensor", "blok"] as const;
 
 const topologyLabels: Record<Topology, string> = {
@@ -31,6 +32,26 @@ const topologyLabels: Record<Topology, string> = {
   BRANCHED: "Bercabang",
   MIXED: "Campuran",
 };
+
+interface LegendItem {
+  readonly label: string;
+  readonly className: string;
+}
+
+const legendItems: readonly LegendItem[] = [
+  { label: "Aman", className: "bg-ok" },
+  { label: "Cukup", className: "bg-warn" },
+  { label: "Kritis", className: "bg-crit" },
+];
+
+function LegendChip({ label, className }: LegendItem) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-2xs text-ink-2">
+      <span aria-hidden="true" className={cn("h-1.5 w-4 rounded-xs", className)} />
+      {label}
+    </span>
+  );
+}
 
 function buildBlockColumns(
   onSelect: (blockId: string) => void,
@@ -108,6 +129,114 @@ function buildBlockColumns(
   ];
 }
 
+interface CanvasPanelProps {
+  readonly children: ReactNode;
+  readonly nodeCount: number;
+  readonly blockCount: number;
+  readonly averageRatio: string;
+  readonly weakestName: string | null;
+  readonly sensorCount: number;
+  readonly staleCount: number;
+  readonly selected: boolean;
+}
+
+function CanvasPanel({
+  children,
+  nodeCount,
+  blockCount,
+  averageRatio,
+  weakestName,
+  sensorCount,
+  staleCount,
+  selected,
+}: CanvasPanelProps) {
+  return (
+    <section className="flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-hair">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line px-5 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <p className="label-caps text-water">Peta jaringan</p>
+          <InfoDialog
+            label="Keterangan"
+            eyebrow="Peta jaringan"
+            title="Membaca peta jaringan"
+            triggerClassName="border border-line-2 bg-surface"
+          >
+            <div className="flex flex-col gap-3">
+              <p>
+                Titik-titik pada latar adalah kisi penggambar. Kotak paling atas adalah
+                intake, kotak abu-abu adalah pertemuan atau pintu air, dan kartu berwarna
+                adalah blok layanan.
+              </p>
+              <p>
+                Kartu blok memuat rasio layanan, luas, debit rencana, dan keadaan
+                sensornya. Warna tepi kartu mengikuti status layanan blok tersebut.
+              </p>
+              <p>
+                Jarum kanal yang berjalan dan berwarna air menandakan pintu blok sedang
+                dibuka; jalur yang redup menandakan pintu tertutup.
+              </p>
+              <p>
+                Klik kartu blok untuk membuka rinciannya pada panel samping. Gunakan
+                kendali di kiri bawah untuk memperbesar, memperkecil, atau memasangkan
+                seluruh jaringan ke layar.
+              </p>
+            </div>
+          </InfoDialog>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          {legendItems.map((item) => (
+            <LegendChip key={item.label} {...item} />
+          ))}
+          <span className="hidden items-center gap-1.5 text-2xs text-ink-3 sm:inline-flex">
+            <span aria-hidden="true" className="h-px w-4 bg-water" />
+            pintu dibuka
+          </span>
+          {!selected && (
+            <span className="hidden text-2xs text-ink-3 md:inline">
+              klik kartu blok untuk membuka rinciannya
+            </span>
+          )}
+        </div>
+      </div>
+      {children}
+      <div className="grid grid-cols-2 divide-line border-t border-line md:grid-cols-4 md:divide-x">
+        <div className="flex flex-col px-5 py-3.5">
+          <p className="label-caps text-ink-3">Rasio layanan</p>
+          <p className="mt-1 font-display text-2xl leading-none font-semibold text-ink tabular">
+            {averageRatio}
+          </p>
+          <p className="mt-1 truncate text-2xs text-ink-3">
+            {weakestName === null ? "belum ada plan" : `terendah ${weakestName}`}
+          </p>
+        </div>
+        <div className="flex flex-col px-5 py-3.5">
+          <p className="label-caps text-ink-3">Titik sensor</p>
+          <p className="mt-1 font-display text-2xl leading-none font-semibold text-ink tabular">
+            {formatNumber(sensorCount)}
+          </p>
+          <p className="mt-1 text-2xs text-ink-3">
+            {staleCount > 0 ? `${formatNumber(staleCount)} basi` : "semua segar"}
+          </p>
+        </div>
+        <div className="flex flex-col px-5 py-3.5">
+          <p className="label-caps text-ink-3">Blok</p>
+          <p className="mt-1 font-display text-2xl leading-none font-semibold text-ink tabular">
+            {formatNumber(blockCount)}
+          </p>
+          <p className="mt-1 text-2xs text-ink-3">titik layanan terdaftar</p>
+        </div>
+        <div className="flex flex-col px-5 py-3.5">
+          <p className="label-caps text-ink-3">Titik jaringan</p>
+          <p className="mt-1 font-display text-2xl leading-none font-semibold text-ink tabular">
+            {formatNumber(nodeCount)}
+          </p>
+          <p className="mt-1 text-2xs text-ink-3">simpul pada topologi</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function NetworkPage() {
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
@@ -182,7 +311,7 @@ export function NetworkPage() {
     return (
       <div className="flex flex-col gap-5">
         <PageHeader eyebrow="Operasi" title="Jaringan" />
-        <Skeleton className="h-105" />
+        <Skeleton className="h-[32rem]" />
       </div>
     );
   }
@@ -225,11 +354,11 @@ export function NetworkPage() {
       <PageHeader
         eyebrow="Operasi"
         title={detail?.name ?? "Jaringan"}
-        description={
-          detail === null
-            ? "Memuat detail jaringan…"
-            : `${topologyLabels[detail.topology]} · ${formatNumber(detail.node_count)} titik · ${formatNumber(detail.block_count)} blok`
-        }
+        {...(detail === null
+          ? {}
+          : {
+              description: `${topologyLabels[detail.topology]} · ${formatNumber(detail.node_count)} titik · ${formatNumber(detail.block_count)} blok`,
+            })}
         actions={networkSelect}
       />
       {contentError !== null ? (
@@ -248,72 +377,58 @@ export function NetworkPage() {
           }
         />
       ) : view === null ? (
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-[repeat(3,minmax(0,1fr))]">
-              {SKELETON_KEYS.map((key) => (
-                <Skeleton key={key} className="h-24" />
-              ))}
-            </div>
-            <Skeleton className="h-105" />
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-[repeat(4,minmax(0,1fr))]">
+            {SKELETON_KEYS.map((key) => (
+              <Skeleton key={key} className="h-24" />
+            ))}
           </div>
-          <Skeleton className="h-72" />
+          <Skeleton className="h-105" />
         </div>
       ) : (
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-[repeat(3,minmax(0,1fr))]">
-              <MetricCard
-                label="Rasio layanan"
-                value={formatCappedPercent(view.summary.averageServiceRatio)}
-                note={
-                  view.summary.weakestBlockName === null
-                    ? "Belum ada slot plan"
-                    : `Terendah: ${view.summary.weakestBlockName}`
-                }
+        <>
+          <div
+            className={cn(
+              "grid grid-cols-[minmax(0,1fr)] gap-4",
+              selected !== null && "xl:grid-cols-[minmax(0,1fr)_22rem]",
+            )}
+          >
+            <CanvasPanel
+              nodeCount={detail?.node_count ?? view.flow.nodes.length}
+              blockCount={view.summary.blockCount}
+              averageRatio={formatCappedPercent(view.summary.averageServiceRatio)}
+              weakestName={view.summary.weakestBlockName}
+              sensorCount={view.summary.sensorCount}
+              staleCount={view.summary.staleSensorCount}
+              selected={selected !== null}
+            >
+              <NetworkCanvas
+                flow={view.flow}
+                height={CANVAS_HEIGHT}
+                className="rounded-none border-0"
+                onBlockSelect={selectBlock}
               />
-              <MetricCard
-                label="Titik sensor"
-                value={formatNumber(view.summary.sensorCount)}
-                note={
-                  view.summary.staleSensorCount > 0
-                    ? `${formatNumber(view.summary.staleSensorCount)} basi`
-                    : "Semua segar"
-                }
-              />
-              <MetricCard label="Blok" value={formatNumber(view.summary.blockCount)} />
-            </div>
-            <NetworkCanvas
-              flow={view.flow}
-              height={CANVAS_HEIGHT}
-              onBlockSelect={selectBlock}
-            />
-            <DataTable
-              columns={columns}
-              data={[...view.blocks]}
-              getRowId={(block) => block.blockId}
-              emptyTitle="Belum ada blok"
-              emptyDescription="Jaringan ini belum memiliki blok terdaftar."
-            />
-          </div>
-          <div className="lg:sticky lg:top-4 lg:self-start">
-            {selected === null ? (
-              <EmptyState
-                compact
-                title="Pilih blok"
-                description="Klik blok di kanvas atau tabel untuk melihat detail."
-                className="rounded-md border border-line bg-surface"
-              />
-            ) : (
-              <BlockInspector
-                block={selected}
-                onClose={() => {
-                  selectBlock(null);
-                }}
-              />
+            </CanvasPanel>
+            {selected !== null && (
+              <div className="xl:sticky xl:top-24 xl:self-start">
+                <BlockInspector
+                  block={selected}
+                  className="rounded-xl"
+                  onClose={() => {
+                    selectBlock(null);
+                  }}
+                />
+              </div>
             )}
           </div>
-        </div>
+          <DataTable
+            columns={columns}
+            data={[...view.blocks]}
+            getRowId={(block) => block.blockId}
+            emptyTitle="Belum ada blok"
+            emptyDescription="Jaringan ini belum memiliki blok terdaftar."
+          />
+        </>
       )}
     </div>
   );

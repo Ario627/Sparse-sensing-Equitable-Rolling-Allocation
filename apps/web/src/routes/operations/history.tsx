@@ -1,4 +1,6 @@
 import type {
+  ExportPlansQuery,
+  NetworkSummaryResponse,
   PlanApprovalSummary,
   PlanStatus,
   PlanSummaryResponse,
@@ -7,6 +9,7 @@ import type {
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/kit/button.tsx";
+import { CapabilityNotice, useCapability } from "@/components/kit/capability-notice.tsx";
 import { DataTable, type SeraColumnDef } from "@/components/kit/data-table.tsx";
 import { ErrorState } from "@/components/kit/error-state.tsx";
 import { inputClass } from "@/components/kit/field.tsx";
@@ -19,9 +22,8 @@ import {
   planStatusTone,
   policyProfileLabel,
 } from "@/features/network/status.ts";
-import { downloadPlansCsv, usePlans } from "@/features/scheduling/api.ts";
-import { isApiError } from "@/lib/api/client.ts";
-import { useSessionStore } from "@/lib/auth/session-store.ts";
+import { usePlans } from "@/features/scheduling/api.ts";
+import { PlanExportDialog } from "@/features/scheduling/export-dialog.tsx";
 import { cn } from "@/lib/cn.ts";
 import { formatDateTime, formatNumber } from "@/lib/format.ts";
 import { buildSearch } from "@/lib/search.ts";
@@ -67,6 +69,35 @@ const initialFilters: HistoryFilters = {
 
 function exportFilename(): string {
   return `sera-plans-${new Date().toISOString().slice(0, 10)}.csv`;
+}
+
+function exportScope(
+  filters: HistoryFilters,
+  networks: readonly NetworkSummaryResponse[],
+  blocks: readonly { readonly id: string; readonly name: string }[],
+): string {
+  const parts: string[] = [];
+  const network =
+    filters.networkId === ALL
+      ? null
+      : (networks.find((item) => item.id === filters.networkId)?.name ?? "Jaringan");
+  parts.push(network ?? "Semua jaringan");
+  if (filters.blockId !== ALL) {
+    const block = blocks.find((item) => item.id === filters.blockId);
+    parts.push(block?.name ?? "Satu blok");
+  }
+  if (filters.status !== ALL) {
+    parts.push(planStatusLabel(filters.status));
+  }
+  if (filters.profile !== ALL) {
+    parts.push(policyProfileLabel(filters.profile));
+  }
+  if (filters.range !== null) {
+    parts.push(
+      `${formatDateTime(filters.range.from)} – ${formatDateTime(filters.range.to)}`,
+    );
+  }
+  return parts.join(" · ");
 }
 
 function DecisionCell({ plan }: { readonly plan: PlanSummaryResponse }) {
@@ -187,10 +218,7 @@ export function HistoryPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<HistoryFilters>(initialFilters);
   const [page, setPage] = useState(1);
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
-  const role = useSessionStore((snapshot) => snapshot.user?.role ?? null);
-  const canExport = role === "OPERATOR" || role === "ADMIN";
+  const canExport = useCapability("plan.export");
   const networksQuery = useNetworks({ limit: 50 });
   const networks = networksQuery.data?.items ?? [];
   const networkQuery = useNetwork(filters.networkId === ALL ? null : filters.networkId);
@@ -223,30 +251,15 @@ export function HistoryPage() {
     setPage(1);
   }
 
-  async function exportCsv(): Promise<void> {
-    setExporting(true);
-    setExportError(null);
-    try {
-      await downloadPlansCsv(
-        {
-          ...(filters.networkId === ALL ? {} : { network_id: filters.networkId }),
-          ...(filters.status === ALL ? {} : { status: filters.status }),
-          ...(filters.profile === ALL ? {} : { profile: filters.profile }),
-          ...(filters.blockId === ALL ? {} : { block_id: filters.blockId }),
-          ...(filters.range === null
-            ? {}
-            : { from: filters.range.from, to: filters.range.to }),
-          sort: "created_at",
-          order: "desc",
-        },
-        exportFilename(),
-      );
-    } catch (cause) {
-      setExportError(isApiError(cause) ? cause.message : "Ekspor gagal. Coba lagi.");
-    } finally {
-      setExporting(false);
-    }
-  }
+  const exportQuery: ExportPlansQuery = {
+    ...(filters.networkId === ALL ? {} : { network_id: filters.networkId }),
+    ...(filters.status === ALL ? {} : { status: filters.status }),
+    ...(filters.profile === ALL ? {} : { profile: filters.profile }),
+    ...(filters.blockId === ALL ? {} : { block_id: filters.blockId }),
+    ...(filters.range === null ? {} : { from: filters.range.from, to: filters.range.to }),
+    sort: "created_at",
+    order: "desc",
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -256,25 +269,16 @@ export function HistoryPage() {
         description="Jejak plan, keputusan, dan override lintas jaringan."
         actions={
           canExport ? (
-            <Button
-              size="sm"
-              variant="outline"
-              pending={exporting}
-              pendingLabel="Menyiapkan…"
-              onClick={() => {
-                void exportCsv();
-              }}
-            >
-              Ekspor CSV
-            </Button>
-          ) : undefined
+            <PlanExportDialog
+              query={exportQuery}
+              filename={exportFilename()}
+              scope={exportScope(filters, networks, blocks)}
+            />
+          ) : (
+            <CapabilityNotice capability="plan.export" />
+          )
         }
       />
-      {exportError !== null && (
-        <p role="alert" className="text-xs text-crit">
-          {exportError}
-        </p>
-      )}
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <select

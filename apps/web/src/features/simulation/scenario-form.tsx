@@ -18,8 +18,41 @@ const TOPOLOGY_OPTIONS: readonly { readonly value: Topology; readonly label: str
     { value: "MIXED", label: "Campuran" },
   ];
 
-const PRESET_HINT =
-  "Preset menentukan profil gangguan; kontrol di bawah menimpa parameter dasar jaringan.";
+function TopologySelect({
+  id,
+  value,
+  onChange,
+}: {
+  readonly id: string;
+  readonly value: Topology;
+  readonly onChange: (next: Topology) => void;
+}) {
+  return (
+    <select
+      id={id}
+      value={value}
+      onChange={(event) => {
+        const next = TOPOLOGY_OPTIONS.find(
+          (option) => option.value === event.target.value,
+        );
+        if (next !== undefined) {
+          onChange(next.value);
+        }
+      }}
+      className={inputClass}
+    >
+      {TOPOLOGY_OPTIONS.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export function topologyLabel(topology: Topology): string {
+  return TOPOLOGY_OPTIONS.find((option) => option.value === topology)?.label ?? topology;
+}
 
 interface NumberInputProps {
   readonly id: string;
@@ -112,7 +145,7 @@ interface PresetPickerProps {
   readonly onChange: (preset: ScenarioPresetKey) => void;
 }
 
-function PresetPicker({ value, onChange }: PresetPickerProps) {
+export function PresetPicker({ value, onChange }: PresetPickerProps) {
   return (
     <fieldset>
       <legend className="label-caps text-ink-3">Preset skenario</legend>
@@ -140,129 +173,102 @@ function PresetPicker({ value, onChange }: PresetPickerProps) {
           );
         })}
       </div>
-      <p className="mt-2 text-xs text-ink-3">{PRESET_HINT}</p>
     </fieldset>
   );
 }
 
-export interface ScenarioFormProps {
+export interface ScenarioFieldsProps {
   readonly value: SimulationScenario;
   readonly onChange: (next: SimulationScenario) => void;
   readonly className?: string;
 }
 
-export function ScenarioForm({ value, onChange, className }: ScenarioFormProps) {
-  const topologyId = useId();
+export function ScenarioFields({ value, onChange, className }: ScenarioFieldsProps) {
   const sensorsId = useId();
   const seedId = useId();
   const supplyId = useId();
   const blocksId = useId();
   const horizonId = useId();
+  const topologyId = useId();
 
   function patch(partial: Partial<SimulationScenario>): void {
     onChange({ ...value, ...partial });
   }
 
   return (
-    <div className={cn("flex flex-col gap-5", className)}>
-      <PresetPicker
-        value={value.preset}
-        onChange={(preset) => {
-          patch({ preset });
+    <div className={cn("grid gap-3 xs:grid-cols-2", className)}>
+      <NumberInput
+        id={blocksId}
+        label="Jumlah blok"
+        value={value.blocks}
+        min={scenarioBounds.blocks.min}
+        max={scenarioBounds.blocks.max}
+        onCommit={(blocks) => {
+          patch({ blocks });
         }}
       />
-      <div className="grid gap-3 xs:grid-cols-2">
-        <Field label="Topologi" htmlFor={topologyId}>
-          <select
-            id={topologyId}
-            value={value.topology}
-            onChange={(event) => {
-              const next = TOPOLOGY_OPTIONS.find(
-                (option) => option.value === event.target.value,
-              );
-              if (next !== undefined) {
-                patch({ topology: next.value });
-              }
+      <NumberInput
+        id={horizonId}
+        label="Horizon (hari)"
+        value={value.horizonDays}
+        min={scenarioBounds.horizonDays.min}
+        max={scenarioBounds.horizonDays.max}
+        onCommit={(horizonDays) => {
+          patch({ horizonDays });
+        }}
+      />
+      <NumberInput
+        id={sensorsId}
+        label="Jumlah sensor"
+        value={value.sensors}
+        min={scenarioBounds.sensors.min}
+        max={scenarioBounds.sensors.max}
+        onCommit={(sensors) => {
+          patch({ sensors });
+        }}
+      />
+      <NumberInput
+        id={supplyId}
+        label="Debit suplai (L/s)"
+        value={value.supplyLps}
+        min={scenarioBounds.supplyLps.min}
+        max={scenarioBounds.supplyLps.max}
+        step={scenarioBounds.supplyLps.step}
+        integer={false}
+        onCommit={(supplyLps) => {
+          patch({ supplyLps });
+        }}
+      />
+      <NumberInput
+        id={seedId}
+        label="Seed"
+        value={value.seed}
+        min={0}
+        max={1_000_000_000}
+        action={
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              patch({ seed: randomSeed() });
             }}
-            className={inputClass}
           >
-            {TOPOLOGY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <NumberInput
-          id={blocksId}
-          label="Jumlah blok"
-          value={value.blocks}
-          min={scenarioBounds.blocks.min}
-          max={scenarioBounds.blocks.max}
-          onCommit={(blocks) => {
-            patch({ blocks });
+            Acak
+          </Button>
+        }
+        onCommit={(seed) => {
+          patch({ seed });
+        }}
+      />
+      <Field label="Topologi" htmlFor={topologyId}>
+        <TopologySelect
+          id={topologyId}
+          value={value.topology}
+          onChange={(topology) => {
+            patch({ topology });
           }}
         />
-        <NumberInput
-          id={horizonId}
-          label="Horizon (hari)"
-          value={value.horizonDays}
-          min={scenarioBounds.horizonDays.min}
-          max={scenarioBounds.horizonDays.max}
-          onCommit={(horizonDays) => {
-            patch({ horizonDays });
-          }}
-        />
-        <NumberInput
-          id={sensorsId}
-          label="Jumlah sensor"
-          value={value.sensors}
-          min={scenarioBounds.sensors.min}
-          max={scenarioBounds.sensors.max}
-          onCommit={(sensors) => {
-            patch({ sensors });
-          }}
-        />
-        <NumberInput
-          id={supplyId}
-          label="Debit suplai (L/s)"
-          value={value.supplyLps}
-          min={scenarioBounds.supplyLps.min}
-          max={scenarioBounds.supplyLps.max}
-          step={scenarioBounds.supplyLps.step}
-          integer={false}
-          onCommit={(supplyLps) => {
-            patch({ supplyLps });
-          }}
-        />
-        <NumberInput
-          id={seedId}
-          label="Seed"
-          value={value.seed}
-          min={0}
-          max={1_000_000_000}
-          action={
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                patch({ seed: randomSeed() });
-              }}
-            >
-              Acak
-            </Button>
-          }
-          onCommit={(seed) => {
-            patch({ seed });
-          }}
-        />
-      </div>
-      <div className="rule-staff" aria-hidden="true" />
-      <p className="font-mono text-2xs text-ink-3 tabular">
-        {value.preset} · {value.topology.toLowerCase()} · {value.blocks} blok ·{" "}
-        {value.horizonDays} hari · {value.sensors} sensor · {value.supplyLps} L/s · seed{" "}
-        {value.seed}
-      </p>
+      </Field>
     </div>
   );
 }

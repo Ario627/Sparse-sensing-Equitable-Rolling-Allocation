@@ -2,6 +2,7 @@ import type { AlertSeverity, EventResponse } from "@sera/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/kit/button.tsx";
+import { CapabilityNotice, useCapability } from "@/components/kit/capability-notice.tsx";
 import { EmptyState } from "@/components/kit/empty-state.tsx";
 import { ErrorState } from "@/components/kit/error-state.tsx";
 import { inputClass } from "@/components/kit/field.tsx";
@@ -73,13 +74,20 @@ function ackFilterValue(filter: AckFilter): boolean | undefined {
 interface AlertRowProps {
   readonly event: EventResponse;
   readonly acknowledging: boolean;
+  readonly canAcknowledge: boolean;
   readonly onAcknowledge: (eventId: string) => void;
   readonly onOpenNetwork: (event: EventResponse) => void;
 }
 
-function AlertRow({ event, acknowledging, onAcknowledge, onOpenNetwork }: AlertRowProps) {
+function AlertRow({
+  event,
+  acknowledging,
+  canAcknowledge,
+  onAcknowledge,
+  onOpenNetwork,
+}: AlertRowProps) {
   const acked = event.acknowledged_at !== null;
-  const canAcknowledge = event.type === "alert" && !acked;
+  const showAcknowledge = canAcknowledge && event.type === "alert" && !acked;
   return (
     <li
       className={cn(
@@ -119,7 +127,7 @@ function AlertRow({ event, acknowledging, onAcknowledge, onOpenNetwork }: AlertR
             Buka jaringan
           </Button>
         )}
-        {canAcknowledge && (
+        {showAcknowledge && (
           <Button
             size="sm"
             variant="outline"
@@ -182,6 +190,7 @@ export function AlertsPage() {
   });
   const statsQuery = useEventsStats();
   const ack = useAcknowledgeEvent();
+  const canAcknowledge = useCapability("event.acknowledge");
   const items = eventsQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const total = eventsQuery.data?.pages[0]?.total ?? 0;
   const untouched = ackFilter === "unacked" && severity === "" && range === null;
@@ -204,8 +213,13 @@ export function AlertsPage() {
       <PageHeader
         eyebrow="Operasi"
         title="Peringatan"
-        description="Kejadian yang butuh perhatian operator, terbaru lebih dahulu."
+        description="Kejadian terbaru lebih dahulu; penandaan dibaca hanya untuk operator."
       />
+      {!canAcknowledge && (
+        <div>
+          <CapabilityNotice capability="event.acknowledge" />
+        </div>
+      )}
       {statsQuery.data !== undefined && (
         <StatsStrip
           unacknowledged={statsQuery.data.unacknowledged}
@@ -300,6 +314,7 @@ export function AlertsPage() {
               <AlertRow
                 key={event.id}
                 event={event}
+                canAcknowledge={canAcknowledge}
                 acknowledging={acknowledgingId === event.id}
                 onAcknowledge={(eventId) => {
                   void acknowledge(eventId);

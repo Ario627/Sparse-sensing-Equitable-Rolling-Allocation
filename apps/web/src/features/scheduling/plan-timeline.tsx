@@ -1,7 +1,12 @@
 import type { PlanItemResponse } from "@sera/contracts";
 import { EmptyState } from "@/components/kit/empty-state.tsx";
 import { cn } from "@/lib/cn.ts";
-import { formatCappedPercent, formatClockMs, formatClockRange, formatUnit } from "@/lib/format.ts";
+import {
+  formatCappedPercent,
+  formatClockMs,
+  formatClockRange,
+  formatUnit,
+} from "@/lib/format.ts";
 import { buildTimelineDomain, hourTicks, percentOf } from "./timeline-scale.ts";
 
 const DEFAULT_HEIGHT = 288;
@@ -18,12 +23,21 @@ const phaseClasses: Record<SlotPhase, string> = {
   closed: "border border-warn/40 bg-warn-soft text-warn",
 };
 
+const phaseChips: Record<SlotPhase, string> = {
+  past: "bg-sunk",
+  active: "bg-water",
+  scheduled: "bg-water-soft",
+  closed: "bg-warn-soft",
+};
+
 const phaseLabels: Record<SlotPhase, string> = {
   past: "Selesai",
   active: "Berjalan",
   scheduled: "Terjadwal",
   closed: "Ditutup",
 };
+
+const PHASE_ORDER: readonly SlotPhase[] = ["past", "active", "scheduled", "closed"];
 
 function phaseOf(item: PlanItemResponse, nowMs: number): SlotPhase {
   const start = Date.parse(item.slot_start);
@@ -95,7 +109,7 @@ function SlotRow({ item, phase, domain, nowMs }: SlotRowProps) {
       : ` · ${formatUnit(item.volume_del_m3, "m³", 1)} sampai`;
   return (
     <li
-      className="grid h-9 grid-cols-[6.5rem_1fr] items-center gap-2 border-b border-line/60 last:border-b-0 sm:grid-cols-[8rem_1fr]"
+      className="grid h-9 grid-cols-[6.5rem_1fr] items-center gap-2 border-b border-line/60 last:border-b-0 hover:bg-water-soft/25 sm:grid-cols-[8rem_1fr]"
       aria-label={rowLabel(item, phase)}
     >
       <p className="truncate pl-1 text-xs text-ink-2">{item.block_name}</p>
@@ -162,28 +176,54 @@ export function PlanTimeline({
     ordered.map((item) => [Date.parse(item.slot_start), Date.parse(item.slot_end)]),
     now,
   );
+  const phases = new Set(ordered.map((item) => phaseOf(item, now)));
   return (
-    <div
-      style={{ height }}
-      className={cn("overflow-auto rounded-md border border-line bg-surface", className)}
+    <section
+      className={cn(
+        "flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-hair",
+        className,
+      )}
     >
-      <div className={cn("px-3 py-2", MIN_INNER_WIDTH)}>
-        <div className="grid grid-cols-[6.5rem_1fr] gap-2 sm:grid-cols-[8rem_1fr]">
-          <span aria-hidden="true" />
-          <TickRuler domain={domain} />
-        </div>
-        <ul className="flex flex-col">
-          {ordered.map((item) => (
-            <SlotRow
-              key={item.id}
-              item={item}
-              phase={phaseOf(item, now)}
-              domain={domain}
-              nowMs={now}
-            />
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line px-5 py-3.5">
+        <p className="label-caps text-water">Linimasa slot</p>
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          {PHASE_ORDER.filter((phase) => phases.has(phase)).map((phase) => (
+            <li
+              key={phase}
+              className="inline-flex items-center gap-1.5 text-2xs text-ink-2"
+            >
+              <span
+                aria-hidden="true"
+                className={cn("h-2 w-4 rounded-xs", phaseChips[phase])}
+              />
+              {phaseLabels[phase]}
+            </li>
           ))}
+          <li className="inline-flex items-center gap-1.5 text-2xs text-ink-2">
+            <span aria-hidden="true" className="h-3 w-px bg-ink/30" />
+            sekarang {formatClockMs(now)}
+          </li>
         </ul>
       </div>
-    </div>
+      <div style={{ height }} className="overflow-auto">
+        <div className={cn("px-3 py-2", MIN_INNER_WIDTH)}>
+          <div className="grid grid-cols-[6.5rem_1fr] gap-2 sm:grid-cols-[8rem_1fr]">
+            <span aria-hidden="true" />
+            <TickRuler domain={domain} />
+          </div>
+          <ul className="flex flex-col">
+            {ordered.map((item) => (
+              <SlotRow
+                key={item.id}
+                item={item}
+                phase={phaseOf(item, now)}
+                domain={domain}
+                nowMs={now}
+              />
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
   );
 }

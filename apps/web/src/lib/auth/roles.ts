@@ -15,7 +15,15 @@ export const ledgerRoles = [
   "ADMIN",
 ] as const satisfies readonly UserRole[];
 
+export const planRoles = [
+  "OPERATOR",
+  "RESEARCHER",
+  "ADMIN",
+] as const satisfies readonly UserRole[];
+
 export const decisionRoles = ["OPERATOR", "ADMIN"] as const satisfies readonly UserRole[];
+
+export const adminRoles = ["ADMIN"] as const satisfies readonly UserRole[];
 
 export type Capability =
   | "plan.propose"
@@ -24,24 +32,18 @@ export type Capability =
   | "event.read"
   | "event.acknowledge"
   | "ledger.read"
-  | "ledger.settle"
   | "experiment.run"
-  | "admin.topology"
-  | "admin.sensors"
   | "admin.users"
   | "admin.audit";
 
 const capabilityHolders: Record<Capability, readonly UserRole[]> = {
   "plan.propose": decisionRoles,
   "plan.decide": decisionRoles,
-  "plan.export": decisionRoles,
+  "plan.export": planRoles,
   "event.read": ledgerRoles,
   "event.acknowledge": ["OPERATOR", "ADMIN"],
   "ledger.read": ledgerRoles,
-  "ledger.settle": ["ADMIN"],
   "experiment.run": labRoles,
-  "admin.topology": ["ADMIN"],
-  "admin.sensors": ["ADMIN"],
   "admin.users": ["ADMIN"],
   "admin.audit": ["ADMIN"],
 };
@@ -49,15 +51,12 @@ const capabilityHolders: Record<Capability, readonly UserRole[]> = {
 const capabilityLabels: Record<Capability, string> = {
   "plan.propose": "Menyusun rencana alokasi",
   "plan.decide": "Menyetujui dan menolak rencana",
-  "plan.export": "Mengekspor rencana",
+  "plan.export": "Mengekspor data rencana",
   "event.read": "Membaca peringatan dan riwayat",
   "event.acknowledge": "Menandai peringatan selesai",
   "ledger.read": "Membaca neraca layanan",
-  "ledger.settle": "Menutup periode neraca",
   "experiment.run": "Menjalankan eksperimen dan simulasi",
-  "admin.topology": "Mengubah topologi jaringan",
-  "admin.sensors": "Mendaftarkan dan mengubah sensor",
-  "admin.users": "Mengelola pengguna dan keanggotaan",
+  "admin.users": "Meninjau pengguna dan perannya",
   "admin.audit": "Membaca jejak audit sistem",
 };
 
@@ -68,10 +67,7 @@ const capabilityOrder: readonly Capability[] = [
   "event.read",
   "event.acknowledge",
   "ledger.read",
-  "ledger.settle",
   "experiment.run",
-  "admin.topology",
-  "admin.sensors",
   "admin.users",
   "admin.audit",
 ];
@@ -87,9 +83,9 @@ const roleProfiles: Record<UserRole, RoleProfile> = {
   ADMIN: {
     label: "Admin",
     mode: "Administrasi",
-    focus: "Tata kelola jaringan, pengguna, dan sensor",
+    focus: "Tata kelola akses dan jejak audit",
     summary:
-      "Memegang seluruh kewenangan sistem: menyusun dan memutuskan rencana, menjalankan riset, serta mengelola pengguna, topologi, dan sensor. Setiap perubahan tercatat pada jejak audit.",
+      "Menggabungkan kewenangan operator dan peneliti, ditambah tata kelola akses: meninjau pengguna, perannya, dan jejak audit sistem. Setiap perubahan akses tercatat pada jejak yang tidak dapat disunting.",
   },
   OPERATOR: {
     label: "Operator",
@@ -139,9 +135,7 @@ export function capabilityLabel(capability: Capability): string {
 }
 
 export function capabilityHoldersLabel(capability: Capability): string {
-  return capabilityHolders[capability]
-    .map((holder) => roleLabels[holder])
-    .join(" atau ");
+  return capabilityHolders[capability].map((holder) => roleLabels[holder]).join(" atau ");
 }
 
 export interface CapabilityLine {

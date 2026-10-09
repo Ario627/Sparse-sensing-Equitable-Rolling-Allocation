@@ -65,7 +65,7 @@ function invalidateEvents(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: [...queryRoot, "events"] });
 }
 
-export function useEventsFeed(overrides: Partial<ListEventsQuery> = {}) {
+export function useEventsFeed(overrides: Partial<ListEventsQuery> = {}, enabled = true) {
   const { page: initialPage = 1, ...filters } = overrides;
   const query: EventsFeedQuery = { ...defaultFeedQuery, ...filters };
   return useInfiniteQuery({
@@ -77,14 +77,16 @@ export function useEventsFeed(overrides: Partial<ListEventsQuery> = {}) {
       lastPage.page < lastPage.total_pages ? lastPage.page + 1 : undefined,
     staleTime: EVENTS_STALE_MS,
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 
-export function useEventsStats() {
+export function useEventsStats(enabled = true) {
   return useQuery({
     queryKey: queryKeys.events.stats(),
     queryFn: () => apiFetch(eventsStatsResponseSchema, "/events/stats"),
     refetchInterval: STATS_POLL_MS,
+    enabled,
   });
 }
 

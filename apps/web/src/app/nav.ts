@@ -7,6 +7,7 @@ import {
   IconChip,
   IconFlask,
   IconGauge,
+  IconKey,
   IconNetwork,
   type IconProps,
   IconRun,
@@ -14,7 +15,13 @@ import {
   IconSliders,
   IconTarget,
 } from "@/components/icons.tsx";
-import { hasAnyRole, labRoles, ledgerRoles } from "@/lib/auth/roles.ts";
+import {
+  adminRoles,
+  hasAnyRole,
+  labRoles,
+  ledgerRoles,
+  planRoles,
+} from "@/lib/auth/roles.ts";
 
 export type NavItemPath =
   | "/operations"
@@ -27,6 +34,7 @@ export type NavItemPath =
   | "/lab/sensor-budget"
   | "/lab/results"
   | "/system/hardware"
+  | "/system/access"
   | "/system/settings";
 
 export interface NavItem {
@@ -67,6 +75,7 @@ export const navGroups: readonly NavGroup[] = [
         hint: "Rencana & persetujuan",
         icon: IconSchedule,
         badge: "pending_plans",
+        roles: planRoles,
       },
       {
         to: "/operations/alerts",
@@ -129,9 +138,16 @@ export const navGroups: readonly NavGroup[] = [
         icon: IconChip,
       },
       {
+        to: "/system/access",
+        label: "Akses",
+        hint: "Pengguna & audit",
+        icon: IconKey,
+        roles: adminRoles,
+      },
+      {
         to: "/system/settings",
         label: "Pengaturan",
-        hint: "Profil & operasi",
+        hint: "Profil & kata sandi",
         icon: IconSliders,
       },
     ],
