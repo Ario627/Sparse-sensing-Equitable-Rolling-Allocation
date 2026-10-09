@@ -8,6 +8,7 @@ import {
   IconFlask,
   IconGauge,
   IconKey,
+  IconLedger,
   IconNetwork,
   type IconProps,
   IconRun,
@@ -29,6 +30,7 @@ export type NavItemPath =
   | "/operations/schedule"
   | "/operations/alerts"
   | "/operations/history"
+  | "/operations/ledger"
   | "/lab/simulation"
   | "/lab/experiments"
   | "/lab/sensor-budget"
@@ -82,6 +84,13 @@ export const navGroups: readonly NavGroup[] = [
         label: "Peringatan",
         hint: "Kejadian penting",
         icon: IconBell,
+        roles: ledgerRoles,
+      },
+      {
+        to: "/operations/ledger",
+        label: "Neraca",
+        hint: "Tunggakan & layanan",
+        icon: IconLedger,
         roles: ledgerRoles,
       },
       {

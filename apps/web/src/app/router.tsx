@@ -12,6 +12,7 @@ import { LandingPage } from "@/routes/landing";
 import { LoginPage } from "@/routes/login.tsx";
 import { AlertsPage } from "@/routes/operations/alerts.tsx";
 import { HistoryPage } from "@/routes/operations/history.tsx";
+import { LedgerPage } from "@/routes/operations/ledger.tsx";
 import { NetworkPage } from "@/routes/operations/network.tsx";
 import { OverviewPage } from "@/routes/operations/overview.tsx";
 import { SchedulePage } from "@/routes/operations/schedule.tsx";
@@ -108,6 +109,12 @@ const historyRoute = createRoute({
   component: HistoryPage,
 });
 
+const ledgerRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/operations/ledger",
+  component: LedgerPage,
+});
+
 const simulationRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/lab/simulation",
@@ -159,6 +166,7 @@ const routeTree = rootRoute.addChildren([
     scheduleRoute,
     alertsRoute,
     historyRoute,
+    ledgerRoute,
     simulationRoute,
     experimentsRoute,
     sensorBudgetRoute,

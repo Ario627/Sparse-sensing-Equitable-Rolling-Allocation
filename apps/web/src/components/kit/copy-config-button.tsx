@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { IconCopy } from "@/components/icons.tsx";
 import { copyText } from "@/lib/clipboard.ts";
 import { cn } from "@/lib/cn.ts";
 import { Button } from "./button.tsx";
@@ -40,6 +41,7 @@ export function CopyConfigButton({
             void handleClick();
           }}
         >
+          <IconCopy size={14} />
           {label}
         </Button>
         {state === "copied" && <span className="text-xs text-ok">{COPIED_NOTE}</span>}

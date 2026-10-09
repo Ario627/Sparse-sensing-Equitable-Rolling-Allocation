@@ -1,5 +1,6 @@
 import { Button } from "@/components/kit/button.tsx";
 import { ErrorState } from "@/components/kit/error-state.tsx";
+import { InfoDialog } from "@/components/kit/info-dialog.tsx";
 import { MetricCard } from "@/components/kit/metric-card.tsx";
 import { PageHeader } from "@/components/kit/page-header.tsx";
 import { Skeleton } from "@/components/kit/skeleton.tsx";
@@ -34,7 +35,42 @@ export function HardwarePage() {
       <PageHeader
         eyebrow="Sistem"
         title="Perangkat"
-        description="Status perangkat keras dari telemetri MQTT terakhir. Demonstrator HIL dikenali sebagai perangkat biasa — tidak ada jalur data khusus."
+        description="Status perangkat dari telemetri MQTT terakhir."
+        actions={
+          <InfoDialog
+            label="Cara menyambung perangkat"
+            eyebrow="MQTT"
+            title="Kontrak perangkat"
+            className="w-[min(40rem,calc(100vw-2rem))]"
+          >
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <p className="label-caps text-ink-3">Topik</p>
+                <ul className="flex flex-col gap-1 font-mono text-2xs text-ink-2">
+                  <li>sera/&lt;situs&gt;/&lt;perangkat&gt;/telemetry</li>
+                  <li>sera/&lt;situs&gt;/&lt;perangkat&gt;/status</li>
+                  <li>sera/&lt;situs&gt;/&lt;perangkat&gt;/command</li>
+                  <li>sera/&lt;situs&gt;/&lt;perangkat&gt;/command/ack</li>
+                </ul>
+              </div>
+              <p>
+                Perangkat mengirim satu pesan telemetri per siklus. Identitas pada topik
+                dan pada isi pesan harus sama, nilai waktu memakai UTC, dan setiap bacaan
+                wajib memakai id sensor yang sudah terdaftar beserta tipe dan satuannya.
+              </p>
+              <p>
+                Perintah pintu datang pada topik command, lalu perangkat menjawab pada
+                topik command/ack dengan status accepted, rejected, atau expired. Batas
+                waktu jawaban dan toleransi posisi pintu ditentukan oleh konfigurasi API.
+              </p>
+              <p>
+                Sensor yang tidak mengirim bacaan melewati ambang basi akan ditandai basi
+                dan memicu peringatan, jadi perangkat sebaiknya juga mengirim status
+                online saat tersambung.
+              </p>
+            </div>
+          </InfoDialog>
+        }
       />
       {latestQuery.isError ? (
         <ErrorState

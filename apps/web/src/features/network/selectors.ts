@@ -71,6 +71,7 @@ export type NetworkNodeData = {
   readonly name: string;
   readonly role: string;
   readonly block: BlockSummary | null;
+  readonly sensors: BlockSensorSummary;
 };
 
 export type NetworkFlowNode = {
@@ -126,6 +127,19 @@ function zoneByNodeId(detail: NetworkDetailResponse): ReadonlyMap<string, LossZo
   return zones;
 }
 
+function accumulateSensors(
+  map: Map<string, BlockSensorSummary>,
+  key: string,
+  item: TelemetryLatestItemResponse,
+): void {
+  const current = map.get(key) ?? NO_SENSORS;
+  map.set(key, {
+    sensorCount: current.sensorCount + 1,
+    staleCount: current.staleCount + (item.stale ? 1 : 0),
+    worstQuality: worseQuality(current.worstQuality, item.stale ? "STALE" : item.quality),
+  });
+}
+
 function sensorsByBlock(
   items: readonly TelemetryLatestItemResponse[],
 ): ReadonlyMap<string, BlockSensorSummary> {
@@ -134,12 +148,20 @@ function sensorsByBlock(
     if (item.block_id === null) {
       continue;
     }
-    const current = map.get(item.block_id) ?? NO_SENSORS;
-    map.set(item.block_id, {
-      sensorCount: current.sensorCount + 1,
-      staleCount: current.staleCount + (item.stale ? 1 : 0),
-      worstQuality: worseQuality(current.worstQuality, item.quality),
-    });
+    accumulateSensors(map, item.block_id, item);
+  }
+  return map;
+}
+
+function sensorsByNode(
+  items: readonly TelemetryLatestItemResponse[],
+): ReadonlyMap<string, BlockSensorSummary> {
+  const map = new Map<string, BlockSensorSummary>();
+  for (const item of items) {
+    if (item.node_id === null) {
+      continue;
+    }
+    accumulateSensors(map, item.node_id, item);
   }
   return map;
 }
@@ -220,6 +242,7 @@ function buildFlow(
   detail: NetworkDetailResponse,
   blockByNodeId: ReadonlyMap<string, BlockSummary>,
   zones: ReadonlyMap<string, LossZone>,
+  nodeSensors: ReadonlyMap<string, BlockSensorSummary>,
 ): NetworkFlowModel {
   const placements = layoutNetworkNodes(detail);
   const nodes: NetworkFlowNode[] = detail.nodes.map((node) => {
@@ -237,6 +260,7 @@ function buildFlow(
         name: node.name,
         role: roleForNode(kind, zones.get(node.id) ?? null),
         block,
+        sensors: nodeSensors.get(node.id) ?? NO_SENSORS,
       },
     };
   });
@@ -307,7 +331,7 @@ export function buildNetworkView(input: BuildNetworkViewInput): NetworkView {
   }
   return {
     blocks,
-    flow: buildFlow(input.detail, blockByNodeId, zones),
+    flow: buildFlow(input.detail, blockByNodeId, zones, sensorsByNode(input.telemetry)),
     summary: buildSummary(blocks, input.telemetry),
   };
 }

@@ -366,6 +366,18 @@ export function IconSpan(props: IconProps) {
   );
 }
 
+export function IconLedger(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M5 4.5h11.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5z" />
+      <path d="M5 4.5a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 5 19.5" />
+      <path d="M8.5 9h6" />
+      <path d="M8.5 12.5h6" />
+      <path d="M8.5 16h3.5" />
+    </IconBase>
+  );
+}
+
 export function IconKey(props: IconProps) {
   return (
     <IconBase {...props}>

@@ -1,4 +1,5 @@
 import type {
+  LedgerHistoryQuery,
   ListAuditQuery,
   ListEventsQuery,
   ListExperimentRunsQuery,
@@ -25,6 +26,12 @@ export const queryKeys = {
       [...root, "telemetry", "latest", networkId] as const,
     readings: (query: TelemetryReadingsQuery) =>
       [...root, "telemetry", "readings", query] as const,
+  },
+  ledger: {
+    current: (networkId: string | null) =>
+      [...root, "ledger", "current", networkId] as const,
+    history: (query: LedgerHistoryQuery) =>
+      [...root, "ledger", "history", query] as const,
   },
   estimates: {
     latest: (networkId: string | null) =>

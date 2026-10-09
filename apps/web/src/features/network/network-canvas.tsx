@@ -127,6 +127,38 @@ function BlockNode({ data, selected }: NodeProps) {
   );
 }
 
+interface SensorBadgeProps {
+  readonly sensors: NetworkNodeData["sensors"];
+}
+
+function SensorBadge({ sensors }: SensorBadgeProps) {
+  if (sensors.sensorCount === 0) {
+    return null;
+  }
+  const stale = sensors.staleCount > 0;
+  return (
+    <span
+      title={
+        stale
+          ? `${formatNumber(sensors.staleCount)} dari ${formatNumber(sensors.sensorCount)} sensor basi`
+          : `${formatNumber(sensors.sensorCount)} sensor segar`
+      }
+      className={cn(
+        "mt-1.5 inline-flex items-center gap-1.5 rounded-xs px-1.5 py-0.5 font-mono text-2xs tabular",
+        stale ? "bg-crit-soft text-crit" : "bg-ok-soft text-ok",
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className={cn("size-1.5 rounded-full", stale ? "bg-crit" : "bg-ok")}
+      />
+      {stale
+        ? `${formatNumber(sensors.staleCount)}/${formatNumber(sensors.sensorCount)} basi`
+        : `${formatNumber(sensors.sensorCount)} sensor`}
+    </span>
+  );
+}
+
 function SourceNode({ data, selected }: NodeProps) {
   const node = data as NetworkNodeData;
   return (
@@ -139,6 +171,7 @@ function SourceNode({ data, selected }: NodeProps) {
       <Handle type="source" position={Position.Bottom} className="!bg-water/60" />
       <p className="label-caps text-water-deep">Intake</p>
       <p className="mt-1 truncate text-sm font-medium text-ink">{node.name}</p>
+      <SensorBadge sensors={node.sensors} />
     </div>
   );
 }
@@ -156,6 +189,7 @@ function PassthroughNode({ data, selected }: NodeProps) {
       <Handle type="source" position={Position.Bottom} className="!bg-line-2" />
       <p className="label-caps text-ink-3">{node.role}</p>
       <p className="mt-1 truncate text-xs text-ink">{node.name}</p>
+      <SensorBadge sensors={node.sensors} />
     </div>
   );
 }
