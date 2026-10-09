@@ -1,0 +1,119 @@
+import { z } from 'zod';
+
+const DURATION_UNITS = {
+  s: 1,
+  m: 60,
+  h: 3_600,
+  d: 86_400,
+} as const;
+
+function parseDurationSeconds(value: string): number {
+  const amount = Number.parseInt(value, 10);
+  const unit = value.at(-1);
+  if (unit !== 's' && unit !== 'm' && unit !== 'h' && unit !== 'd') {
+    throw new RangeError(`unsupported duration unit "${String(unit)}"`);
+  }
+  return amount * DURATION_UNITS[unit];
+}
+
+function durationSchema(fallback: string, label: string) {
+  return z
+    .string()
+    .regex(/^\d+[smhd]$/, `${label} must look like 30s, 15m, 2h, or 7d`)
+    .refine(
+      (value) => Number.parseInt(value, 10) > 0,
+      `${label} must be positive`,
+    )
+    .default(fallback)
+    .transform(parseDurationSeconds);
+}
+
+export const envSchema = z.object({
+  NODE_ENV: z
+    .enum(['development', 'test', 'demo', 'production'])
+    .default('development'),
+  API_PORT: z.coerce.number().int().min(1024).max(65_535).default(3000),
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  DATABASE_URL: z.url({ protocol: /^postgresql?$/ }),
+  CORS_ORIGINS: z
+    .string()
+    .default('http://localhost:5173')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0),
+    ),
+  JWT_SECRET: z.string().min(32),
+  JWT_ACCESS_TTL: durationSchema('15m', 'JWT_ACCESS_TTL'),
+  JWT_REFRESH_TTL: durationSchema('7d', 'JWT_REFRESH_TTL'),
+  MQTT_URL: z.url({ protocol: /^mqtts?$/ }).default('mqtt://localhost:1883'),
+  MQTT_CLIENT_ID: z.string().min(1).max(128).default('sera-api'),
+  MQTT_USERNAME: z.string().min(1).optional(),
+  MQTT_PASSWORD: z.string().min(1).optional(),
+  MQTT_TOPIC_PREFIX: z
+    .string()
+    .regex(/^[a-z0-9-]+(?:\/[a-z0-9-]+)*$/)
+    .default('sera'),
+  MQTT_SITE_ID: z
+    .string()
+    .regex(/^[a-z0-9-]+$/)
+    .max(64)
+    .default('demo-01'),
+  SOLVER_URL: z.url({ protocol: /^https?$/ }).default('http://localhost:8000'),
+  SOLVER_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(250)
+    .max(300_000)
+    .default(30_000),
+  SOLVER_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(2),
+  TELEMETRY_MAX_SKEW_S: z.coerce.number().int().min(10).max(3_600).default(300),
+  TELEMETRY_STALE_S: z.coerce.number().int().min(60).max(86_400).default(900),
+  COMMAND_TTL_S: z.coerce.number().int().min(10).max(3_600).default(300),
+  COMMAND_ACK_TIMEOUT_S: z.coerce.number().int().min(10).max(3_600).default(45),
+  COMMAND_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(2),
+  GATE_POSITION_TOLERANCE_PCT: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(40),
+  PLAN_HORIZON_H: z.coerce.number().int().min(1).max(168).default(24),
+  PLAN_SLOT_H: z.coerce.number().int().min(1).max(24).default(1),
+  EXPERIMENT_MAX_RUNS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100_000)
+    .default(5_000),
+  EXPERIMENT_POLL_INTERVAL_S: z.coerce.number().int().min(2).max(600).default(10),
+  ESTIMATOR_INTERVAL_S: z.coerce.number().int().min(30).max(3_600).default(300),
+  ESTIMATOR_WINDOW_MIN: z.coerce.number().int().min(1).max(1_440).default(15),
+  ESTIMATOR_MAX_OBSERVATIONS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(500)
+    .default(500),
+  ESTIMATOR_BATCH_NETWORKS: z.coerce.number().int().min(1).max(50).default(10),
+  ESTIMATE_STALE_S: z.coerce.number().int().min(60).max(86_400).default(900),
+  LEDGER_PERIOD_H: z.coerce.number().int().min(1).max(168).default(6),
+  LEDGER_GAMMA: z.coerce.number().gt(0).lt(1).default(0.9),
+  LEDGER_DEBT_MAX_M3: z.coerce.number().gt(0).max(1_000_000).default(40),
+  LEDGER_SETTLE_INTERVAL_S: z.coerce
+    .number()
+    .int()
+    .min(60)
+    .max(3_600)
+    .default(600),
+  REFRESH_CLEANUP_INTERVAL_S: z.coerce
+    .number()
+    .int()
+    .min(60)
+    .max(86_400)
+    .default(3_600),
+  REFRESH_TOKEN_RETENTION_D: z.coerce.number().int().min(1).max(365).default(30),
+});
+
+export type Env = z.infer<typeof envSchema>;

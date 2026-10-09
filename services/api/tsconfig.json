@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+
+    "lib": ["ES2024", "DOM"],
+    "types": ["node"],
+
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    "erasableSyntaxOnly": false,
+    "verbatimModuleSyntax": false,
+    "exactOptionalPropertyTypes": false,
+
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": ["src"]
+}

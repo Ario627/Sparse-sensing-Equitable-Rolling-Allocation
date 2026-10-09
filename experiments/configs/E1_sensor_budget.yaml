@@ -1,0 +1,21 @@
+experiment_id: E1_sensor_budget
+seed_base: 20261001
+results_root: experiments/results
+methods: [sera, greedy, proportional, oracle]
+scenarios: [nominal, drought]
+block_counts: [10]
+topologies: [CHAIN]
+k_factors: [1.0, 0.6]
+sensor_sets:
+  - [b2]
+  - [b2, b5]
+  - [b2, b5, b8]
+replicates: 3
+policy:
+  horizon_slots: 6
+  cvar_alpha: 0.9
+  scenario_config:
+    n_scenarios: 10
+executor:
+  slot_hours: 6.0
+  metric_cvar_alpha: 0.9

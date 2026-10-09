@@ -1,0 +1,82 @@
+{
+  "config": {
+    "config": {
+      "executor": {
+        "metric_cvar_alpha": null,
+        "slot_hours": 6.0,
+        "start_time": "2026-01-01T00:00:00Z",
+        "verify_streams": true
+      },
+      "experiment_id": "E1_smoke_1791505854",
+      "factors": {
+        "block_counts": [
+          6
+        ],
+        "k_factors": [
+          1.0
+        ],
+        "methods": [
+          "sera"
+        ],
+        "replicates": 1,
+        "scenarios": [
+          "nominal"
+        ],
+        "sensor_sets": [
+          [
+            "b1"
+          ]
+        ],
+        "topologies": [
+          "CHAIN"
+        ]
+      },
+      "policy": {},
+      "results_root": null,
+      "seed_base": 1042
+    },
+    "factors": {
+      "block_counts": [
+        6
+      ],
+      "k_factors": [
+        1.0
+      ],
+      "methods": [
+        "sera"
+      ],
+      "replicates": 1,
+      "scenario_ids": [
+        "nominal"
+      ],
+      "sensor_sets": [
+        [
+          "b1"
+        ]
+      ],
+      "topologies": [
+        "CHAIN"
+      ]
+    }
+  },
+  "config_hash": "815c3c6efe8ce0502f31e593dc7adf53d10c76511f48a8dff44ce523557ba74d",
+  "created_at": "2026-10-09T00:32:40.029183Z",
+  "dependencies": {
+    "fastapi": "0.142.2",
+    "numpy": "2.5.3",
+    "ortools": "9.15.6755",
+    "pandas": "3.0.6",
+    "pyarrow": "25.0.1",
+    "pydantic": "2.13.5",
+    "pydantic-settings": "2.15.0",
+    "pyyaml": "6.0.3",
+    "scipy": "1.18.1",
+    "sera-solver": "0.1.0",
+    "uvicorn": "0.54.0"
+  },
+  "git_commit": "b0dbd07e798f1d1878727bcf8e2cced2957708cb",
+  "git_dirty": true,
+  "platform": "Linux-7.2.6-arch2-1-x86_64-with-glibc2.44",
+  "python": "3.14.7",
+  "schema_version": 1
+}

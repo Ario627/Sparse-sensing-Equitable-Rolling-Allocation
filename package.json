@@ -1,0 +1,31 @@
+{
+  "name": "sera",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "npm@12.2.0",
+  "engines": {
+    "node": ">=26.0.0",
+    "npm": ">=12.2.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @sera/web",
+    "dev:api": "npm run start:dev -w @sera/api",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "e2e:smoke": "bash scripts/e2e-smoke.sh",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "typescript": "6.0.3"
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,191 @@
+@layer base {
+    html {
+        color-scheme: light;
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-line-2) transparent;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+    }
+
+    body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100dvh;
+        background-color: var(--color-paper);
+        color: var(--color-ink);
+        font-family: var(--font-sans);
+        font-synthesis: none;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    #root {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+    }
+
+    ::selection {
+        background-color: var(--color-water-soft);
+        color: var(--color-water-deep);
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-water);
+        outline-offset: 2px;
+    }
+
+    [data-surface="deep"] :focus-visible {
+        outline-color: var(--color-water-line);
+    }
+
+    h1,
+    h2,
+    h3 {
+        text-wrap: balance;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+        font-family: var(--font-display);
+        font-weight: 600;
+        letter-spacing: -0.025em;
+    }
+
+    p {
+        text-wrap: pretty;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+        font: inherit;
+        color: inherit;
+    }
+
+    input[type="number"] {
+        appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        appearance: none;
+        margin: 0;
+    }
+
+    dialog {
+        padding: 0;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius-lg);
+        background-color: var(--color-surface);
+        color: var(--color-ink);
+        box-shadow: var(--shadow-pop);
+    }
+
+    dialog::backdrop {
+        background-color: rgb(22 26 23 / 0.45);
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        border: 3px solid var(--color-paper);
+        border-radius: 8px;
+        background-color: var(--color-line-2);
+    }
+
+    ::-webkit-scrollbar-track {
+        background-color: transparent;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+        *,
+        ::before,
+        ::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+}
+
+@utility tabular {
+    font-variant-numeric: tabular-nums;
+}
+
+@utility label-caps {
+    font-size: var(--text-2xs);
+    line-height: var(--text-2xs--line-height);
+    letter-spacing: var(--tracking-caps);
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+@utility pt-safe {
+    padding-top: max(calc(var(--spacing) * 3), env(safe-area-inset-top));
+}
+
+@utility pb-safe {
+    padding-bottom: max(calc(var(--spacing) * 4), env(safe-area-inset-bottom));
+}
+
+@utility rule-staff {
+    height: 6px;
+    background-image:
+        repeating-linear-gradient(90deg, var(--color-line-2) 0 1px, transparent 1px 64px),
+        repeating-linear-gradient(90deg, var(--color-line) 0 1px, transparent 1px 8px);
+    background-size: 100% 6px, 100% 3px;
+    background-position: 0 100%, 0 100%;
+    background-repeat: repeat-x, repeat-x;
+}
+
+@utility bg-grid {
+    background-image:
+        repeating-linear-gradient(to bottom, rgb(20 45 56 / 0.05) 0 1px, transparent 1px 32px),
+        repeating-linear-gradient(to right, rgb(20 45 56 / 0.05) 0 1px, transparent 1px 32px);
+}
+
+@utility contour-paper {
+    background-image: repeating-radial-gradient(
+        circle at 8% 118%,
+        transparent 0 26px,
+        rgb(20 45 56 / 0.055) 26px 27px
+    );
+}
+
+@utility depth-scale {
+    background-image: linear-gradient(
+        to top,
+        var(--color-water) 0%,
+        var(--color-water-line) 100%
+    );
+}
+
+@utility bg-ruled-light {
+    background-image: repeating-linear-gradient(to bottom, rgb(242 246 248 / 0.06) 0 1px, transparent 1px 36px);
+}
+
+@utility bg-ruler {
+    background-image: linear-gradient(to right, var(--color-line-2) 1px, transparent 1px);
+    background-size: 12px 6px;
+    background-position: 0 100%;
+    background-repeat: repeat-x;
+}
+
+@utility bg-gauge-y {
+    background-image:
+        repeating-linear-gradient(to bottom, rgb(242 246 248 / 0.5) 0 1px, transparent 1px 110px),
+        repeating-linear-gradient(to bottom, rgb(242 246 248 / 0.22) 0 1px, transparent 1px 22px);
+    background-size: 22px 100%, 12px 100%;
+    background-repeat: no-repeat, no-repeat;
+}

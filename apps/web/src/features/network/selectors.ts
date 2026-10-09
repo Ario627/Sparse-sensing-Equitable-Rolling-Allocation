@@ -1,0 +1,434 @@
+import type {
+  LossZone,
+  NetworkBlockResponse,
+  NetworkDetailResponse,
+  NodeType,
+  PlanItemResponse,
+  ReadingQuality,
+  TelemetryLatestItemResponse,
+} from "@sera/contracts";
+import { worseQuality } from "@/features/sensors/status.ts";
+import { layoutNetworkNodes } from "@/lib/gl/relief-layout.ts";
+import { type StatusBand, serviceRatioBand } from "./status.ts";
+
+const CANVAS_X_SCALE = 380;
+const CANVAS_Y_SCALE = 172;
+const NO_PLAN_BAND: StatusBand = {
+  tone: "neutral",
+  label: "Belum ada rencana",
+};
+
+const ZONE_LABELS: Record<LossZone, string> = {
+  HEAD: "Hulu",
+  MIDDLE: "Tengah",
+  TAIL: "Hilir",
+};
+
+const KIND_BY_NODE_TYPE: Record<NodeType, NetworkNodeKind> = {
+  SOURCE: "source",
+  JUNCTION: "junction",
+  GATE: "gate",
+  BLOCK_TERMINAL: "block",
+};
+
+const NO_SENSORS: BlockSensorSummary = {
+  sensorCount: 0,
+  staleCount: 0,
+  worstQuality: null,
+};
+
+export type NetworkNodeKind = "source" | "junction" | "gate" | "block";
+
+export type BlockSensorSummary = {
+  readonly sensorCount: number;
+  readonly staleCount: number;
+  readonly worstQuality: ReadingQuality | null;
+};
+export type BlockSlot = {
+  readonly slotStart: string;
+  readonly slotEnd: string;
+  readonly gateOpen: boolean;
+  readonly serviceRatio: number | null;
+  readonly volumeDelM3: number | null;
+  readonly volumeGrossM3: number | null;
+  readonly reasonJson: unknown;
+  readonly upcoming: boolean;
+};
+export type BlockSummary = {
+  readonly blockId: string;
+  readonly nodeId: string;
+  readonly name: string;
+  readonly areaM2: number;
+  readonly nominalFlowLps: number;
+  readonly zone: LossZone | null;
+  readonly serviceRatio: number | null;
+  readonly band: StatusBand;
+  readonly sensors: BlockSensorSummary;
+  readonly slot: BlockSlot | null;
+};
+
+export type NetworkNodeData = {
+  readonly name: string;
+  readonly role: string;
+  readonly block: BlockSummary | null;
+  readonly sensors: BlockSensorSummary;
+};
+
+export type NetworkFlowNode = {
+  readonly id: string;
+  readonly kind: NetworkNodeKind;
+  readonly x: number;
+  readonly y: number;
+  readonly data: NetworkNodeData;
+};
+
+export type NetworkFlowEdge = {
+  readonly id: string;
+  readonly from: string;
+  readonly to: string;
+  readonly zone: LossZone;
+};
+
+export type NetworkFlowModel = {
+  readonly nodes: readonly NetworkFlowNode[];
+  readonly edges: readonly NetworkFlowEdge[];
+};
+
+export type NetworkViewSummary = {
+  readonly blockCount: number;
+  readonly sensorCount: number;
+  readonly staleSensorCount: number;
+  readonly worstSensorQuality: ReadingQuality | null;
+  readonly averageServiceRatio: number | null;
+  readonly weakestBlockName: string | null;
+  readonly weakestServiceRatio: number | null;
+};
+
+export type NetworkView = {
+  readonly blocks: readonly BlockSummary[];
+  readonly flow: NetworkFlowModel;
+  readonly summary: NetworkViewSummary;
+};
+
+export interface BuildNetworkViewInput {
+  readonly detail: NetworkDetailResponse;
+  readonly telemetry: readonly TelemetryLatestItemResponse[];
+  readonly planItems?: readonly PlanItemResponse[];
+  readonly now?: number;
+}
+
+function zoneByNodeId(detail: NetworkDetailResponse): ReadonlyMap<string, LossZone> {
+  const zones = new Map<string, LossZone>();
+  for (const edge of detail.edges) {
+    if (!zones.has(edge.to_node_id)) {
+      zones.set(edge.to_node_id, edge.zone);
+    }
+  }
+  return zones;
+}
+
+function accumulateSensors(
+  map: Map<string, BlockSensorSummary>,
+  key: string,
+  item: TelemetryLatestItemResponse,
+): void {
+  const current = map.get(key) ?? NO_SENSORS;
+  map.set(key, {
+    sensorCount: current.sensorCount + 1,
+    staleCount: current.staleCount + (item.stale ? 1 : 0),
+    worstQuality: worseQuality(current.worstQuality, item.stale ? "STALE" : item.quality),
+  });
+}
+
+function sensorsByBlock(
+  items: readonly TelemetryLatestItemResponse[],
+): ReadonlyMap<string, BlockSensorSummary> {
+  const map = new Map<string, BlockSensorSummary>();
+  for (const item of items) {
+    if (item.block_id === null) {
+      continue;
+    }
+    accumulateSensors(map, item.block_id, item);
+  }
+  return map;
+}
+
+function sensorsByNode(
+  items: readonly TelemetryLatestItemResponse[],
+): ReadonlyMap<string, BlockSensorSummary> {
+  const map = new Map<string, BlockSensorSummary>();
+  for (const item of items) {
+    if (item.node_id === null) {
+      continue;
+    }
+    accumulateSensors(map, item.node_id, item);
+  }
+  return map;
+}
+
+function planSlotByBlock(
+  items: readonly PlanItemResponse[],
+  now: number,
+): ReadonlyMap<string, BlockSlot> {
+  const upcoming = new Map<string, PlanItemResponse>();
+  const latest = new Map<string, PlanItemResponse>();
+  for (const item of items) {
+    const start = Date.parse(item.slot_start);
+    const currentLatest = latest.get(item.block_id);
+    if (currentLatest === undefined || Date.parse(currentLatest.slot_start) < start) {
+      latest.set(item.block_id, item);
+    }
+    if (start < now) {
+      continue;
+    }
+    const currentUpcoming = upcoming.get(item.block_id);
+    if (currentUpcoming === undefined || Date.parse(currentUpcoming.slot_start) > start) {
+      upcoming.set(item.block_id, item);
+    }
+  }
+  const slots = new Map<string, BlockSlot>();
+  for (const blockId of new Set([...upcoming.keys(), ...latest.keys()])) {
+    const chosen = upcoming.get(blockId) ?? latest.get(blockId);
+    if (chosen === undefined) {
+      continue;
+    }
+    slots.set(blockId, {
+      slotStart: chosen.slot_start,
+      slotEnd: chosen.slot_end,
+      gateOpen: chosen.gate_open,
+      serviceRatio: chosen.service_ratio_est,
+      volumeDelM3: chosen.volume_del_m3,
+      volumeGrossM3: chosen.volume_gross_m3,
+      reasonJson: chosen.reason_json,
+      upcoming: upcoming.has(blockId),
+    });
+  }
+  return slots;
+}
+
+function roleForNode(kind: NetworkNodeKind, zone: LossZone | null): string {
+  if (kind === "source") {
+    return "Sumber";
+  }
+  if (kind === "gate") {
+    return "Pintu air";
+  }
+  const base = kind === "block" ? "Blok" : "Pertemuan";
+  return zone === null ? base : `${base} · ${ZONE_LABELS[zone]}`;
+}
+
+function composeBlock(
+  block: NetworkBlockResponse,
+  zone: LossZone | null,
+  sensors: BlockSensorSummary,
+  slot: BlockSlot | null,
+): BlockSummary {
+  const ratio = slot?.serviceRatio ?? null;
+  return {
+    blockId: block.id,
+    nodeId: block.node_id,
+    name: block.name,
+    areaM2: block.area_m2,
+    nominalFlowLps: block.nominal_flow_lps,
+    zone,
+    serviceRatio: ratio,
+    band: ratio === null ? NO_PLAN_BAND : serviceRatioBand(ratio),
+    sensors,
+    slot,
+  };
+}
+
+function buildFlow(
+  detail: NetworkDetailResponse,
+  blockByNodeId: ReadonlyMap<string, BlockSummary>,
+  zones: ReadonlyMap<string, LossZone>,
+  nodeSensors: ReadonlyMap<string, BlockSensorSummary>,
+): NetworkFlowModel {
+  const placements = layoutNetworkNodes(detail);
+  const nodes: NetworkFlowNode[] = detail.nodes.map((node) => {
+    const placement = placements.get(node.id) ?? { x: 0, z: 0 };
+    const block = blockByNodeId.get(node.id) ?? null;
+    const mapped = KIND_BY_NODE_TYPE[node.type];
+    const kind: NetworkNodeKind =
+      mapped === "block" && block === null ? "junction" : mapped;
+    return {
+      id: node.id,
+      kind,
+      x: placement.x * CANVAS_X_SCALE,
+      y: placement.z * CANVAS_Y_SCALE,
+      data: {
+        name: node.name,
+        role: roleForNode(kind, zones.get(node.id) ?? null),
+        block,
+        sensors: nodeSensors.get(node.id) ?? NO_SENSORS,
+      },
+    };
+  });
+  const edges: NetworkFlowEdge[] = detail.edges.map((edge) => ({
+    id: edge.id,
+    from: edge.from_node_id,
+    to: edge.to_node_id,
+    zone: edge.zone,
+  }));
+  return { nodes, edges };
+}
+
+function buildSummary(
+  blocks: readonly BlockSummary[],
+  telemetry: readonly TelemetryLatestItemResponse[],
+): NetworkViewSummary {
+  let worst: ReadingQuality | null = null;
+  let staleCount = 0;
+  for (const item of telemetry) {
+    worst = worseQuality(worst, item.stale ? "STALE" : item.quality);
+    if (item.stale) {
+      staleCount += 1;
+    }
+  }
+  let ratioSum = 0;
+  let ratioCount = 0;
+  let weakestName: string | null = null;
+  let weakestRatio: number | null = null;
+  for (const block of blocks) {
+    const ratio = block.serviceRatio;
+    if (ratio === null) {
+      continue;
+    }
+    ratioSum += ratio;
+    ratioCount += 1;
+    if (weakestRatio === null || ratio < weakestRatio) {
+      weakestRatio = ratio;
+      weakestName = block.name;
+    }
+  }
+  return {
+    blockCount: blocks.length,
+    sensorCount: telemetry.length,
+    staleSensorCount: staleCount,
+    worstSensorQuality: worst,
+    averageServiceRatio: ratioCount === 0 ? null : ratioSum / ratioCount,
+    weakestBlockName: weakestName,
+    weakestServiceRatio: weakestRatio,
+  };
+}
+
+export function buildNetworkView(input: BuildNetworkViewInput): NetworkView {
+  const now = input.now ?? Date.now();
+  const zones = zoneByNodeId(input.detail);
+  const sensors = sensorsByBlock(input.telemetry);
+  const slots = planSlotByBlock(input.planItems ?? [], now);
+  const blocks = input.detail.blocks.map((block) =>
+    composeBlock(
+      block,
+      zones.get(block.node_id) ?? null,
+      sensors.get(block.id) ?? NO_SENSORS,
+      slots.get(block.id) ?? null,
+    ),
+  );
+  const blockByNodeId = new Map<string, BlockSummary>();
+  for (const block of blocks) {
+    blockByNodeId.set(block.nodeId, block);
+  }
+  return {
+    blocks,
+    flow: buildFlow(input.detail, blockByNodeId, zones, sensorsByNode(input.telemetry)),
+    summary: buildSummary(blocks, input.telemetry),
+  };
+}
+
+export function zoneLabel(zone: LossZone): string {
+  return ZONE_LABELS[zone];
+}
+
+export interface FlowReading {
+  readonly sensorId: string;
+  readonly valueLps: number;
+  readonly stale: boolean;
+  readonly ageS: number | null;
+  readonly nodeId: string | null;
+  readonly nodeName: string | null;
+}
+
+function bestFlowReading(
+  items: readonly TelemetryLatestItemResponse[],
+  nodeId: string | null,
+  restrictToNode: boolean,
+): FlowReading | null {
+  let best: FlowReading | null = null;
+  let bestAge = Number.POSITIVE_INFINITY;
+  for (const item of items) {
+    if (item.type !== "FLOW" || item.value === null) {
+      continue;
+    }
+    if (restrictToNode && item.node_id !== nodeId) {
+      continue;
+    }
+    const age = item.age_s ?? Number.POSITIVE_INFINITY;
+    if (age < bestAge) {
+      bestAge = age;
+      best = {
+        sensorId: item.sensor_id,
+        valueLps: item.value,
+        stale: item.stale,
+        ageS: item.age_s,
+        nodeId: item.node_id,
+        nodeName: item.node_name,
+      };
+    }
+  }
+  return best;
+}
+
+export function sourceFlowReading(
+  items: readonly TelemetryLatestItemResponse[],
+  sourceNodeId: string | null,
+): FlowReading | null {
+  if (sourceNodeId === null) {
+    return null;
+  }
+  return bestFlowReading(items, sourceNodeId, true);
+}
+
+export function freshestFlowReading(
+  items: readonly TelemetryLatestItemResponse[],
+): FlowReading | null {
+  return bestFlowReading(items, null, false);
+}
+
+export interface ZoneServiceSummary {
+  readonly zone: LossZone;
+  readonly blockCount: number;
+  readonly sampledCount: number;
+  readonly averageRatio: number | null;
+  readonly weakestBlockName: string | null;
+}
+
+export function zoneServiceSummary(
+  blocks: readonly BlockSummary[],
+): readonly ZoneServiceSummary[] {
+  const zones: readonly LossZone[] = ["HEAD", "MIDDLE", "TAIL"];
+  return zones.map((zone) => {
+    const members = blocks.filter((block) => block.zone === zone);
+    let sum = 0;
+    let sampled = 0;
+    let weakest: BlockSummary | null = null;
+    for (const block of members) {
+      const ratio = block.serviceRatio;
+      if (ratio === null) {
+        continue;
+      }
+      sum += ratio;
+      sampled += 1;
+      if (weakest === null || ratio < (weakest.serviceRatio ?? 1)) {
+        weakest = block;
+      }
+    }
+    return {
+      zone,
+      blockCount: members.length,
+      sampledCount: sampled,
+      averageRatio: sampled === 0 ? null : sum / sampled,
+      weakestBlockName: weakest === null ? null : weakest.name,
+    };
+  });
+}
