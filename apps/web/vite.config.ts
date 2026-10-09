@@ -35,5 +35,16 @@ export default defineConfig({
   preview: {
     port: 4173,
     strictPort: true,
+    proxy: {
+      "/v1": {
+        target: apiTarget,
+        changeOrigin: true,
+      },
+      "/socket.io": {
+        target: apiTarget,
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
 });

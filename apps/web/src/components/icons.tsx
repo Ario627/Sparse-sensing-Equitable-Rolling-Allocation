@@ -172,6 +172,16 @@ export function IconSliders(props: IconProps) {
   );
 }
 
+export function IconMenu(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M4.5 7h15" />
+      <path d="M4.5 12h15" />
+      <path d="M4.5 17h15" />
+    </IconBase>
+  );
+}
+
 export function IconClock(props: IconProps) {
   return (
     <IconBase {...props}>

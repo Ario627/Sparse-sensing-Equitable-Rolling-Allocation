@@ -78,6 +78,8 @@ const INITIAL_PITCH = 0.58;
 const DRAG_SENSITIVITY = 0.0055;
 const DPR_CAP = 2;
 const PULSE_START = 0.45;
+const AUTO_ROTATE_SPEED = 0.11;
+const AUTO_RESUME_MS = 2_600;
 
 const fallbackText = {
   unavailable:
@@ -120,6 +122,9 @@ interface Scene {
   lastNow: number;
   needsDraw: boolean;
   reduced: boolean;
+  autoRotate: boolean;
+  dragging: boolean;
+  lastInteraction: number;
   raf: number;
 }
 
@@ -127,6 +132,8 @@ interface ReliefCanvasProps {
   readonly blocks: readonly TerrainBlock[];
   readonly flow: readonly TerrainFlowPoint[];
   readonly height?: number;
+  readonly autoRotate?: boolean;
+  readonly interactive?: boolean;
   readonly label: string;
   readonly className?: string;
 }
@@ -261,6 +268,9 @@ function createScene(canvas: HTMLCanvasElement): Scene | null {
     lastNow: 0,
     needsDraw: true,
     reduced: false,
+    autoRotate: false,
+    dragging: false,
+    lastInteraction: 0,
     raf: 0,
   };
 }
@@ -350,6 +360,13 @@ function startLoop(scene: Scene): void {
     scene.lastNow = now;
     if (!scene.reduced) {
       scene.time += delta;
+      if (
+        scene.autoRotate &&
+        !scene.dragging &&
+        now - scene.lastInteraction > AUTO_RESUME_MS
+      ) {
+        scene.yaw += delta * AUTO_ROTATE_SPEED;
+      }
       scene.needsDraw = true;
     }
     if (scene.needsDraw) {
@@ -377,6 +394,8 @@ export function ReliefCanvas({
   blocks,
   flow,
   height = 260,
+  autoRotate = false,
+  interactive = true,
   label,
   className,
 }: ReliefCanvasProps) {
@@ -441,12 +460,22 @@ export function ReliefCanvas({
     scene.needsDraw = true;
   }, [blocks, flow]);
 
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (scene === null) {
+      return;
+    }
+    scene.autoRotate = autoRotate;
+  }, [autoRotate]);
+
   function handlePointerDown(event: ReactPointerEvent<HTMLCanvasElement>): void {
     const scene = sceneRef.current;
-    if (scene === null || fallback !== null) {
+    if (scene === null || fallback !== null || !interactive) {
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);
+    scene.dragging = true;
+    scene.lastInteraction = performance.now();
     dragRef.current = {
       pointerId: event.pointerId,
       x: event.clientX,
@@ -470,8 +499,14 @@ export function ReliefCanvas({
   }
 
   function handlePointerUp(event: ReactPointerEvent<HTMLCanvasElement>): void {
-    if (dragRef.current?.pointerId === event.pointerId) {
-      dragRef.current = null;
+    if (dragRef.current?.pointerId !== event.pointerId) {
+      return;
+    }
+    dragRef.current = null;
+    const scene = sceneRef.current;
+    if (scene !== null) {
+      scene.dragging = false;
+      scene.lastInteraction = performance.now();
     }
   }
 
@@ -491,7 +526,12 @@ export function ReliefCanvas({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className="block h-full w-full cursor-grab touch-none active:cursor-grabbing"
+        className={cn(
+          "block h-full w-full",
+          interactive
+            ? "cursor-grab touch-none active:cursor-grabbing"
+            : "pointer-events-none",
+        )}
       />
       {fallback !== null && (
         <p className="absolute inset-0 grid place-items-center px-6 text-center text-xs text-ink-3">

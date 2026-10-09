@@ -20,7 +20,6 @@ import {
   type ScenarioPresetKey,
 } from "@/features/simulation/scenario.ts";
 import { isApiError } from "@/lib/api/client.ts";
-import { cn } from "@/lib/cn.ts";
 import { formatNumber } from "@/lib/format.ts";
 import { buildSearch, readSearchString } from "@/lib/search.ts";
 

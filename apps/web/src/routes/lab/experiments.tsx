@@ -21,8 +21,6 @@ import {
 } from "@/features/experiments/kpi.ts";
 import { RunProgress } from "@/features/experiments/run-progress.tsx";
 import {
-  experimentStatusLabel,
-  experimentStatusTone,
   runStatusLabel,
   runStatusTone,
 } from "@/features/experiments/status.ts";
