@@ -1,0 +1,84 @@
+{
+  "budget_curves": [],
+  "config_hash": "41fbc84cb4e666866902942e9cec06f037eadb1217797c0f4fce876a080cfcef",
+  "experiment_id": "expmv12hmsisy",
+  "failures_total": 0,
+  "level": 0.95,
+  "methods": [
+    {
+      "failures": 0,
+      "fallback_rate": 1.0,
+      "method": "sera",
+      "metrics": {
+        "adequacy": {
+          "ci": {
+            "lower": 0.42098842790143526,
+            "upper": 0.42098842790143526
+          },
+          "mean": 0.42098842790143526,
+          "median": 0.42098842790143526,
+          "n": 1
+        },
+        "cvar_shortage_m3": {
+          "ci": {
+            "lower": 208.53401579881384,
+            "upper": 208.53401579881384
+          },
+          "mean": 208.53401579881384,
+          "median": 208.53401579881384,
+          "n": 1
+        },
+        "dependability": {
+          "ci": {
+            "lower": 0.06574074074074074,
+            "upper": 0.06574074074074074
+          },
+          "mean": 0.06574074074074074,
+          "median": 0.06574074074074074,
+          "n": 1
+        },
+        "equity": {
+          "ci": {
+            "lower": 0.03686061859961831,
+            "upper": 0.03686061859961831
+          },
+          "mean": 0.03686061859961831,
+          "median": 0.03686061859961831,
+          "n": 1
+        },
+        "shortage_total_m3": {
+          "ci": {
+            "lower": 17743.27577251451,
+            "upper": 17743.27577251451
+          },
+          "mean": 17743.27577251451,
+          "median": 17743.27577251451,
+          "n": 1
+        },
+        "solve_time_ms": {
+          "ci": {
+            "lower": 977237.906,
+            "upper": 977237.906
+          },
+          "mean": 977237.906,
+          "median": 977237.906,
+          "n": 1
+        },
+        "worst_sr": {
+          "ci": {
+            "lower": 0.4572726958472168,
+            "upper": 0.4572726958472168
+          },
+          "mean": 0.4572726958472168,
+          "median": 0.4572726958472168,
+          "n": 1
+        }
+      },
+      "runs": 1
+    }
+  ],
+  "pairwise": [],
+  "pairwise_excluded": 0,
+  "resamples": 10000,
+  "seed": 1042
+}
