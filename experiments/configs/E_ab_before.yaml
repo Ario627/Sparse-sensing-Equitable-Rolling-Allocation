@@ -1,0 +1,35 @@
+# A/B benchmark — lengan "sebelum" optimasi dispersion (kode apa adanya).
+#
+# Pasangan file ini adalah E_ab_after.yaml. Keduanya WAJIB identik kecuali
+# experiment_id, supaya seed dan environment yang diturunkan dari seed_base +
+# faktor benar-benar sama. Jangan ubah salah satu tanpa yang lain.
+#
+# Fokus: environment besar (BRANCHED dengan n_blocks 10 = 18 blok aktual) tempat
+# biaya kendala dispersion paling besar, plus environment kecil sebagai kontrol.
+# Rentang faktor sengaja dipangkas (1 replikasi, 2 sensor set) supaya dua lengan
+# bisa selesai dalam waktu wajar tanpa mengorbankan jumlah pasangan uji (48
+# environment > MIN_PAIRS = 5).
+experiment_id: E_ab_before
+seed_base: 20261011
+results_root: experiments/results
+
+methods: [sera, proportional, rotation, greedy, oracle]
+scenarios: [nominal, drought]
+block_counts: [6, 10]
+topologies: [CHAIN, BRANCHED]
+k_factors: [0.4, 0.7, 1.0]
+sensor_sets:
+  - [b2]
+  - [b2, b5]
+replicates: 1
+
+policy:
+  horizon_slots: 2
+  stage_time_limit_s: 2.0
+  cvar_alpha: 0.8
+  scenario_config:
+    n_scenarios: 5
+
+executor:
+  slot_hours: 6.0
+  metric_cvar_alpha: 0.8

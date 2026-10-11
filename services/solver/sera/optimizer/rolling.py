@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import time
 from dataclasses import dataclass, replace
 
 import numpy as np
@@ -64,6 +65,11 @@ class RollingOutcome:
     fallback: FallbackDecision | None
     total_solve_seconds: float
     commit_slots: int
+    # Waktu dinding, terpisah dari `total_solve_seconds` yang hanya berisi
+    # `solve_stats.solve_time` dari solver. Konstruksi model tidak pernah ikut
+    # terhitung di sana, sehingga biaya sebenarnya tidak terlihat.
+    model_build_seconds: float = 0.0
+    solver_wall_seconds: float = 0.0
 
     @property
     def used_fallback(self) -> bool:
@@ -89,6 +95,9 @@ class RollingOutcome:
         decision: FallbackDecision,
         total_solve_seconds: float,
         commit_slots: int,
+        *,
+        model_build_seconds: float = 0.0,
+        solver_wall_seconds: float = 0.0,
     ) -> RollingOutcome:
         return cls(
             request=request,
@@ -99,6 +108,8 @@ class RollingOutcome:
             fallback=decision,
             total_solve_seconds=total_solve_seconds,
             commit_slots=commit_slots,
+            model_build_seconds=model_build_seconds,
+            solver_wall_seconds=solver_wall_seconds,
         )
 
 
@@ -172,10 +183,14 @@ def rolling_solve(
             0.0,
             problem.commit_slots,
         )
+    build_started = time.perf_counter()
     model = build_plan_model(expanded)
     if request.cvar_alpha is not None:
         model.enable_cvar(request.cvar_alpha)
+    build_seconds = time.perf_counter() - build_started
+    solve_started = time.perf_counter()
     outcome = solve_lexicographic(model, request.lexicographic)
+    solve_wall_seconds = time.perf_counter() - solve_started
     total_seconds = math.fsum(stage.solve_seconds for stage in outcome.stages)
     final = outcome.final
     if final is None or not final.has_solution:
@@ -188,6 +203,8 @@ def rolling_solve(
             decision,
             total_seconds,
             problem.commit_slots,
+            model_build_seconds=build_seconds,
+            solver_wall_seconds=solve_wall_seconds,
         )
     return RollingOutcome(
         request=request,
@@ -198,6 +215,8 @@ def rolling_solve(
         fallback=None,
         total_solve_seconds=total_seconds,
         commit_slots=problem.commit_slots,
+        model_build_seconds=build_seconds,
+        solver_wall_seconds=solve_wall_seconds,
     )
 
 

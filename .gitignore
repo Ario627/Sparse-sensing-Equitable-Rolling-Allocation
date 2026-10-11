@@ -10,6 +10,11 @@ node_modules/
 # Firmware
 .pio/
 
+
+experiments/results/*
+!experiments/results/AB_ANALYSIS.md
+!experiments/results/AB_REPORT.md
+
 # Build output
 dist/
 build/

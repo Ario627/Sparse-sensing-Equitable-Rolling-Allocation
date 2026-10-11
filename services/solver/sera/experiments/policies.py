@@ -470,6 +470,8 @@ class SignalSnapshot:
 class PolicyTelemetry:
     n_resolves: int
     solve_seconds_total: float
+    model_build_seconds_total: float
+    solver_wall_seconds_total: float
     fallback_count: int
     fallback_by_level: Mapping[FallbackLevel, int]
     review_required_count: int
@@ -489,6 +491,8 @@ class PolicyTelemetry:
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise DomainInvariantError(f"{name} must be a non-negative integer")
         require_non_negative(self.solve_seconds_total, "solve_seconds_total")
+        require_non_negative(self.model_build_seconds_total, "model_build_seconds_total")
+        require_non_negative(self.solver_wall_seconds_total, "solver_wall_seconds_total")
         if self.mip_gap is not None:
             require_non_negative(self.mip_gap, "mip_gap")
 
@@ -696,6 +700,8 @@ class PolicyCore:
     _step: int = 0
     _previous_open: dict[str, bool] = field(default_factory=dict)
     _solve_seconds_total: float = 0.0
+    _model_build_seconds_total: float = 0.0
+    _solver_wall_seconds_total: float = 0.0
     _n_resolves: int = 0
     _fallback_counts: dict[FallbackLevel, int] = field(default_factory=dict)
     _review_required_count: int = 0
@@ -721,6 +727,8 @@ class PolicyCore:
         return PolicyTelemetry(
             n_resolves=self._n_resolves,
             solve_seconds_total=self._solve_seconds_total,
+            model_build_seconds_total=self._model_build_seconds_total,
+            solver_wall_seconds_total=self._solver_wall_seconds_total,
             fallback_count=sum(counts.values()),
             fallback_by_level=MappingProxyType(counts),
             review_required_count=self._review_required_count,
@@ -859,6 +867,8 @@ class SeraPolicy(PolicyCore):
         outcome = rolling_solve(problem, request, self.rng, fallback_context=fallback_context)
         self._n_resolves += 1
         self._solve_seconds_total += outcome.total_solve_seconds
+        self._model_build_seconds_total += outcome.model_build_seconds
+        self._solver_wall_seconds_total += outcome.solver_wall_seconds
         self._record_plan(outcome, context.slot_index)
         execution = outcome.execution_by_block()
         opens = {block_id: execution[block_id][0] for block_id in self.network.block_ids}
@@ -944,6 +954,8 @@ class BaselinePolicy(PolicyCore):
             return {block_id: bool(flag) for block_id, flag in decision.opens.items()}
         self._n_resolves += 1
         self._solve_seconds_total += outcome.solve_seconds
+        self._model_build_seconds_total += outcome.model_build_seconds
+        self._solver_wall_seconds_total += outcome.solver_wall_seconds
         self._record_gap(outcome.relative_gap)
         return {
             block_id: bool(outcome.plan.open_by_slot[position][0])

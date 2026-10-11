@@ -484,29 +484,55 @@ class PlanModel:
                 )
 
     def _add_dispersion_constraints(self) -> None:
+        """Kendala dispersi (linearisasi Gini) — ekuivalen, konstruksi lebih murah.
+
+        Formulasi tidak berubah: untuk setiap (pasangan blok, skenario) tetap
+        dipasang dua kendala `spread - scale*pair <= 0` dan `-spread - scale*pair <= 0`,
+        dengan urutan dan nama yang sama seperti sebelumnya.
+
+        Yang berubah hanya cara menghitungnya. `_fairness_denominator` dan
+        `_delivered_expression` hanya bergantung pada (blok, skenario), tetapi
+        sebelumnya dihitung ulang untuk setiap pasangan — 2 * n(n-1)/2 kali per
+        skenario. Sekarang dihitung sekali per kombinasi, lalu suku luar
+        diangkat keluar dari loop dalam.
+
+        Ekuivalensi (himpunan kendala, urutan, nama, jumlah variabel, optimum LP,
+        dan solusi lexicographic) dijaga oleh
+        tests/test_dispersion_equivalence.py.
+        """
         block_ids = self._problem.block_ids
+
+        denominators: dict[tuple[str, str], float] = {}
+        delivered: dict[tuple[str, str], mathopt.LinearBase] = {}
         for scenario in self._problem.scenarios:
+            sid = scenario.scenario_id
+            for block_id in block_ids:
+                block = self.block(block_id)
+                denominators[(block_id, sid)] = self._fairness_denominator(block, scenario)
+                delivered[(block_id, sid)] = self._delivered_expression(block, sid)
+
+        for scenario in self._problem.scenarios:
+            sid = scenario.scenario_id
             for left in range(1, len(block_ids)):
+                left_id = block_ids[left]
+                left_den = denominators[(left_id, sid)]
+                left_term = self.block(left_id).ledger_delivered_m3 + delivered[(left_id, sid)]
                 for right in range(left + 1, len(block_ids)):
-                    first = self.block(block_ids[left])
-                    second = self.block(block_ids[right])
-                    first_den = self._fairness_denominator(first, scenario)
-                    second_den = self._fairness_denominator(second, scenario)
-                    pair = self._d[(left, right, scenario.scenario_id)]
-                    spread = second_den * (
-                        first.ledger_delivered_m3
-                        + self._delivered_expression(first, scenario.scenario_id)
-                    ) - first_den * (
-                        second.ledger_delivered_m3
-                        + self._delivered_expression(second, scenario.scenario_id)
+                    right_id = block_ids[right]
+                    right_den = denominators[(right_id, sid)]
+                    right_term = (
+                        self.block(right_id).ledger_delivered_m3 + delivered[(right_id, sid)]
+                    )
+                    pair = self._d[(left, right, sid)]
+                    spread = right_den * left_term - left_den * right_term
+                    scale = left_den * right_den
+                    self._model.add_linear_constraint(
+                        spread - scale * pair <= 0.0,
+                        name=_variable_name("disp", left, right, sid),
                     )
                     self._model.add_linear_constraint(
-                        spread - (first_den * second_den) * pair <= 0.0,
-                        name=_variable_name("disp", left, right, scenario.scenario_id),
-                    )
-                    self._model.add_linear_constraint(
-                        -spread - (first_den * second_den) * pair <= 0.0,
-                        name=_variable_name("disp", left, right, scenario.scenario_id, "rev"),
+                        -spread - scale * pair <= 0.0,
+                        name=_variable_name("disp", left, right, sid, "rev"),
                     )
 
     def _add_stability_constraints(self) -> None:

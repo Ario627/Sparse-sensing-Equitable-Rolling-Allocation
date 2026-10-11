@@ -1,0 +1,26 @@
+# Verifikasi netralitas instrumentasi timing: subset dari E_benchmark_v2 dengan
+# faktor & seed_base identik, supaya setiap run harus menghasilkan metrik yang
+# PERSIS SAMA dengan v2. Hanya kolom waktu yang boleh berbeda.
+experiment_id: E_instr_check
+seed_base: 20261011
+results_root: experiments/results
+
+methods: [sera, proportional, rotation, greedy, oracle]
+scenarios: [nominal, drought]
+block_counts: [6]
+topologies: [CHAIN]
+k_factors: [0.4, 1.0]
+sensor_sets:
+  - [b2]
+replicates: 1
+
+policy:
+  horizon_slots: 2
+  stage_time_limit_s: 2.0
+  cvar_alpha: 0.8
+  scenario_config:
+    n_scenarios: 5
+
+executor:
+  slot_hours: 6.0
+  metric_cvar_alpha: 0.8

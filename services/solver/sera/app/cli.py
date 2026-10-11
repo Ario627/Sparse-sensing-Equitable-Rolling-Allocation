@@ -12,6 +12,15 @@ from typing import Final
 from sera.app.settings import get_settings
 from sera.core.io import experiment_dir, to_jsonable
 from sera.core.types import DomainInvariantError
+from sera.experiments.ab_compare import compare_arms, render_markdown, save_timing_charts
+from sera.experiments.benchmark import (
+    DEFAULT_WORKERS,
+    execute_benchmark,
+    merge_benchmark,
+    parse_shard_spec,
+    shard_plan,
+)
+from sera.experiments.charts import generate_all_charts
 from sera.experiments.config import ExperimentConfig, load_experiment_config
 from sera.experiments.progress import (
     ProgressCancelled,
@@ -73,6 +82,20 @@ def _argument_flag(arguments: argparse.Namespace, name: str) -> bool:
     value = getattr(arguments, name, None)
     if not isinstance(value, bool):
         raise DomainInvariantError(f"argument {name} must be a boolean")
+    return value
+
+
+def _argument_number(arguments: argparse.Namespace, name: str) -> float:
+    value = getattr(arguments, name, None)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise DomainInvariantError(f"argument {name} must be a number")
+    return float(value)
+
+
+def _argument_integer(arguments: argparse.Namespace, name: str) -> int:
+    value = getattr(arguments, name, None)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise DomainInvariantError(f"argument {name} must be an integer")
     return value
 
 
@@ -179,6 +202,10 @@ def _command_run(arguments: argparse.Namespace) -> int:
     )
     results_root = _resolve_results_root(arguments, config)
     plan = config.build_plan()
+    shard_argument = _argument_optional_text(arguments, "shard")
+    if shard_argument is not None:
+        shard_index, shard_count = parse_shard_spec(shard_argument)
+        plan = shard_plan(plan, shard_index=shard_index, shard_count=shard_count)
     checkpoint_path = experiment_dir(results_root, plan.experiment_id) / CHECKPOINT_FILENAME
     pending = _completed_run_indexes(checkpoint_path, plan)
     executor = config.executor
@@ -224,6 +251,109 @@ def _command_run(arguments: argparse.Namespace) -> int:
     )
     _print_outcome(outcome, artifacts)
     return EXIT_OK if outcome.failure_count == 0 else EXIT_ISSUES
+
+
+def _command_benchmark(arguments: argparse.Namespace) -> int:
+    settings = get_settings()
+    out_override = _argument_optional_text(arguments, "out")
+    report, artifacts = execute_benchmark(
+        Path(_argument_text(arguments, "config")),
+        results_root=None if out_override is None else Path(out_override).expanduser(),
+        workers=_argument_integer(arguments, "workers"),
+        default_seed_base=settings.seed_base,
+        repo=locate_repo_root(Path(__file__)),
+    )
+    print(
+        f"{report.experiment_id}  runs {report.runs}  failures {report.failures}"
+        f"  workers {report.workers}  wall {_format_duration(report.wall_seconds)}"
+    )
+    for shard in report.shards:
+        print(
+            f"  shard {shard.index:>2}  runs {shard.records:<4}"
+            f" failures {shard.failures:<3} wall {_format_duration(shard.wall_seconds)}"
+        )
+    print(f"runs        {report.runs_path}")
+    print(f"summary     {report.summary_path}")
+    charts = artifacts.charts.get("charts")
+    if isinstance(charts, list):
+        for chart in charts:
+            if isinstance(chart, dict):
+                print(f"chart       {chart.get('path')}")
+    scorecard = artifacts.charts.get("final_scorecard")
+    if isinstance(scorecard, dict):
+        ranking = scorecard.get("ranking")
+        if isinstance(ranking, list):
+            print("peringkat final:")
+            for row in ranking:
+                if isinstance(row, dict):
+                    print(f"  {row.get('method')!s:<14} skor {row.get('composite_score')}")
+    return EXIT_OK if report.failures == 0 else EXIT_ISSUES
+
+
+def _command_merge(arguments: argparse.Namespace) -> int:
+    """Gabungkan checkpoint shard yang sudah selesai menjadi artefak + chart."""
+    settings = get_settings()
+    config_path = Path(_argument_text(arguments, "config"))
+    config = load_experiment_config(config_path, default_seed_base=settings.seed_base)
+    out_override = _argument_optional_text(arguments, "out")
+    root = Path(out_override).expanduser() if out_override is not None else config.results_root
+    if root is None:
+        print("error: results_root must be provided by config or --out", file=sys.stderr)
+        return EXIT_USAGE
+    workers = _argument_integer(arguments, "workers")
+    plan = config.build_plan()
+    outcome, artifacts, copied, out_of_plan = merge_benchmark(
+        root, plan, workers=workers, repo=locate_repo_root(Path(__file__))
+    )
+    charts = generate_all_charts(root, plan.experiment_id)
+    print(
+        f"{plan.experiment_id}  runs {outcome.completed_count}"
+        f"  failures {outcome.failure_count}  timeseries {copied}"
+        f"  di luar plan {out_of_plan}"
+    )
+    print(f"runs        {artifacts.runs_path}")
+    print(f"summary     {artifacts.summary_path}")
+    entries = charts.get("charts")
+    if isinstance(entries, list):
+        for chart in entries:
+            if isinstance(chart, dict):
+                print(f"chart       {chart.get('path')}")
+    scorecard = charts.get("final_scorecard")
+    if isinstance(scorecard, dict):
+        ranking = scorecard.get("ranking")
+        if isinstance(ranking, list):
+            print("peringkat final:")
+            for row in ranking:
+                if isinstance(row, dict):
+                    print(f"  {row.get('method')!s:<14} skor {row.get('composite_score')}")
+    return EXIT_OK if outcome.failure_count == 0 else EXIT_ISSUES
+
+
+def _command_compare_ab(arguments: argparse.Namespace) -> int:
+    """Bandingkan dua lengan benchmark secara berpasangan."""
+    settings = get_settings()
+    out_override = _argument_optional_text(arguments, "out")
+    root = Path(out_override).expanduser() if out_override is not None else settings.results_dir
+    comparison, paired = compare_arms(
+        root,
+        before_id=_argument_text(arguments, "before"),
+        after_id=_argument_text(arguments, "after"),
+        level=_argument_number(arguments, "level"),
+    )
+    charts_dir = _argument_optional_text(arguments, "charts")
+    if charts_dir is not None:
+        target = Path(charts_dir).expanduser()
+        for path in save_timing_charts(paired, target, comparison=comparison):
+            print(f"chart       {path}")
+    text = render_markdown(comparison)
+    output = _argument_optional_text(arguments, "report")
+    if output is not None:
+        target = Path(output).expanduser()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+        print(f"report      {target}")
+    print(text, end="")
+    return EXIT_ISSUES if comparison.decision_diffs else EXIT_OK
 
 
 def _command_verify(arguments: argparse.Namespace) -> int:
@@ -332,7 +462,53 @@ def _build_parser() -> argparse.ArgumentParser:
         help="lewati penulisan Parquet timeseries",
     )
     run.add_argument("--quiet", action="store_true", help="hanya cetak ringkasan akhir")
+    run.add_argument(
+        "--shard",
+        default=None,
+        help="jalankan hanya sebagian grid, format INDEX/COUNT (dipakai benchmark)",
+    )
     run.set_defaults(handler=_command_run)
+    benchmark = subparsers.add_parser(
+        "benchmark",
+        help="jalankan grid besar secara paralel lalu hasilkan chart",
+    )
+    benchmark.add_argument("--config", required=True, help="path ke file config YAML")
+    benchmark.add_argument("--out", default=None, help="root direktori hasil; menimpa config")
+    benchmark.add_argument(
+        "--workers",
+        type=int,
+        default=DEFAULT_WORKERS,
+        help=f"jumlah proses paralel (default {DEFAULT_WORKERS})",
+    )
+    benchmark.set_defaults(handler=_command_benchmark)
+    merge = subparsers.add_parser(
+        "merge",
+        help="gabungkan checkpoint shard yang sudah ada menjadi artefak + chart",
+    )
+    merge.add_argument("--config", required=True, help="path ke file config YAML")
+    merge.add_argument("--out", default=None, help="root direktori hasil; menimpa config")
+    merge.add_argument(
+        "--workers",
+        type=int,
+        default=DEFAULT_WORKERS,
+        help=f"jumlah shard yang dipakai saat menjalankan (default {DEFAULT_WORKERS})",
+    )
+    merge.set_defaults(handler=_command_merge)
+    compare = subparsers.add_parser(
+        "compare-ab",
+        help="bandingkan dua lengan benchmark secara berpasangan (sebelum/sesudah)",
+    )
+    compare.add_argument("--before", required=True, help="experiment_id lengan sebelum")
+    compare.add_argument("--after", required=True, help="experiment_id lengan sesudah")
+    compare.add_argument("--out", default=None, help="root direktori hasil")
+    compare.add_argument(
+        "--level", type=float, default=0.95, help="tingkat keyakinan bootstrap (default 0.95)"
+    )
+    compare.add_argument("--report", default=None, help="tulis laporan markdown ke path ini")
+    compare.add_argument(
+        "--charts", default=None, help="direktori untuk chart batang sebelum/sesudah"
+    )
+    compare.set_defaults(handler=_command_compare_ab)
     verify = subparsers.add_parser("verify", help="periksa konsistensi artefak eksperimen")
     verify.add_argument("--experiment", required=True, help="id eksperimen")
     verify.add_argument("--out", default=None, help="root direktori hasil")
@@ -357,3 +533,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except DomainInvariantError as error:
         print(f"error: {error}", file=sys.stderr)
         return EXIT_USAGE
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

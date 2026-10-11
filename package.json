@@ -15,6 +15,7 @@
   "scripts": {
     "dev:web": "npm run dev -w @sera/web",
     "dev:api": "npm run start:dev -w @sera/api",
+    "dev:solver": "cd services/solver && uv run uvicorn sera.app.main:app --reload",
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",

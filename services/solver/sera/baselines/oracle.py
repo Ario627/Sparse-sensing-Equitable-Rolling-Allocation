@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import time
 from dataclasses import dataclass, field, replace
 
 from sera.baselines.base import BaselineMethod, BaselinePlan, require_step_index
@@ -15,9 +16,13 @@ class OracleOutcome:
     stages: tuple[StageOutcome, ...]
     solve_seconds: float
     relative_gap: float | None
+    model_build_seconds: float = 0.0
+    solver_wall_seconds: float = 0.0
 
     def __post_init__(self) -> None:
         require_non_negative(self.solve_seconds, "solve_seconds")
+        require_non_negative(self.model_build_seconds, "model_build_seconds")
+        require_non_negative(self.solver_wall_seconds, "solver_wall_seconds")
         if self.relative_gap is not None:
             require_non_negative(self.relative_gap, "relative_gap")
 
@@ -37,8 +42,12 @@ class OracleStrategy:
     def solve(self, problem: PlanningProblem, step_index: int = 0) -> OracleOutcome:
         require_step_index(step_index)
         clairvoyant = replace(problem, commit_slots=0)
+        build_started = time.perf_counter()
         model = build_plan_model(clairvoyant)
+        build_seconds = time.perf_counter() - build_started
+        solve_started = time.perf_counter()
         outcome = solve_lexicographic(model, self.lexicographic)
+        solve_wall_seconds = time.perf_counter() - solve_started
         final = outcome.final
         if final is None or not final.has_solution:
             raise DomainInvariantError(
@@ -55,6 +64,8 @@ class OracleStrategy:
             stages=outcome.stages,
             solve_seconds=math.fsum(stage.solve_seconds for stage in outcome.stages),
             relative_gap=final.relative_gap,
+            model_build_seconds=build_seconds,
+            solver_wall_seconds=solve_wall_seconds,
         )
 
     def plan(self, problem: PlanningProblem, step_index: int = 0) -> BaselinePlan:

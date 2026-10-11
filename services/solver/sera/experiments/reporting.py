@@ -39,6 +39,9 @@ EXTRAS_COLUMNS: Final[tuple[str, ...]] = (
     "mean_confidence",
     "storage_coverage",
     "storage_calibration_error",
+    "model_build_seconds",
+    "solver_wall_seconds",
+    "run_wall_seconds",
 )
 
 

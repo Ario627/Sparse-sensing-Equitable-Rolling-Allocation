@@ -150,6 +150,15 @@ uv run uvicorn sera.app.main:app --reload
 
 Cek: `curl -fsS http://localhost:8000/health`.
 
+Dari root repo bisa juga langsung: `npm run dev:solver`.
+
+> **Jalankan dari `services/solver`, jangan dari root.** Root tidak punya
+> `pyproject.toml`, sehingga `uv run` di sana membuat environment sementara tanpa
+> paket `sera` dan `uvicorn sera.app.main:app` gagal dengan
+> `ModuleNotFoundError: No module named 'sera'` (memakai Python 3.11, sedangkan
+> solver butuh >= 3.14). Opsi `--with uvicorn` juga tidak perlu — uvicorn sudah
+> dependency proyek.
+
 ### 4. Broker MQTT
 
 ```bash
@@ -199,6 +208,7 @@ npm run lint:fix       # Biome (auto-fix)
 npm run format         # Biome (format)
 npm run dev:web        # web dev server
 npm run dev:api        # api watch mode
+npm run dev:solver     # solver (uvicorn, reload) — dijalankan dari services/solver
 npm run e2e:smoke      # uji end-to-end lintas service
 ```
 
@@ -241,6 +251,68 @@ punya `schema_version`. Contoh untuk seed demo:
 `sera/demo-01/esp32-01/telemetry`. Aturan lengkap + contoh payload di
 [`docs/SERA_v3_05_DATA_MODEL.md`](../docs/SERA_v3_05_DATA_MODEL.md) §5.
 
+## Benchmark & perbandingan metode
+
+Untuk membandingkan SERA dengan metode lain (`proportional`, `rotation`,
+`greedy`) dan batas atas `oracle`, solver punya runner benchmark paralel yang
+menghasilkan chart:
+
+```bash
+cd services/solver
+uv run sera-exp benchmark --config ../../experiments/configs/E_benchmark_main.yaml --workers 4
+```
+
+Bila shard sudah selesai dan hanya perlu digabung ulang (mis. setelah proses
+induk berhenti), pakai:
+
+```bash
+uv run sera-exp merge --config ../../experiments/configs/E_benchmark_main.yaml --workers 4
+uv run sera-exp verify --experiment E_benchmark_main
+```
+
+Keluaran: `experiments/results/<experiment_id>/charts/` berisi `kpi_comparison.png`,
+`sweep_*.png`, `estimation_learning.png`, `service_trajectories.png`, dan
+`final_scorecard.png` (peringkat kualitas + profil radar + biaya komputasi).
+
+Test yang menyertainya:
+
+```bash
+uv run pytest            # dari services/solver — termasuk test sharding & chart
+npm test -w @sera/api    # dari root — termasuk pemrosesan telemetry backend
+```
+
+Test backend menulis artefaknya sendiri ke
+`experiments/results/backend_pipeline/` (`report.json` + `pipeline.svg`).
+
+Catatan metodologi, biaya komputasi, dan keterbatasan grid ada di
+[`experiments/README.md`](./experiments/README.md). Hasil audit dan perbandingan
+sebelum/sesudah optimasi dispersion ada di
+[`experiments/results/AB_ANALYSIS.md`](./experiments/results/AB_ANALYSIS.md).
+
+Dua grid utama disediakan:
+
+| Config | `stage_time_limit_s` | Kegunaan |
+|---|---|---|
+| [`E_benchmark_main.yaml`](./experiments/configs/E_benchmark_main.yaml) | 0.5 | Artefak v1; menunjukkan efek batas waktu yang terlalu ketat |
+| [`E_benchmark_v2.yaml`](./experiments/configs/E_benchmark_v2.yaml) | 2.0 | Angka yang dianjurkan untuk pelaporan |
+
+**Kenapa oracle selalu di atas SERA.** Oracle adalah *full-information upper
+bound* (`docs/SERA_v3_08_EKSPERIMEN_KPI.md` §2): ia diberi seluruh state dan
+parameter yang SERA harus estimasi, jadi ia memang harus jadi yang terbaik.
+Selisihnya sendiri kecil (adekuasi 0.6013 vs 0.6333; regret 76.6 vs 0).
+
+**Kenapa SERA jauh lebih mahal.** Terukur pada instance identik: SERA 2.87 s vs
+oracle 0.18 s untuk 6 stage. Penyebabnya ensembel 5 skenario + CVaR (variabel
+443 → 2.211) dan 6 stage lexicographic; loop stage ditulis tangan karena backend
+HiGHS menolak multi-objective bawaan MathOpt (`Highs does not support multiple
+objectives`).
+
+**Inefisiensi yang ditemukan.** Pembangunan model memakan ≈258 ms per resolve
+(18 blok × 5 skenario) dan **tidak dihitung** di `solve_time_ms`; sekitar 47%-nya
+dari `_add_dispersion_constraints` yang O(n²) (linearisasi Gini). Pada satu run
+pembanding, 38 s dari 150 s wall-clock tidak terlihat di metrik mana pun.
+Rincian + rekomendasi di [`experiments/README.md`](./experiments/README.md).
+
 ## Verifikasi
 
 ```bash
@@ -255,3 +327,58 @@ harus terpasang (langkah yang tidak bisa dijalankan akan di-`SKIP`, bukan `FAIL`
 Override target lewat env: `SERA_API_BASE`, `SERA_SOLVER_BASE`, `SERA_MQTT_HOST`,
 `SERA_MQTT_PORT`, `SERA_MQTT_SITE`, `SERA_MQTT_DEVICE`.
 
+
+## Dokumentasi
+
+Dokumentasi kanonik ada di folder **`docs/`**, yang di workspace ini berada
+**satu tingkat di atas** root repo (`../docs/`) dan tidak ikut ter-commit ke repo
+`SERA`. Kalau repo ini di-clone sendirian, folder tersebut perlu disalin manual.
+
+| File | Isi |
+|---|---|
+| [`00_INDEX`](../docs/SERA_v3_00_INDEX.md) | Peta dokumen & urutan baca |
+| [`01_KONTEKS`](../docs/SERA_v3_01_KONTEKS.md) | Problem, scope, non-goals, glossary |
+| [`02_ARSITEKTUR`](../docs/SERA_v3_02_ARSITEKTUR.md) | Service, data flow, ADR, batas kepercayaan |
+| [`03_TECH_STACK`](../docs/SERA_v3_03_TECH_STACK.md) | Stack per layer + versi terkunci |
+| [`04_ALGORITMA`](../docs/SERA_v3_04_ALGORITMA.md) | Estimator, ledger, optimizer, sensor selection |
+| [`05_DATA_MODEL`](../docs/SERA_v3_05_DATA_MODEL.md) | Skema Prisma, kontrak MQTT, kontrak API |
+| [`06_HARDWARE_IOT`](../docs/SERA_v3_06_HARDWARE_IOT.md) | ESP32, sensor, kalibrasi, HIL |
+| [`08_EKSPERIMEN_KPI`](../docs/SERA_v3_08_EKSPERIMEN_KPI.md) | E1–E8, baseline, KPI, desain statistik |
+| [`09_SECURITY`](../docs/SERA_v3_09_SECURITY.md) | Threat model, kontrol, MQTT security |
+| [`12_OPERASI_RUNBOOK`](../docs/SERA_v3_12_OPERASI_RUNBOOK.md) | Deploy, migrasi, rollback, observability |
+
+Dokumen internal repo:
+
+| File | Isi |
+|---|---|
+| [`experiments/README.md`](./experiments/README.md) | Grid eksperimen, benchmark, chart, catatan metodologi |
+| [`services/solver/README.md`](./services/solver/README.md) | Detail scientific engine |
+| [`firmware/esp32/README.md`](./firmware/esp32/README.md) | Firmware node ESP32 (mode mock) |
+
+## Batasan yang diketahui
+
+- **`docker/compose.yml` belum ada** meski disebut di
+  [`docs/SERA_v3_02_ARSITEKTUR.md`](../docs/SERA_v3_02_ARSITEKTUR.md) dan
+  [`docs/SERA_v3_12_OPERASI_RUNBOOK.md`](../docs/SERA_v3_12_OPERASI_RUNBOOK.md).
+  Jalur yang berfungsi saat ini adalah menjalankan tiap service secara manual
+  seperti di §Setup cepat.
+- **Firmware masih mode mock** — belum ada sensor fisik; nilai sensor
+  dibangkitkan. Yang diuji adalah jalur komunikasi & kontrak, bukan hidrologi.
+- **Arduino-ESP32 2.0.17**, bukan 3.3.12 seperti
+  [`docs/SERA_v3_03_TECH_STACK.md`](../docs/SERA_v3_03_TECH_STACK.md) §7 —
+  platform resmi PlatformIO belum menyediakan core 3.x.
+- **Solver tidak reproducible saat time limit mengikat.** Bila sebuah stage
+  lexicographic kehabisan waktu, solusi yang dikembalikan bergantung pada kondisi
+  wall-clock, sehingga keputusan dapat berbeda antar-run dengan seed dan kode
+  yang sama. Terbukti eksperimen kontrol (`E_det_rep_a` vs `E_det_rep_b`); oracle
+  identik, tetapi `sera` berbeda. `solve_time_ms` juga bukan besaran reproducible.
+- **Angka benchmark bukan klaim optimalitas.** `stage_time_limit_s` diturunkan
+  demi kelayakan waktu, dan grid utama bersifat eksploratif (memetakan *di mana*
+  SERA unggul, bukan satu angka tunggal). Rincian di
+  [`experiments/README.md`](./experiments/README.md).
+- **Artefak eksperimen tidak di-commit.** `experiments/results/*` diabaikan
+  `.gitignore` (timeseries Parquet, chart PNG, checkpoint shard), kecuali dua
+  laporan ringkas `AB_ANALYSIS.md` dan `AB_REPORT.md`. Semua artefak dapat
+  diregenerasi — lihat [`experiments/README.md`](./experiments/README.md).
+- Versi toolchain yang terkunci bisa berbeda dari environment terpasang —
+  sumber kebenaran tetap [`docs/SERA_v3_03_TECH_STACK.md`](../docs/SERA_v3_03_TECH_STACK.md).

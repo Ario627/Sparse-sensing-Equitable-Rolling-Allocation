@@ -1,0 +1,45 @@
+# Benchmark SERA v2 — grid sama dengan E_benchmark_main, tapi dengan anggaran
+# waktu solver yang realistis.
+#
+# Kenapa v2 ada (temuan dari v1):
+#   * v1 memakai stage_time_limit_s: 0.5. Untuk instance besar (BRANCHED dengan
+#     n_blocks: 10 = 18 blok aktual, 5 skenario, 6 stage lexicographic) HiGHS
+#     tidak sempat menemukan solusi layak dalam 0.5 s, sehingga solve melaporkan
+#     NO_SOLUTION dan kebijakan turun ke fallback ledger-greedy. Terukur pada
+#     satu environment terburuk: 40 fallback dari 120 resolve, dan 82 fallback
+#     pada run terburuk di grid v1.
+#   * Eksperimen pembanding pada environment identik (seed sama) menunjukkan
+#     menaikkan batas ke 2.0 s memangkas fallback 40 -> 2 (worst_sr 0.107 ->
+#     0.168) dengan tambahan waktu total hanya ~10%.
+#   * Penyebabnya bukan bug, melainkan anggaran waktu yang terlalu ketat:
+#     model SERA berukuran ~5x skenario (+CVaR) dibanding instance 1-skenario.
+#
+# Sensor set hanya menyebut blok yang ada di SEMUA kombinasi grid:
+# b1..b6 (CHAIN n=6 terkecil). Lihat catatan di README.
+experiment_id: E_benchmark_v2
+seed_base: 20261011
+results_root: experiments/results
+
+methods: [sera, proportional, rotation, greedy, oracle]
+scenarios: [nominal, drought]
+block_counts: [6, 10]
+topologies: [CHAIN, BRANCHED]
+k_factors: [0.4, 0.7, 1.0]
+sensor_sets:
+  - [b2]
+  - [b2, b5]
+  - [b2, b5, b6]
+replicates: 2
+
+policy:
+  horizon_slots: 2
+  # Dinaikkan dari 0.5 s: cukup bagi HiGHS menemukan solusi layak pada instance
+  # BRANCHED terbesar, tanpa membuat total waktu tidak layak.
+  stage_time_limit_s: 2.0
+  cvar_alpha: 0.8
+  scenario_config:
+    n_scenarios: 5
+
+executor:
+  slot_hours: 6.0
+  metric_cvar_alpha: 0.8

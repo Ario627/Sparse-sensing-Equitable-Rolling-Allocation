@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import time
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Final, Protocol
@@ -90,6 +91,7 @@ class ExperimentExecutor:
     def execute(self, spec: RunSpec) -> RunOutcome:
         if not isinstance(spec, RunSpec):
             raise DomainInvariantError("spec must be a RunSpec")
+        run_started = time.perf_counter()
         base = scenario_from_preset(
             spec.scenario_id,
             n_blocks=spec.n_blocks,
@@ -158,6 +160,7 @@ class ExperimentExecutor:
             simulation=simulation,
             block_ids=index.block_ids,
             instrumented=instrumented,
+            run_wall_seconds=time.perf_counter() - run_started,
         )
         if self.timeseries_sink is not None:
             self.timeseries_sink.record(spec, simulation, snapshots, target_table)
@@ -288,6 +291,7 @@ def _extras(
     simulation: SimulationResult,
     block_ids: tuple[str, ...],
     instrumented: tuple[str, ...],
+    run_wall_seconds: float,
 ) -> dict[str, object]:
     coverage, calibration = _coverage_extras(simulation, snapshots, block_ids)
     final = snapshots[-1] if snapshots else None
@@ -312,5 +316,10 @@ def _extras(
         "mean_confidence": mean_confidence,
         "storage_coverage": coverage,
         "storage_calibration_error": calibration,
+        # Tiga komponen waktu, terpisah. `solver_wall_seconds` mencakup
+        # penerjemahan model ke solver (yang tidak masuk `solve_time_ms`).
+        "model_build_seconds": telemetry.model_build_seconds_total,
+        "solver_wall_seconds": telemetry.solver_wall_seconds_total,
+        "run_wall_seconds": run_wall_seconds,
         "eta_group_intervals": dict(final.eta_intervals) if final is not None else {},
     }

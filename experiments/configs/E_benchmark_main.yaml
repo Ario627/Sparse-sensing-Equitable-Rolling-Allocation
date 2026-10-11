@@ -1,0 +1,41 @@
+# Benchmark utama SERA: banyak skenario, semua metode, untuk chart perbandingan.
+#
+# Catatan desain (dari probe biaya, lihat catatan di README benchmark):
+#   * BRANCHED adalah kasus yang mengdiskriminasi metode; CHAIN sering degenerat
+#     karena semua kebijakan sadar-batas menghasilkan alokasi yang sama.
+#   * k_factor < 1 memaksa konflik alokasi; k_factor = 1.0 dipakai sebagai kontrol
+#     "tanpa kelangkaan" supaya terlihat bahwa metode memang setara saat mudah.
+#   * tiga sensor set menjalankan kurva sensor budget (E1 di docs/08).
+#   * stage_time_limit_s diturunkan dari 6.0 ke 0.5 demi kelayakan waktu; ini
+#     menaikkan MIP gap, jadi angka absolut bukan klaim optimalitas — yang
+#     dibandingkan adalah perbedaan antar metode pada anggaran waktu yang sama.
+#
+# Sensor set WAJIB hanya menyebut blok yang ada di SEMUA jumlah blok pada grid.
+# Blok diberi nama b1..bN, jadi untuk block_counts [6, 10] hanya b1..b6 yang aman.
+# Sensor set yang menyebut b8 akan menggagalkan setiap metode kecuali oracle
+# (lihat catatan di README).
+experiment_id: E_benchmark_main
+seed_base: 20261011
+results_root: experiments/results
+
+methods: [sera, proportional, rotation, greedy, oracle]
+scenarios: [nominal, drought]
+block_counts: [6, 10]
+topologies: [CHAIN, BRANCHED]
+k_factors: [0.4, 0.7, 1.0]
+sensor_sets:
+  - [b2]
+  - [b2, b5]
+  - [b2, b5, b6]
+replicates: 2
+
+policy:
+  horizon_slots: 2
+  stage_time_limit_s: 0.5
+  cvar_alpha: 0.8
+  scenario_config:
+    n_scenarios: 5
+
+executor:
+  slot_hours: 6.0
+  metric_cvar_alpha: 0.8

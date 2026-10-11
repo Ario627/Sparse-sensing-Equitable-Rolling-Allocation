@@ -169,6 +169,10 @@ def test_run_seeds_are_stable_across_grid_positions() -> None:
     assert [spec.seed for spec in first.specs] == [spec.seed for spec in second.specs]
 
 
+# Kolom waktu: diukur, tetapi tidak dijamin reproducibility.
+TIMING_KEYS: Final = ("model_build_seconds", "solver_wall_seconds", "run_wall_seconds")
+
+
 def test_experiment_replay_produces_identical_metrics(tmp_path: Path) -> None:
     plan = small_plan("repro-replay")
     executor = ExperimentExecutor()
@@ -180,7 +184,17 @@ def test_experiment_replay_produces_identical_metrics(tmp_path: Path) -> None:
     for left, right in zip(first.records, second.records, strict=True):
         assert left.spec == right.spec
         assert left.metrics == right.metrics
-        assert left.extras == right.extras
+        # Waktu dinding tidak deterministik, jadi ia di luar jaminan reproducibility.
+        # Bandingkan seluruh extras kecuali kolom waktu, lalu pastikan kolom waktu
+        # memang ada dan bernilai wajar.
+        deterministic = {key: value for key, value in left.extras.items() if key not in TIMING_KEYS}
+        expected = {key: value for key, value in right.extras.items() if key not in TIMING_KEYS}
+        assert deterministic == expected
+        for key in TIMING_KEYS:
+            assert key in left.extras
+            assert key in right.extras
+            assert isinstance(left.extras[key], float)
+            assert left.extras[key] >= 0.0
 
 
 def test_experiment_checkpoint_resume_skips_completed_runs(tmp_path: Path) -> None:

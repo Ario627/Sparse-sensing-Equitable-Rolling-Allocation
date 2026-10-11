@@ -1,0 +1,34 @@
+# Kontrol non-determinisme: satu environment terbesar dijalankan berulang.
+#
+# Latar: tiga run SERA berbeda antara E_benchmark_v2 dan E_ab_before meski hanya
+# instrumentasi yang berubah, dan `n_fallbacks`-nya ikut berbeda — indikasi
+# bahwa time limit solver ikut menentukan hasil. Eksperimen ini menjalankan
+# environment yang sama beberapa kali untuk memisahkan:
+#   * non-determinisme inheren (time limit mengikat), versus
+#   * perbedaan yang benar-benar disebabkan perubahan kode.
+#
+# Dijalankan dua kali dengan experiment_id berbeda (rep_a / rep_b), keduanya
+# sekuensial dengan workers=1 supaya kondisi mesin seragam.
+experiment_id: E_det_rep_a
+seed_base: 20261011
+results_root: experiments/results
+
+methods: [sera, oracle]
+scenarios: [drought]
+block_counts: [10]
+topologies: [BRANCHED]
+k_factors: [0.4]
+sensor_sets:
+  - [b2, b5]
+replicates: 1
+
+policy:
+  horizon_slots: 2
+  stage_time_limit_s: 2.0
+  cvar_alpha: 0.8
+  scenario_config:
+    n_scenarios: 5
+
+executor:
+  slot_hours: 6.0
+  metric_cvar_alpha: 0.8
